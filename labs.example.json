@@ -1,0 +1,6 @@
+[
+  {"name": "srv6-core", "dir": "/home/dcantor/srv6-core", "portal": "http://192.168.50.231:8091", "repo": "https://github.com/dcantor/srv6-core",
+   "description": "SRv6 WAN core: VyOS PEs + P triangle, IS-IS, BGP L3VPN over SRv6 (uSID), two tenants, Alpine hosts; tenant provisioning portal", "gitea": "http://192.168.50.231:3000/lab/srv6-core-configs"},
+  {"name": "cat8000v-ipsec", "dir": "/home/dcantor/cat8000v-ipsec", "portal": "http://192.168.50.231:8090", "repo": "https://github.com/dcantor/cat8000v-ipsec",
+   "description": "Catalyst 8000v IPsec VTI + eBGP: 3 headends behind VyOS firewalls, 5 spokes, Network-as-Code / Terraform, Golden Config; VPN provisioning portal", "gitea": "http://192.168.50.231:3000/lab/config-backups"}
+]

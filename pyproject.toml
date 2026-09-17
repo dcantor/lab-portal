@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "labportal"
+version = "0.1.0"
+description = "Shared machinery for the lab portals (cat8000v-ipsec, srv6-core): pipeline runs with resume, Robot reports, and the lab hub"
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "requests>=2.31"]
+
+[project.scripts]
+lab-hub = "labportal.hub.app:main"
+
+[tool.setuptools.packages.find]
+include = ["labportal*"]
+
+[tool.setuptools.package-data]
+"labportal.hub" = ["static/*"]

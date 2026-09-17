@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Lab hub</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --ok:#15803d; --warn:#b45309; --bad:#b91c1c }
+  * { box-sizing:border-box } body { margin:0; font:14px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg) }
+  header { background:#0b1020; color:#e2e8f0; padding:14px 26px; display:flex; align-items:baseline; gap:18px } header h1 { font-size:19px; margin:0 } header .sub { color:#94a3b8; font-size:12px } header .right { margin-left:auto; color:#94a3b8; font-size:12px }
+  main { max-width:1300px; margin:0 auto; padding:18px 26px } .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:16px }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px 18px } .card h2 { font-size:17px; margin:0 0 4px } .card h2 a { color:inherit; text-decoration:none } .desc { color:var(--muted); font-size:13px; margin:0 0 10px }
+  .pill { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:#e2e8f0 } .pill.ok { background:#dcfce7; color:var(--ok) } .pill.warn { background:#fef3c7; color:var(--warn) } .pill.bad { background:#fee2e2; color:var(--bad) }
+  .kv { display:grid; grid-template-columns:130px 1fr; gap:4px 10px; font-size:13px } .kv dt { color:var(--muted) } .kv dd { margin:0 }
+  .vms { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px } .vm { font:11px ui-monospace, monospace; padding:2px 6px; border-radius:4px; background:#fee2e2; color:var(--bad) } .vm.running { background:#dcfce7; color:var(--ok) }
+  .links a { margin-right:12px; font-size:13px } .links { margin-top:10px } .hint { color:var(--muted); font-size:12px }
+</style></head><body>
+<header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right" id="host"></span></header>
+<main><div class="grid" id="labs"></div><p class="hint" id="gen"></p></main>
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function load() {
+  const d = await (await fetch('/api/labs')).json();
+  document.getElementById('host').textContent = d.host.memory ? `host memory ${d.host.used_gib ?? d.host.memory.used_gib} / ${d.host.memory.total_gib} GiB used (${d.host.memory.available_gib} available) · load ${d.host.load.map(x => x.toFixed(1)).join(' ')}` : '';
+  document.getElementById('labs').innerHTML = d.labs.map(l => {
+    const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
+    return `<div class="card"><h2><a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span></h2>
+      <p class="desc">${esc(l.description || '')}</p>
+      <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
+      <dt>Last tests</dt><dd>${t ? (t.error ? esc(t.error) : `<span class="pill ${t.failed ? 'bad' : 'ok'}">${t.passed} passed, ${t.failed} failed</span> <span class="hint">${esc(t.when)} · ${t.suites.map(s => esc(s.name.replace(/^\\d+ /, '')) + (s.status === 'PASS' ? '' : ' ✗')).join(', ')}</span>`) : '<span class="hint">no results yet</span>'}</dd>
+      <dt>Directory</dt><dd><code>${esc(l.dir)}</code></dd></dl>
+      <div class="vms">${Object.entries(l.vms).filter(([, v]) => typeof v === 'object' && v.state).map(([n, v]) => `<span class="vm ${v.state === 'running' ? 'running' : ''}" title="${esc(v.role)} · ${esc(v.state)}">${esc(n)}</span>`).join('')}</div>
+      <div class="links"><a href="${l.portal}" target="_blank">portal</a><a href="${l.portal}/docs" target="_blank">API</a><a href="${l.nautobot}" target="_blank">Nautobot</a>${l.gitea ? `<a href="${l.gitea}" target="_blank">Gitea configs</a>` : ''}<a href="${l.repo}" target="_blank">GitHub</a></div></div>`; }).join('');
+  document.getElementById('gen').textContent = 'refreshed ' + new Date(d.generated * 1000).toLocaleTimeString() + ' · read-only: use a lab\'s portal or lab.sh to change anything';
+}
+load(); setInterval(load, 30000);
+</script></body></html>

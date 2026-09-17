@@ -1,0 +1,10 @@
+[Unit]
+Description=Lab hub (every lab on this host at a glance)
+After=network.target
+
+[Service]
+ExecStart=/home/dcantor/lab-portal/.venv/bin/lab-hub
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
