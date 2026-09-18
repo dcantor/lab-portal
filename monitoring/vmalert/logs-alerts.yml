@@ -42,6 +42,6 @@ groups:
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: {{ $value }} SSH authentication failures in 10 minutes"}
       - alert: NodeSyslogSilent
-        expr: '_time:10m * | stats by (hostname) count() as lines | filter lines:<1'
+        expr: '_time:10m hostname:* | stats by (hostname) count() as lines | filter lines:<1'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: no syslog for 10 minutes"}

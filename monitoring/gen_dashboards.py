@@ -149,4 +149,20 @@ p.append(panel("Log-derived alerts (vmalert-logs), last 3 h", "state-timeline", 
 p.append(panel("Routing daemons: BGP / IS-IS / BFD / zebra syslog", "logs", [('app_name:in(bgpd, isisd, bfdd, zebra, staticd, vtysh) | uniq by (_time, hostname, _msg)', "")], 0, 34, 24, 10, ds=VL, showTime=True, wrapLogMessage=True, sortOrder="Descending"))
 p.append(panel("Commits and configuration changes (vyos-configd / commit)", "logs", [('app_name:in(vyos-configd, commit, vyos-commitd) OR _msg:"commit"', "")], 0, 37, 24, 8, ds=VL, showTime=True, wrapLogMessage=True, sortOrder="Descending"))
 (OUT / "vyos-telegraf.json").write_text(json.dumps(dashboard("vyos-telegraf", "VyOS telemetry: Telegraf and syslog", p, ["lab", "vyos", "telegraf"], TV), indent=1))
+# ---------------------------------------------------------------- Flows (sFlow from PEs / Ps -> goflow2 -> VictoriaLogs)
+_id[0] = 0
+FL = 'sampler_address:* '                                   # every sFlow record (goflow2 JSON, one per sampled packet)
+SR = FL + 'proto:"IPv6-Route" '                              # SRv6-encapsulated packets: outer IPv6 with a routing header
+def logs_ts(q, legend): return (q, legend, {"queryType": "stats", "format": "time_series"})   # VictoriaLogs stats over _time buckets
+p = []
+p.append(panel("Sampled packets / min per exporter", "stat", [(FL + '| stats by (sampler_address) count() as samples', "{{sampler_address}}", {"queryType": "stats"})], 0, 0, 12, 4, ds=VL, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]}))
+p.append(panel("SRv6 traffic seen in the core (sampled bytes × rate, last range)", "stat", [(SR + '| stats sum(bytes) as b | math b * 16 as bytes | fields bytes', "bytes", {"queryType": "stats"})], 12, 0, 6, 4, ds=VL, unit="bytes", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Distinct SRv6 paths (src PE -> SID)", "stat", [(SR + '| stats count_uniq(src_addr, dst_addr) as paths', "paths", {"queryType": "stats"})], 18, 0, 6, 4, ds=VL, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]}))
+p.append(panel("SRv6 flows: source PE -> destination SID (uDT4 / uSID carrier), estimated bytes", "table", [(SR + '| stats by (src_addr, dst_addr) sum(bytes) as sampled_bytes, count() as samples, count_uniq(sampler_address) as seen_by | math sampled_bytes * 16 as est_bytes | sort by (est_bytes desc) | limit 30', "", {"queryType": "stats"})], 0, 4, 14, 10, ds=VL))
+p.append(panel("Which router forwards what (sampler x destination SID)", "table", [(SR + '| stats by (sampler_address, dst_addr) sum(bytes) as sampled_bytes, count() as samples | sort by (sampler_address, sampled_bytes desc) | limit 40', "", {"queryType": "stats"})], 14, 4, 10, 10, ds=VL))
+p.append(panel("SRv6 bytes / min per destination SID (sampled × 16)", "timeseries", [logs_ts(SR + '| stats by (_time:1m, dst_addr) sum(bytes) as sampled | math sampled * 16 as bytes | fields _time, dst_addr, bytes', "{{dst_addr}}")], 0, 14, 12, 8, ds=VL, unit="bytes", min=0))
+p.append(panel("Sampled packets / min per exporter", "timeseries", [logs_ts(FL + '| stats by (_time:1m, sampler_address) count() as samples', "{{sampler_address}}")], 12, 14, 12, 8, ds=VL, min=0))
+p.append(panel("Protocols in the core (sampled packets)", "table", [(FL + '| stats by (proto, etype) count() as samples | sort by (samples desc) | limit 12', "", {"queryType": "stats"})], 0, 22, 8, 8, ds=VL))
+p.append(panel("Steered packets: uSID carrier (3+ uSIDs in the destination) or an SRH with segments left", "table", [(SR + '(ipv6_routing_header_seg_left:>0 OR dst_addr:~"^fd00:c(:[0-9a-f]+){3,}::") | stats by (sampler_address, src_addr, dst_addr, ipv6_routing_header_addresses) count() as samples | sort by (samples desc) | limit 12', "", {"queryType": "stats"})], 8, 22, 16, 8, ds=VL))
+(OUT / "flows.json").write_text(json.dumps(dashboard("srv6-flows", "SRv6 flows (sFlow)", p, ["srv6-core", "flows", "sflow"]), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

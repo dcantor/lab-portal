@@ -1,0 +1,502 @@
+{
+ "uid": "srv6-flows",
+ "title": "SRv6 flows (sFlow)",
+ "tags": [
+  "srv6-core",
+  "flows",
+  "sflow"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "annotations": {
+  "list": [
+   {
+    "name": "Runs and tests",
+    "enable": true,
+    "iconColor": "#5794F2",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "run"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Test events (failover, reflector)",
+    "enable": true,
+    "iconColor": "#F2495C",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "test"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Steering changes",
+    "enable": true,
+    "iconColor": "#FF9830",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "steering"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Router syslog alerts (vmalert-logs)",
+    "enable": true,
+    "iconColor": "#B877D9",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "expr": "ALERTS{lab=\"srv6-core\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{hostname}}",
+    "tagKeys": "alertname,hostname"
+   }
+  ]
+ },
+ "templating": {
+  "list": []
+ },
+ "panels": [
+  {
+   "id": 1,
+   "title": "Sampled packets / min per exporter",
+   "type": "stat",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* | stats by (sampler_address) count() as samples",
+     "legendFormat": "{{sampler_address}}",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 2,
+   "title": "SRv6 traffic seen in the core (sampled bytes \u00d7 rate, last range)",
+   "type": "stat",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats sum(bytes) as b | math b * 16 as bytes | fields bytes",
+     "legendFormat": "bytes",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 3,
+   "title": "Distinct SRv6 paths (src PE -> SID)",
+   "type": "stat",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats count_uniq(src_addr, dst_addr) as paths",
+     "legendFormat": "paths",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 4,
+   "title": "SRv6 flows: source PE -> destination SID (uDT4 / uSID carrier), estimated bytes",
+   "type": "table",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 4,
+    "w": 14,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats by (src_addr, dst_addr) sum(bytes) as sampled_bytes, count() as samples, count_uniq(sampler_address) as seen_by | math sampled_bytes * 16 as est_bytes | sort by (est_bytes desc) | limit 30",
+     "legendFormat": "",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   }
+  },
+  {
+   "id": 5,
+   "title": "Which router forwards what (sampler x destination SID)",
+   "type": "table",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 14,
+    "y": 4,
+    "w": 10,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats by (sampler_address, dst_addr) sum(bytes) as sampled_bytes, count() as samples | sort by (sampler_address, sampled_bytes desc) | limit 40",
+     "legendFormat": "",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   }
+  },
+  {
+   "id": 6,
+   "title": "SRv6 bytes / min per destination SID (sampled \u00d7 16)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 14,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats by (_time:1m, dst_addr) sum(bytes) as sampled | math sampled * 16 as bytes | fields _time, dst_addr, bytes",
+     "legendFormat": "{{dst_addr}}",
+     "queryType": "stats",
+     "format": "time_series"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 7,
+   "title": "Sampled packets / min per exporter",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 14,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* | stats by (_time:1m, sampler_address) count() as samples",
+     "legendFormat": "{{sampler_address}}",
+     "queryType": "stats",
+     "format": "time_series"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 8,
+   "title": "Protocols in the core (sampled packets)",
+   "type": "table",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 22,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* | stats by (proto, etype) count() as samples | sort by (samples desc) | limit 12",
+     "legendFormat": "",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   }
+  },
+  {
+   "id": 9,
+   "title": "Steered packets: uSID carrier (3+ uSIDs in the destination) or an SRH with segments left",
+   "type": "table",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 22,
+    "w": 16,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "sampler_address:* proto:\"IPv6-Route\" (ipv6_routing_header_seg_left:>0 OR dst_addr:~\"^fd00:c(:[0-9a-f]+){3,}::\") | stats by (sampler_address, src_addr, dst_addr, ipv6_routing_header_addresses) count() as samples | sort by (samples desc) | limit 12",
+     "legendFormat": "",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   }
+  }
+ ],
+ "links": [
+  {
+   "title": "Lab hub",
+   "type": "link",
+   "url": "http://192.168.50.231:8088",
+   "targetBlank": true
+  },
+  {
+   "title": "Prometheus alerts",
+   "type": "link",
+   "url": "http://192.168.50.231:9090/alerts",
+   "targetBlank": true
+  }
+ ]
+}

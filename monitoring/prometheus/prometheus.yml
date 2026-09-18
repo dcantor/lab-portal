@@ -38,3 +38,5 @@ scrape_configs:
         labels: {component: victorialogs}
       - targets: [vmalert-logs:8880]
         labels: {component: vmalert-logs}
+      - targets: [goflow2:8080]
+        labels: {component: goflow2}

@@ -33,6 +33,27 @@ services:
     volumes: ["./vmalert:/etc/vmalert:ro"]
     depends_on: [victorialogs, victoriametrics]
 
+  goflow2:                                        # sFlow collector: decodes the samples from the PEs / Ps into JSON lines (shared volume)
+    image: netsampler/goflow2:v2
+    restart: unless-stopped
+    command: ["-listen=sflow://:6343", "-format=json", "-transport=file", "-transport.file=/flows/flows.json", "-addr=:8080"]
+    user: "0:0"                                   # the image runs unprivileged; the shared volume is root-owned
+    ports: ["6343:6343/udp", "8083:8080"]
+    volumes: ["flows:/flows"]
+
+  flows-shipper:                                  # Fluent Bit tails goflow2's file into VictoriaLogs (structured records, stream per exporter)
+    image: fluent/fluent-bit:3.2
+    restart: unless-stopped
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/etc/flows/fluent-bit.conf"]
+    volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
+    depends_on: [goflow2, victorialogs]
+
+  flows-rotate:                                   # daily truncation of the goflow2 file
+    image: busybox:1.37
+    restart: unless-stopped
+    command: ["sh", "/etc/flows/rotate.sh"]
+    volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
+
   prometheus:
     image: prom/prometheus:v3.14.0
     restart: unless-stopped
@@ -71,5 +92,6 @@ services:
 volumes:
   vm_data:
   vl_data:
+  flows:
   prom_data:
   grafana_data:
