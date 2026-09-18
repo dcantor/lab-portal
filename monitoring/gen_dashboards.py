@@ -114,4 +114,26 @@ p.append(panel("Firing alerts", "table", [('ALERTS{alertstate="firing"}', "", {"
 p.append(panel("Samples scraped / s (Prometheus)", "timeseries", [('rate(prometheus_tsdb_head_samples_appended_total[5m])', "samples/s")], 0, 20, 12, 6, min=0, ds=PROM))
 p.append(panel("VictoriaMetrics: active series", "timeseries", [('vm_cache_entries{type="storage/hour_metric_ids"}', "active series")], 12, 20, 12, 6, min=0))
 (OUT / "labs-fleet.json").write_text(json.dumps(dashboard("labs-fleet", "Labs: fleet and monitoring", p, ["lab", "fleet"]), indent=1))
+# ---------------------------------------------------------------- VyOS Telegraf (pushed by the nodes) + syslog (VictoriaLogs)
+_id[0] = 0
+VL = {"type": "victoriametrics-logs-datasource", "uid": "victorialogs"}
+TV = [{"name": "lab", "type": "query", "datasource": VM, "query": "label_values(cpu_usage_idle, lab)", "refresh": 2, "includeAll": False, "current": {"text": "srv6-core", "value": "srv6-core"}}]
+T = 'lab="$lab"'
+p = []
+p.append(panel("Nodes pushing (Telegraf, last 2 min)", "stat", [(f'count(count by (host) (cpu_usage_idle{{{T},cpu="cpu-total"}}))', "nodes")], 0, 0, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("FRR services down (vyos_services_status)", "stat", [(f'count(vyos_services_status{{{T}}} == 0) or vector(0)', "down")], 4, 0, 4, 4, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("systemd units failed", "stat", [(f'count(systemd_units_active_code{{{T},active="failed"}}) or vector(0)', "failed")], 8, 0, 4, 4, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Ip6OutNoRoutes / s (SRv6 encapsulated packets with no outer route — the VRF leak quirk)", "stat", [(f'sum(rate(nstat_Ip6OutNoRoutes{{{T}}}[5m]))', "per s")], 12, 0, 6, 4, colorMode="background", decimals=2, thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 0.5}]}))
+p.append(panel("Syslog lines / min (VictoriaLogs)", "stat", [('* | stats count() as n', "lines")], 18, 0, 6, 4, ds=VL, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]}))
+p.append(panel("VyOS services (FRR daemons) per node", "state-timeline", [(f'vyos_services_status{{{T}}}', "{{host}} {{service}}")], 0, 4, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("CPU busy % (Telegraf)", "timeseries", [(f'100 - cpu_usage_idle{{{T},cpu="cpu-total"}}', "{{host}}")], 12, 4, 12, 9, unit="percent", min=0, max=100))
+p.append(panel("Kernel nstat: IPv6 forwarded / s", "timeseries", [(f'rate(nstat_Ip6OutForwDatagrams{{{T}}}[2m])', "{{host}}")], 0, 13, 8, 7, unit="pps", min=0))
+p.append(panel("Kernel nstat: Ip6OutNoRoutes / s per node", "timeseries", [(f'rate(nstat_Ip6OutNoRoutes{{{T}}}[2m])', "{{host}}")], 8, 13, 8, 7, unit="pps", min=0))
+p.append(panel("NIC drops / s (ethtool)", "timeseries", [(f'rate(ethtool_rx_drops{{{T}}}[2m])', "{{host}} {{interface}} rx")], 16, 13, 8, 7, min=0))
+p.append(panel("Conntrack entries", "timeseries", [(f'conntrack_ip_conntrack_count{{{T}}}', "{{host}}")], 0, 20, 8, 7, min=0))
+p.append(panel("Memory used % (Telegraf)", "timeseries", [(f'mem_used_percent{{{T}}}', "{{host}}")], 8, 20, 8, 7, unit="percent", min=0, max=100))
+p.append(panel("Interrupts / s", "timeseries", [(f'sum by (host) (rate(interrupts_total{{{T}}}[2m]))', "{{host}}")], 16, 20, 8, 7, min=0))
+p.append(panel("Routing daemons: BGP / IS-IS / BFD / zebra syslog", "logs", [('app_name:in(bgpd, isisd, bfdd, zebra, staticd, vtysh)', "")], 0, 27, 24, 10, ds=VL, showTime=True, wrapLogMessage=True, sortOrder="Descending"))
+p.append(panel("Commits and configuration changes (vyos-configd / commit)", "logs", [('app_name:in(vyos-configd, commit, vyos-commitd) OR _msg:"commit"', "")], 0, 37, 24, 8, ds=VL, showTime=True, wrapLogMessage=True, sortOrder="Descending"))
+(OUT / "vyos-telegraf.json").write_text(json.dumps(dashboard("vyos-telegraf", "VyOS telemetry: Telegraf and syslog", p, ["lab", "vyos", "telegraf"], TV), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

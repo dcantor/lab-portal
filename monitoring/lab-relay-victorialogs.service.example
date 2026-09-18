@@ -1,0 +1,11 @@
+[Unit]
+Description=Relay victorialogs (lab NMS 10.0.0.10:9428) to the LAN on port 9428
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/socat TCP-LISTEN:9428,fork,reuseaddr,bind=192.168.50.231 TCP:10.0.0.10:9428
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

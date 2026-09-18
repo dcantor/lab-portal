@@ -34,3 +34,5 @@ scrape_configs:
         labels: {component: victoriametrics}
       - targets: [grafana:3001]
         labels: {component: grafana}
+      - targets: [victorialogs:9428]
+        labels: {component: victorialogs}

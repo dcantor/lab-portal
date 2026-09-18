@@ -1,6 +1,8 @@
 # Lab monitoring on the NMS: Prometheus scrapes (targets discovered from each lab portal's /api/sd) and evaluates the alert
-# rules; VictoriaMetrics keeps the long-term series (remote_write; 180 days); Grafana (port 3001 — Gitea has 3000) reads
-# VictoriaMetrics for the dashboards and Prometheus for the alert state.        deploy: ../monitoring/deploy.sh
+# rules; VictoriaMetrics keeps the long-term series (remote_write; 180 days) and also receives what the VyOS nodes push
+# themselves (Telegraf -> InfluxDB write API); VictoriaLogs keeps their syslog (Telegraf -> Loki push API); Grafana (port
+# 3001 — Gitea has 3000) reads VictoriaMetrics / VictoriaLogs for the dashboards and Prometheus for the alert state.
+# deploy: ../monitoring/deploy.sh
 services:
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.152.0
@@ -8,6 +10,13 @@ services:
     command: ["--storageDataPath=/storage", "--retentionPeriod=180d", "--httpListenAddr=:8428"]
     ports: ["8428:8428"]
     volumes: ["vm_data:/storage"]
+
+  victorialogs:                                   # syslog from the VyOS nodes (system syslog remote -> the native syslog receiver, UDP 5514 — 514 is the NMS rsyslog)
+    image: victoriametrics/victoria-logs:v1.52.0
+    restart: unless-stopped
+    command: ["--storageDataPath=/vlogs", "--retentionPeriod=90d", "--httpListenAddr=:9428", "--syslog.listenAddr.udp=:5514", "--syslog.streamFields.udp=[\"hostname\",\"app_name\"]"]
+    ports: ["9428:9428", "5514:5514/udp"]
+    volumes: ["vl_data:/vlogs"]
 
   prometheus:
     image: prom/prometheus:v3.14.0
@@ -36,14 +45,16 @@ services:
       GF_USERS_DEFAULT_THEME: light
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_INSTALL_PLUGINS: victoriametrics-logs-datasource   # VictoriaLogs (Grafana pulls it from grafana.com at start)
     ports: ["3001:3001"]
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
-    depends_on: [victoriametrics, prometheus]
+    depends_on: [victoriametrics, victorialogs, prometheus]
 
 volumes:
   vm_data:
+  vl_data:
   prom_data:
   grafana_data:

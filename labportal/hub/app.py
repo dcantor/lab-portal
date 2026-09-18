@@ -12,7 +12,7 @@ import requests
 
 CONFIG = Path(os.environ.get("LAB_HUB_CONFIG", Path.home() / ".config" / "lab-hub" / "labs.json"))
 MONITORING = json.loads(os.environ["LAB_HUB_MONITORING"]) if os.environ.get("LAB_HUB_MONITORING") else \
-    {"grafana": "http://192.168.50.231:3001", "prometheus": "http://192.168.50.231:9090", "victoriametrics": "http://192.168.50.231:8428"}   # the stack in ../monitoring on the NMS
+    {"grafana": "http://192.168.50.231:3001", "prometheus": "http://192.168.50.231:9090", "victoriametrics": "http://192.168.50.231:8428", "victorialogs": "http://192.168.50.231:9428"}   # the stack in ../monitoring on the NMS
 NAUTOBOT = os.environ.get("NAUTOBOT_PUBLIC_URL", "http://192.168.50.231:8080")
 app = FastAPI(title="Lab hub", version="1.0", description="Every lab on this host at a glance: VM state, portal health, last tests, links.")
 
