@@ -1,0 +1,47 @@
+# Alerts derived from the VyOS nodes' syslog in VictoriaLogs (evaluated by vmalert; rule type vlogs = LogsQL).
+# FRR logs routing state changes at informational — srv6-core/tools/frr_logging.py raises the level on every node.
+# VyOS's rsyslog forwards every FRR line twice (socket + journal): `uniq` before counting. vmalert evaluates a vlogs group over
+# the last `interval` (the `_time` filter in the expression cannot widen it), so an event keeps its alert firing for about
+# one interval; the ALERTS series in VictoriaMetrics (remote write) is what the dashboards annotate from.
+groups:
+  - name: routing-events
+    type: vlogs
+    interval: 1m
+    rules:
+      - alert: BgpNeighborDownLogged
+        expr: '_time:3m app_name:bgpd "%ADJCHANGE" "Down" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as downs'
+        labels: {severity: warning, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: bgpd logged {{ $value }} neighbour Down transition(s) in the last 3 minutes"}
+      - alert: IsisAdjacencyChangeLogged
+        expr: '_time:3m app_name:isisd "ADJCHANGE" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as changes'
+        labels: {severity: warning, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: isisd logged {{ $value }} adjacency change(s) in the last 3 minutes"}
+      - alert: BfdSessionChangeLogged
+        expr: '_time:3m app_name:bfdd ("state-change" OR "Down" OR "down") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as changes'
+        labels: {severity: warning, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: bfdd logged {{ $value }} session change(s) in the last 3 minutes"}
+      - alert: FrrDaemonRestarted
+        expr: '_time:5m app_name:watchfrr ("restart" OR "crash" OR "Restarting") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as events'
+        labels: {severity: critical, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: watchfrr restarted a routing daemon"}
+      - alert: ZebraRouteInstallFailure
+        expr: '_time:5m app_name:zebra ("netlink-dp" AND "error") -"platform_labels" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as errors'
+        labels: {severity: warning, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: zebra failed to install {{ $value }} route(s) in the kernel"}
+
+  - name: operations-events
+    type: vlogs
+    interval: 1m
+    rules:
+      - alert: ConfigCommitted                     # informational: shows on the alert list and as an event while it lasts
+        expr: '_time:5m app_name:commit "Successful change" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as commits'
+        labels: {severity: info, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: {{ $value }} configuration commit(s) in the last 5 minutes"}
+      - alert: SshAuthFailures
+        expr: '_time:10m app_name:sshd ("Failed password" OR "Invalid user") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as failures | filter failures:>5'
+        labels: {severity: warning, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: {{ $value }} SSH authentication failures in 10 minutes"}
+      - alert: NodeSyslogSilent
+        expr: '_time:10m * | stats by (hostname) count() as lines | filter lines:<1'
+        labels: {severity: warning, source: syslog}
+        annotations: {summary: "{{ $labels.hostname }}: no syslog for 10 minutes"}

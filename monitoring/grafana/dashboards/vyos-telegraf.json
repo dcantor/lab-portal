@@ -15,6 +15,81 @@
   "from": "now-3h",
   "to": "now"
  },
+ "annotations": {
+  "list": [
+   {
+    "name": "Runs and tests",
+    "enable": true,
+    "iconColor": "#5794F2",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "run"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Test events (failover, reflector)",
+    "enable": true,
+    "iconColor": "#F2495C",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "test"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Steering changes",
+    "enable": true,
+    "iconColor": "#FF9830",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "steering"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Router syslog alerts (vmalert-logs)",
+    "enable": true,
+    "iconColor": "#B877D9",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "expr": "ALERTS{lab=\"srv6-core\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{hostname}}",
+    "tagKeys": "alertname,hostname"
+   }
+  ]
+ },
  "templating": {
   "list": [
    {
@@ -655,6 +730,65 @@
   },
   {
    "id": 14,
+   "title": "Log-derived alerts (vmalert-logs), last 3 h",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 27,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "max by (alertname, hostname) (ALERTS{lab=\"$lab\",evaluator=\"vmalert-logs\"})",
+     "legendFormat": "{{alertname}} {{hostname}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "1": {
+         "text": "firing",
+         "color": "red"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 15,
    "title": "Routing daemons: BGP / IS-IS / BFD / zebra syslog",
    "type": "logs",
    "datasource": {
@@ -663,7 +797,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 27,
+    "y": 34,
     "w": 24,
     "h": 10
    },
@@ -674,7 +808,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "app_name:in(bgpd, isisd, bfdd, zebra, staticd, vtysh)",
+     "expr": "app_name:in(bgpd, isisd, bfdd, zebra, staticd, vtysh) | uniq by (_time, hostname, _msg)",
      "legendFormat": ""
     }
    ],
@@ -689,7 +823,7 @@
    }
   },
   {
-   "id": 15,
+   "id": 16,
    "title": "Commits and configuration changes (vyos-configd / commit)",
    "type": "logs",
    "datasource": {

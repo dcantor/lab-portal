@@ -18,6 +18,21 @@ services:
     ports: ["9428:9428", "5514:5514/udp"]
     volumes: ["vl_data:/vlogs"]
 
+  vmalert-logs:                                   # log-derived alerts: LogsQL rules against VictoriaLogs; alert state written to VictoriaMetrics (ALERTS)
+    image: victoriametrics/vmalert:v1.152.0
+    restart: unless-stopped
+    command:
+      - --datasource.url=http://victorialogs:9428
+      - --rule=/etc/vmalert/logs-alerts.yml
+      - --remoteWrite.url=http://victoriametrics:8428
+      - --external.label=lab=srv6-core
+      - --external.label=evaluator=vmalert-logs
+      - --notifier.blackhole                     # no Alertmanager yet: alert state lives in VictoriaMetrics (ALERTS) and on :8880
+      - --httpListenAddr=:8880
+    ports: ["8880:8880"]
+    volumes: ["./vmalert:/etc/vmalert:ro"]
+    depends_on: [victorialogs, victoriametrics]
+
   prometheus:
     image: prom/prometheus:v3.14.0
     restart: unless-stopped

@@ -37,9 +37,20 @@ BGP_MAP = [{"type": "value", "options": {"0": {"text": "down", "color": "red"}, 
 GB = {"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 70}, {"color": "red", "value": 90}]}
 
 
-def dashboard(uid, title, panels, tags, variables=None, refresh="30s"):
+def annotations(lab):
+    """Event overlays: what the portal / the tests / the steering tool did (Grafana annotations by tag) and what the routers'
+    syslog said (vmalert-logs alerts, as ALERTS series in VictoriaMetrics)."""
+    return {"list": [
+        {"name": "Runs and tests", "enable": True, "iconColor": "#5794F2", "datasource": {"type": "grafana", "uid": "-grafana-"}, "type": "tags", "target": {"type": "tags", "tags": [lab, "run"], "matchAny": False, "limit": 200}},
+        {"name": "Test events (failover, reflector)", "enable": True, "iconColor": "#F2495C", "datasource": {"type": "grafana", "uid": "-grafana-"}, "type": "tags", "target": {"type": "tags", "tags": [lab, "test"], "matchAny": False, "limit": 200}},
+        {"name": "Steering changes", "enable": True, "iconColor": "#FF9830", "datasource": {"type": "grafana", "uid": "-grafana-"}, "type": "tags", "target": {"type": "tags", "tags": [lab, "steering"], "matchAny": False, "limit": 200}},
+        {"name": "Router syslog alerts (vmalert-logs)", "enable": True, "iconColor": "#B877D9", "datasource": VM, "expr": f'ALERTS{{lab="{lab}",evaluator="vmalert-logs",alertstate="firing",severity!="info"}}', "step": "30s", "titleFormat": "{{alertname}}", "textFormat": "{{hostname}}", "tagKeys": "alertname,hostname"},
+    ]}
+
+
+def dashboard(uid, title, panels, tags, variables=None, refresh="30s", lab="srv6-core"):
     return {"uid": uid, "title": title, "tags": tags, "timezone": "browser", "schemaVersion": 39, "version": 1, "editable": True, "refresh": refresh, "time": {"from": "now-3h", "to": "now"},
-            "templating": {"list": variables or []}, "panels": panels, "links": [{"title": "Lab hub", "type": "link", "url": "http://192.168.50.231:8088", "targetBlank": True},
+            "annotations": annotations(lab), "templating": {"list": variables or []}, "panels": panels, "links": [{"title": "Lab hub", "type": "link", "url": "http://192.168.50.231:8088", "targetBlank": True},
                                                                                 {"title": "Prometheus alerts", "type": "link", "url": "http://192.168.50.231:9090/alerts", "targetBlank": True}]}
 
 
@@ -53,7 +64,8 @@ p.append(panel("Steering policies", "stat", [(f"lab_steering_policies{{{L}}}", "
 p.append(panel("Last test run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 13, 1, 5, 4, colorMode="value",
                overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}]},
                           {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}]}}]}]))
-p.append(panel("Firing alerts", "stat", [('count(ALERTS{alertstate="firing"}) or vector(0)', "firing")], 18, 1, 6, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Firing alerts (metrics)", "stat", [('count(ALERTS{alertstate="firing"}) or vector(0)', "firing")], 18, 1, 3, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Firing alerts (syslog)", "stat", [(f'count(ALERTS{{{L},evaluator="vmalert-logs",alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 21, 1, 3, 4, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
 p.append(panel("PE - CE eBGP per tenant site", "state-timeline", [(f"lab_tenant_site_bgp_up{{{L}}}", "{{tenant}} {{dc}} ({{pe}}-{{ce}})")], 0, 5, 12, 8, mappings=SITE_MAP, thresholds=UPDOWN))
 p.append(panel("Tenant host reachability (SSH over OOB)", "state-timeline", [(f"lab_host_reachable{{{L}}}", "{{host}} ({{tenant}})")], 12, 5, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("VRF routes on the PE per tenant site", "timeseries", [(f"lab_tenant_vrf_routes{{{L}}}", "{{tenant}} {{dc}} total"), (f"lab_tenant_srv6_routes{{{L}}}", "{{tenant}} {{dc}} SRv6")], 0, 13, 12, 7, min=0))
@@ -133,7 +145,8 @@ p.append(panel("NIC drops / s (ethtool)", "timeseries", [(f'rate(ethtool_rx_drop
 p.append(panel("Conntrack entries", "timeseries", [(f'conntrack_ip_conntrack_count{{{T}}}', "{{host}}")], 0, 20, 8, 7, min=0))
 p.append(panel("Memory used % (Telegraf)", "timeseries", [(f'mem_used_percent{{{T}}}', "{{host}}")], 8, 20, 8, 7, unit="percent", min=0, max=100))
 p.append(panel("Interrupts / s", "timeseries", [(f'sum by (host) (rate(interrupts_total{{{T}}}[2m]))', "{{host}}")], 16, 20, 8, 7, min=0))
-p.append(panel("Routing daemons: BGP / IS-IS / BFD / zebra syslog", "logs", [('app_name:in(bgpd, isisd, bfdd, zebra, staticd, vtysh)', "")], 0, 27, 24, 10, ds=VL, showTime=True, wrapLogMessage=True, sortOrder="Descending"))
+p.append(panel("Log-derived alerts (vmalert-logs), last 3 h", "state-timeline", [(f'max by (alertname, hostname) (ALERTS{{{T},evaluator="vmalert-logs"}})', "{{alertname}} {{hostname}}")], 0, 27, 24, 7, mappings=[{"type": "value", "options": {"1": {"text": "firing", "color": "red"}}}], thresholds={"steps": [{"color": "red", "value": None}]}))
+p.append(panel("Routing daemons: BGP / IS-IS / BFD / zebra syslog", "logs", [('app_name:in(bgpd, isisd, bfdd, zebra, staticd, vtysh) | uniq by (_time, hostname, _msg)', "")], 0, 34, 24, 10, ds=VL, showTime=True, wrapLogMessage=True, sortOrder="Descending"))
 p.append(panel("Commits and configuration changes (vyos-configd / commit)", "logs", [('app_name:in(vyos-configd, commit, vyos-commitd) OR _msg:"commit"', "")], 0, 37, 24, 8, ds=VL, showTime=True, wrapLogMessage=True, sortOrder="Descending"))
 (OUT / "vyos-telegraf.json").write_text(json.dumps(dashboard("vyos-telegraf", "VyOS telemetry: Telegraf and syslog", p, ["lab", "vyos", "telegraf"], TV), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

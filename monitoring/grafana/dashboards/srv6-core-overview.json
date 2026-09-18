@@ -14,6 +14,81 @@
   "from": "now-3h",
   "to": "now"
  },
+ "annotations": {
+  "list": [
+   {
+    "name": "Runs and tests",
+    "enable": true,
+    "iconColor": "#5794F2",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "run"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Test events (failover, reflector)",
+    "enable": true,
+    "iconColor": "#F2495C",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "test"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Steering changes",
+    "enable": true,
+    "iconColor": "#FF9830",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srv6-core",
+      "steering"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Router syslog alerts (vmalert-logs)",
+    "enable": true,
+    "iconColor": "#B877D9",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "expr": "ALERTS{lab=\"srv6-core\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{hostname}}",
+    "tagKeys": "alertname,hostname"
+   }
+  ]
+ },
  "templating": {
   "list": []
  },
@@ -292,7 +367,7 @@
   },
   {
    "id": 6,
-   "title": "Firing alerts",
+   "title": "Firing alerts (metrics)",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
@@ -301,7 +376,7 @@
    "gridPos": {
     "x": 18,
     "y": 1,
-    "w": 6,
+    "w": 3,
     "h": 4
    },
    "targets": [
@@ -345,6 +420,59 @@
   },
   {
    "id": 7,
+   "title": "Firing alerts (syslog)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 21,
+    "y": 1,
+    "w": 3,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(ALERTS{lab=\"srv6-core\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}) or vector(0)",
+     "legendFormat": "firing"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 8,
    "title": "PE - CE eBGP per tenant site",
    "type": "state-timeline",
    "datasource": {
@@ -411,7 +539,7 @@
    }
   },
   {
-   "id": 8,
+   "id": 9,
    "title": "Tenant host reachability (SSH over OOB)",
    "type": "state-timeline",
    "datasource": {
@@ -478,7 +606,7 @@
    }
   },
   {
-   "id": 9,
+   "id": 10,
    "title": "VRF routes on the PE per tenant site",
    "type": "timeseries",
    "datasource": {
@@ -528,7 +656,7 @@
    }
   },
   {
-   "id": 10,
+   "id": 11,
    "title": "Prefixes from the CEs (frr-exporter, per PE VRF session)",
    "type": "timeseries",
    "datasource": {
@@ -569,7 +697,7 @@
    }
   },
   {
-   "id": 11,
+   "id": 12,
    "type": "row",
    "title": "Core: IS-IS, BFD, VPNv4",
    "collapsed": false,
@@ -582,7 +710,7 @@
    "panels": []
   },
   {
-   "id": 12,
+   "id": 13,
    "title": "IS-IS adjacencies up vs expected",
    "type": "timeseries",
    "datasource": {
@@ -659,7 +787,7 @@
    }
   },
   {
-   "id": 13,
+   "id": 14,
    "title": "BFD sessions up per node",
    "type": "timeseries",
    "datasource": {
@@ -700,7 +828,7 @@
    }
   },
   {
-   "id": 14,
+   "id": 15,
    "title": "VPNv4 sessions PE - route reflector",
    "type": "state-timeline",
    "datasource": {
@@ -767,7 +895,7 @@
    }
   },
   {
-   "id": 15,
+   "id": 16,
    "title": "BGP peers (frr-exporter): every session on every node",
    "type": "state-timeline",
    "datasource": {
@@ -838,7 +966,7 @@
    }
   },
   {
-   "id": 16,
+   "id": 17,
    "title": "Routes in the RIB / FIB per node (frr-exporter)",
    "type": "timeseries",
    "datasource": {
@@ -888,7 +1016,7 @@
    }
   },
   {
-   "id": 17,
+   "id": 18,
    "type": "row",
    "title": "Nodes: CPU, memory, links",
    "collapsed": false,
@@ -901,7 +1029,7 @@
    "panels": []
   },
   {
-   "id": 18,
+   "id": 19,
    "title": "CPU busy %",
    "type": "timeseries",
    "datasource": {
@@ -944,7 +1072,7 @@
    }
   },
   {
-   "id": 19,
+   "id": 20,
    "title": "Memory used %",
    "type": "timeseries",
    "datasource": {
@@ -987,7 +1115,7 @@
    }
   },
   {
-   "id": 20,
+   "id": 21,
    "title": "Load (1 min)",
    "type": "timeseries",
    "datasource": {
@@ -1028,7 +1156,7 @@
    }
   },
   {
-   "id": 21,
+   "id": 22,
    "title": "Core link traffic (bit/s, PE and P data ports, received)",
    "type": "timeseries",
    "datasource": {
@@ -1070,7 +1198,7 @@
    }
   },
   {
-   "id": 22,
+   "id": 23,
    "title": "Tenant host traffic (bit/s, transmitted)",
    "type": "timeseries",
    "datasource": {
@@ -1112,7 +1240,7 @@
    }
   },
   {
-   "id": 23,
+   "id": 24,
    "title": "Exporters up",
    "type": "state-timeline",
    "datasource": {

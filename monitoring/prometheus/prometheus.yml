@@ -36,3 +36,5 @@ scrape_configs:
         labels: {component: grafana}
       - targets: [victorialogs:9428]
         labels: {component: victorialogs}
+      - targets: [vmalert-logs:8880]
+        labels: {component: vmalert-logs}

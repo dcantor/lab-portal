@@ -40,6 +40,8 @@ Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `l
 ## Monitoring (`monitoring/`)
 Prometheus + VictoriaMetrics + Grafana for every lab, deployed on the NMS with `monitoring/deploy.sh`. Portals expose
 `/api/sd` (service discovery) and `/metrics`; `labportal.metrics` has the exposition helper and the run / test metrics
-common to every portal; VyOS nodes push Telegraf metrics into VictoriaMetrics and syslog into VictoriaLogs. See
+common to every portal; `labportal.grafana` posts annotations (every run is a region on the dashboards); VyOS nodes push
+Telegraf metrics into VictoriaMetrics and syslog into VictoriaLogs, where vmalert turns routing-daemon log lines into
+alerts. See
 [monitoring/README.md](monitoring/README.md). The hub links to Grafana per lab and to the
 Prometheus targets / alerts.

@@ -55,8 +55,12 @@ class RunBase:
     def after(self):
         """Hook after a run finishes (any status) — e.g. invalidate caches."""
 
+    LAB = "lab"   # Grafana annotation tag (a portal sets its lab name)
+
     def execute(self):
         self.status = "running"; self.persist()
+        from . import grafana
+        ann = grafana.annotate(f"{self.LAB}: run {self.mode} started ({self.id})", tags=[self.LAB, "run", self.mode])
         try:
             for s in self.steps:
                 if s["status"] == "success": continue
@@ -71,6 +75,7 @@ class RunBase:
                 if s["status"] == "pending": s["status"] = "skipped"
             self.error = str(e); self.status = "failed"; self.say(f"!! {e}")
         self.finished = time.time(); self.persist()
+        grafana.update(ann, text=f"{self.LAB}: run {self.mode} {self.status} ({self.id})" + (f" — {self.error}" if self.error else ""), end=self.finished, tags=[self.LAB, "run", self.mode, self.status])
         try: self.after()
         except Exception: pass
 
