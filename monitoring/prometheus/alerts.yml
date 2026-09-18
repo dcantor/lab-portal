@@ -1,0 +1,79 @@
+# Alert rules for the labs (evaluated by Prometheus; state visible at :9090/alerts and on the Grafana overview).
+groups:
+  - name: lab-exporters
+    rules:
+      - alert: ExporterDown    # only for VMs the portal reports as running: a powered-off lab is a normal state
+        expr: (up{job=~"node|frr"} == 0) and on (lab, node) (lab_vm_running == 1)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.job }} exporter on {{ $labels.node }} ({{ $labels.instance }}) not scraped for 2 minutes"}
+      - alert: PortalDown
+        expr: up{job="portal"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "the {{ $labels.lab }} portal ({{ $labels.instance }}) is not answering"}
+      - alert: PortalCollectorStale    # only while the lab runs
+        expr: (time() - lab_collector_last_refresh_seconds > 600) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "the {{ $labels.lab }} portal has not refreshed its live state for 10 minutes"}
+
+  - name: srv6-core
+    rules:
+      - alert: TenantHostUnreachable
+        expr: (lab_host_reachable == 0) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.host }} ({{ $labels.tenant }}, {{ $labels.dc }}) does not answer SSH"}
+      - alert: TenantSiteBgpDown
+        expr: (lab_tenant_site_bgp_up == 0) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.tenant }} {{ $labels.dc }}: eBGP {{ $labels.pe }} - {{ $labels.ce }} is not Established"}
+      - alert: TenantDegraded
+        expr: (lab_tenant_health < 2) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.tenant }} is {{ if eq $value 1.0 }}degraded{{ else }}down{{ end }}"}
+      - alert: IsisAdjacencyMissing
+        expr: (lab_isis_adjacencies_up < lab_isis_adjacencies_expected) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} IS-IS adjacencies up, fewer than its core links"}
+      - alert: BfdSessionDown
+        expr: (lab_bfd_sessions_up < lab_isis_adjacencies_expected) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: a BFD session is down ({{ $value }} up)"}
+      - alert: VpnV4SessionDown
+        expr: (lab_vpnv4_session_up == 0) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.pe }}: VPNv4 session to route reflector {{ $labels.reflector }} down"}
+      - alert: FrrBgpPeerDown
+        expr: (frr_bgp_peer_state{job="frr"} != 1) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: BGP peer {{ $labels.peer }} ({{ $labels.vrf }} {{ $labels.safi }}) not Established"}
+      - alert: LabTestsFailed
+        expr: lab_tests_last_failed > 0
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.lab }}: {{ $value }} Robot test(s) failed in the last run"}
+
+  - name: nodes
+    rules:
+      - alert: NodeHighCpu
+        expr: 100 * (1 - avg by (node, role, lab) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 85
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: CPU {{ $value | printf \"%.0f\" }} % for 10 minutes"}
+      - alert: NodeLowMemory
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: less than 10 % memory available"}
+      - alert: NodeDiskFull    # the persistent disk: "/" on the hosts, the persistence mount on VyOS (live-boot overlay)
+        expr: node_filesystem_avail_bytes{mountpoint=~"/|/usr/lib/live/mount/persistence",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint=~"/|/usr/lib/live/mount/persistence",fstype!="tmpfs"} < 0.1
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: {{ $labels.mountpoint }} under 10 % free"}

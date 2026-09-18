@@ -1,0 +1,11 @@
+[Unit]
+Description=Relay grafana (lab NMS 10.0.0.10:3001) to the LAN on port 3001
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/socat TCP-LISTEN:3001,fork,reuseaddr,bind=192.168.50.231 TCP:10.0.0.10:3001
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

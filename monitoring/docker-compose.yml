@@ -1,0 +1,49 @@
+# Lab monitoring on the NMS: Prometheus scrapes (targets discovered from each lab portal's /api/sd) and evaluates the alert
+# rules; VictoriaMetrics keeps the long-term series (remote_write; 180 days); Grafana (port 3001 — Gitea has 3000) reads
+# VictoriaMetrics for the dashboards and Prometheus for the alert state.        deploy: ../monitoring/deploy.sh
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.152.0
+    restart: unless-stopped
+    command: ["--storageDataPath=/storage", "--retentionPeriod=180d", "--httpListenAddr=:8428"]
+    ports: ["8428:8428"]
+    volumes: ["vm_data:/storage"]
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2d          # short: VictoriaMetrics is the store of record
+      - --web.enable-lifecycle                     # POST /-/reload after a config change
+      - --web.enable-remote-write-receiver
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prom_data:/prometheus
+    depends_on: [victoriametrics]
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    restart: unless-stopped
+    environment:
+      GF_SERVER_HTTP_PORT: "3001"
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"           # lab: dashboards readable without a login
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: light
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    ports: ["3001:3001"]
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on: [victoriametrics, prometheus]
+
+volumes:
+  vm_data:
+  prom_data:
+  grafana_data:

@@ -36,3 +36,9 @@ configuration repo and GitHub. Read-only by design — it never starts, stops or
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)
+
+## Monitoring (`monitoring/`)
+Prometheus + VictoriaMetrics + Grafana for every lab, deployed on the NMS with `monitoring/deploy.sh`. Portals expose
+`/api/sd` (service discovery) and `/metrics`; `labportal.metrics` has the exposition helper and the run / test metrics
+common to every portal. See [monitoring/README.md](monitoring/README.md). The hub links to Grafana per lab and to the
+Prometheus targets / alerts.

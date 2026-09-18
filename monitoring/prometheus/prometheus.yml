@@ -1,0 +1,36 @@
+# Targets come from each lab portal's HTTP service discovery (/api/sd): every VyOS node-exporter (:9100) and frr-exporter
+# (:9342), every tenant host's node-exporter and the portal itself (/metrics: tenant health, IS-IS / BFD, VPNv4 sessions,
+# test results). The SD labels (lab, node, role, dc, tenant, job) override the scrape job's own.
+global:
+  scrape_interval: 30s
+  scrape_timeout: 20s
+  evaluation_interval: 30s
+  external_labels: {site: nms}
+
+rule_files: [alerts.yml]
+
+remote_write:
+  - url: http://victoriametrics:8428/api/v1/write
+    queue_config: {max_samples_per_send: 5000, batch_send_deadline: 5s}
+
+scrape_configs:
+  - job_name: srv6-core
+    http_sd_configs: [{url: http://10.3.0.1:8091/api/sd, refresh_interval: 60s}]
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}     # keep ip:port as the instance
+    metric_relabel_configs:                                          # node-exporter: drop what a lab never looks at
+      - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
+
+  - job_name: cat8000v-ipsec
+    http_sd_configs: [{url: http://10.2.0.1:8090/api/sd, refresh_interval: 60s}]
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
+  - job_name: monitoring
+    static_configs:
+      - targets: [prometheus:9090]
+        labels: {component: prometheus}
+      - targets: [victoriametrics:8428]
+        labels: {component: victoriametrics}
+      - targets: [grafana:3001]
+        labels: {component: grafana}
