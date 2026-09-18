@@ -45,3 +45,11 @@ Telegraf metrics into VictoriaMetrics and syslog into VictoriaLogs, where vmaler
 alerts. See
 [monitoring/README.md](monitoring/README.md). The hub links to Grafana per lab and to the
 Prometheus targets / alerts.
+
+## `lab-mcp` — the labs as tools for an AI operator
+`labportal/mcp/server.py` (`pip install -e ".[mcp]"`, entry point `lab-mcp`, stdio) exposes 19 read-only tools over the
+labs: state, inventory, show / shell commands on routers and hosts, the ping matrix, the portal's live view, PromQL on
+VictoriaMetrics, LogsQL on VictoriaLogs (syslog and flows), alerts, Grafana events, Nautobot GraphQL, intended vs
+running configuration drift, and the test suites. `vyos_configure` is refused unless `LAB_MCP_ALLOW_WRITE=1`; every
+command and change is audited in `~/.config/lab-hub/mcp-audit.jsonl`. See `srv6-core/docs/ai-ops.md` for the setup,
+the fault-injection drill and a worked diagnosis.

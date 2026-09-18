@@ -9,8 +9,12 @@ description = "Shared machinery for the lab portals (cat8000v-ipsec, srv6-core):
 requires-python = ">=3.11"
 dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "requests>=2.31"]
 
+[project.optional-dependencies]
+mcp = ["mcp>=2", "paramiko>=3", "netmiko>=4"]
+
 [project.scripts]
 lab-hub = "labportal.hub.app:main"
+lab-mcp = "labportal.mcp.server:main"
 
 [tool.setuptools.packages.find]
 include = ["labportal*"]
