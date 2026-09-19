@@ -698,19 +698,104 @@
   },
   {
    "id": 12,
+   "title": "Internet breakout: firewall, eBGP per tenant, default route per tenant VRF on every PE",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 20,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_internet_fw_reachable{lab=\"srv6-core\"}",
+     "legendFormat": "{{fw}} reachable"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_internet_bgp_up{lab=\"srv6-core\"}",
+     "legendFormat": "eBGP {{pe}} - fw ({{tenant}})"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_internet_default_route{lab=\"srv6-core\"}",
+     "legendFormat": "0/0 on {{pe}} ({{tenant}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 13,
    "type": "row",
    "title": "Core: IS-IS, BFD, VPNv4",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 20,
+    "y": 27,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 13,
+   "id": 14,
    "title": "IS-IS adjacencies up vs expected",
    "type": "timeseries",
    "datasource": {
@@ -719,7 +804,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 21,
+    "y": 28,
     "w": 8,
     "h": 7
    },
@@ -787,7 +872,7 @@
    }
   },
   {
-   "id": 14,
+   "id": 15,
    "title": "BFD sessions up per node",
    "type": "timeseries",
    "datasource": {
@@ -796,7 +881,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 21,
+    "y": 28,
     "w": 8,
     "h": 7
    },
@@ -828,7 +913,7 @@
    }
   },
   {
-   "id": 15,
+   "id": 16,
    "title": "VPNv4 sessions PE - route reflector",
    "type": "state-timeline",
    "datasource": {
@@ -837,7 +922,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 21,
+    "y": 28,
     "w": 8,
     "h": 7
    },
@@ -895,7 +980,7 @@
    }
   },
   {
-   "id": 16,
+   "id": 17,
    "title": "BGP peers (frr-exporter): every session on every node",
    "type": "state-timeline",
    "datasource": {
@@ -904,7 +989,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 28,
+    "y": 35,
     "w": 12,
     "h": 9
    },
@@ -966,7 +1051,7 @@
    }
   },
   {
-   "id": 17,
+   "id": 18,
    "title": "Routes in the RIB / FIB per node (frr-exporter)",
    "type": "timeseries",
    "datasource": {
@@ -975,7 +1060,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 28,
+    "y": 35,
     "w": 12,
     "h": 9
    },
@@ -1016,20 +1101,20 @@
    }
   },
   {
-   "id": 18,
+   "id": 19,
    "type": "row",
    "title": "Nodes: CPU, memory, links",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 37,
+    "y": 44,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 19,
+   "id": 20,
    "title": "CPU busy %",
    "type": "timeseries",
    "datasource": {
@@ -1038,7 +1123,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 38,
+    "y": 45,
     "w": 8,
     "h": 8
    },
@@ -1072,7 +1157,7 @@
    }
   },
   {
-   "id": 20,
+   "id": 21,
    "title": "Memory used %",
    "type": "timeseries",
    "datasource": {
@@ -1081,7 +1166,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 38,
+    "y": 45,
     "w": 8,
     "h": 8
    },
@@ -1115,7 +1200,7 @@
    }
   },
   {
-   "id": 21,
+   "id": 22,
    "title": "Load (1 min)",
    "type": "timeseries",
    "datasource": {
@@ -1124,7 +1209,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 38,
+    "y": 45,
     "w": 8,
     "h": 8
    },
@@ -1156,7 +1241,7 @@
    }
   },
   {
-   "id": 22,
+   "id": 23,
    "title": "Core link traffic (bit/s, PE and P data ports, received)",
    "type": "timeseries",
    "datasource": {
@@ -1165,7 +1250,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 46,
+    "y": 53,
     "w": 12,
     "h": 8
    },
@@ -1198,7 +1283,7 @@
    }
   },
   {
-   "id": 23,
+   "id": 24,
    "title": "Tenant host traffic (bit/s, transmitted)",
    "type": "timeseries",
    "datasource": {
@@ -1207,7 +1292,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 46,
+    "y": 53,
     "w": 12,
     "h": 8
    },
@@ -1240,7 +1325,7 @@
    }
   },
   {
-   "id": 24,
+   "id": 25,
    "title": "Exporters up",
    "type": "state-timeline",
    "datasource": {
@@ -1249,7 +1334,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 54,
+    "y": 61,
     "w": 24,
     "h": 8
    },

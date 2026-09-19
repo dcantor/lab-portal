@@ -35,6 +35,11 @@ groups:
         for: 2m
         labels: {severity: critical}
         annotations: {summary: "{{ $labels.tenant }} is {{ if eq $value 1.0 }}degraded{{ else }}down{{ end }}"}
+      - alert: InternetBreakoutDown
+        expr: ((lab_internet_bgp_up == 0) or (lab_internet_default_route == 0) or (lab_internet_fw_reachable == 0)) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "internet breakout: {{ if $labels.pe }}{{ $labels.tenant }} on {{ $labels.pe }}{{ else }}{{ $labels.fw }}{{ end }} — session down, no default route, or the firewall unreachable"}
       - alert: IsisAdjacencyMissing
         expr: (lab_isis_adjacencies_up < lab_isis_adjacencies_expected) and on (lab) (sum by (lab) (lab_vm_running) > 0)
         for: 1m

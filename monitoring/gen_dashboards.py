@@ -70,22 +70,24 @@ p.append(panel("PE - CE eBGP per tenant site", "state-timeline", [(f"lab_tenant_
 p.append(panel("Tenant host reachability (SSH over OOB)", "state-timeline", [(f"lab_host_reachable{{{L}}}", "{{host}} ({{tenant}})")], 12, 5, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("VRF routes on the PE per tenant site", "timeseries", [(f"lab_tenant_vrf_routes{{{L}}}", "{{tenant}} {{dc}} total"), (f"lab_tenant_srv6_routes{{{L}}}", "{{tenant}} {{dc}} SRv6")], 0, 13, 12, 7, min=0))
 p.append(panel("Prefixes from the CEs (frr-exporter, per PE VRF session)", "timeseries", [(f'frr_bgp_peer_prefixes_received_count_total{{{L},safi="unicast"}}', "{{node}} {{vrf}} from {{peer}}")], 12, 13, 12, 7, min=0))
+p.append(panel("Internet breakout: firewall, eBGP per tenant, default route per tenant VRF on every PE", "state-timeline",
+               [(f"lab_internet_fw_reachable{{{L}}}", "{{fw}} reachable"), (f"lab_internet_bgp_up{{{L}}}", "eBGP {{pe}} - fw ({{tenant}})"), (f"lab_internet_default_route{{{L}}}", "0/0 on {{pe}} ({{tenant}})")], 0, 20, 24, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 
-p.append(row("Core: IS-IS, BFD, VPNv4", 20))
-p.append(panel("IS-IS adjacencies up vs expected", "timeseries", [(f"lab_isis_adjacencies_up{{{L}}}", "{{node}} up"), (f"lab_isis_adjacencies_expected{{{L}}}", "{{node}} expected", {"hide": False})], 0, 21, 8, 7, min=0,
+p.append(row("Core: IS-IS, BFD, VPNv4", 27))
+p.append(panel("IS-IS adjacencies up vs expected", "timeseries", [(f"lab_isis_adjacencies_up{{{L}}}", "{{node}} up"), (f"lab_isis_adjacencies_expected{{{L}}}", "{{node}} expected", {"hide": False})], 0, 28, 8, 7, min=0,
                overrides=[{"matcher": {"id": "byRegexp", "options": ".* expected"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}]}]))
-p.append(panel("BFD sessions up per node", "timeseries", [(f"lab_bfd_sessions_up{{{L}}}", "{{node}}")], 8, 21, 8, 7, min=0))
-p.append(panel("VPNv4 sessions PE - route reflector", "state-timeline", [(f"lab_vpnv4_session_up{{{L}}}", "{{pe}} -> {{reflector}}")], 16, 21, 8, 7, mappings=SITE_MAP, thresholds=UPDOWN))
-p.append(panel("BGP peers (frr-exporter): every session on every node", "state-timeline", [(f'frr_bgp_peer_state{{{L}}}', "{{node}} {{vrf}} {{safi}} {{peer}}")], 0, 28, 12, 9, mappings=BGP_MAP, thresholds=UPDOWN))
-p.append(panel("Routes in the RIB / FIB per node (frr-exporter)", "timeseries", [(f'sum by (node) (frr_route_total{{{L}}})', "{{node}} RIB"), (f'sum by (node) (frr_route_total_fib{{{L}}})', "{{node}} FIB")], 12, 28, 12, 9, min=0))
+p.append(panel("BFD sessions up per node", "timeseries", [(f"lab_bfd_sessions_up{{{L}}}", "{{node}}")], 8, 28, 8, 7, min=0))
+p.append(panel("VPNv4 sessions PE - route reflector", "state-timeline", [(f"lab_vpnv4_session_up{{{L}}}", "{{pe}} -> {{reflector}}")], 16, 28, 8, 7, mappings=SITE_MAP, thresholds=UPDOWN))
+p.append(panel("BGP peers (frr-exporter): every session on every node", "state-timeline", [(f'frr_bgp_peer_state{{{L}}}', "{{node}} {{vrf}} {{safi}} {{peer}}")], 0, 35, 12, 9, mappings=BGP_MAP, thresholds=UPDOWN))
+p.append(panel("Routes in the RIB / FIB per node (frr-exporter)", "timeseries", [(f'sum by (node) (frr_route_total{{{L}}})', "{{node}} RIB"), (f'sum by (node) (frr_route_total_fib{{{L}}})', "{{node}} FIB")], 12, 35, 12, 9, min=0))
 
-p.append(row("Nodes: CPU, memory, links", 37))
-p.append(panel("CPU busy %", "timeseries", [(f'100 * (1 - avg by (node) (rate(node_cpu_seconds_total{{{L},mode="idle"}}[5m])))', "{{node}}")], 0, 38, 8, 8, unit="percent", min=0, max=100))
-p.append(panel("Memory used %", "timeseries", [(f'100 * (1 - node_memory_MemAvailable_bytes{{{L}}} / node_memory_MemTotal_bytes{{{L}}})', "{{node}}")], 8, 38, 8, 8, unit="percent", min=0, max=100))
-p.append(panel("Load (1 min)", "timeseries", [(f'node_load1{{{L}}}', "{{node}}")], 16, 38, 8, 8, min=0))
-p.append(panel("Core link traffic (bit/s, PE and P data ports, received)", "timeseries", [(f'rate(node_network_receive_bytes_total{{{L},role=~"pe|p",device=~"eth[1-9]"}}[2m]) * 8', "{{node}} {{device}}")], 0, 46, 12, 8, unit="bps", min=0))
-p.append(panel("Tenant host traffic (bit/s, transmitted)", "timeseries", [(f'rate(node_network_transmit_bytes_total{{{L},role="host",device="eth1"}}[2m]) * 8', "{{node}} ({{tenant}})")], 12, 46, 12, 8, unit="bps", min=0))
-p.append(panel("Exporters up", "state-timeline", [(f'up{{{L}}}', "{{node}} {{job}}")], 0, 54, 24, 8, ds=PROM, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(row("Nodes: CPU, memory, links", 44))
+p.append(panel("CPU busy %", "timeseries", [(f'100 * (1 - avg by (node) (rate(node_cpu_seconds_total{{{L},mode="idle"}}[5m])))', "{{node}}")], 0, 45, 8, 8, unit="percent", min=0, max=100))
+p.append(panel("Memory used %", "timeseries", [(f'100 * (1 - node_memory_MemAvailable_bytes{{{L}}} / node_memory_MemTotal_bytes{{{L}}})', "{{node}}")], 8, 45, 8, 8, unit="percent", min=0, max=100))
+p.append(panel("Load (1 min)", "timeseries", [(f'node_load1{{{L}}}', "{{node}}")], 16, 45, 8, 8, min=0))
+p.append(panel("Core link traffic (bit/s, PE and P data ports, received)", "timeseries", [(f'rate(node_network_receive_bytes_total{{{L},role=~"pe|p",device=~"eth[1-9]"}}[2m]) * 8', "{{node}} {{device}}")], 0, 53, 12, 8, unit="bps", min=0))
+p.append(panel("Tenant host traffic (bit/s, transmitted)", "timeseries", [(f'rate(node_network_transmit_bytes_total{{{L},role="host",device="eth1"}}[2m]) * 8', "{{node}} ({{tenant}})")], 12, 53, 12, 8, unit="bps", min=0))
+p.append(panel("Exporters up", "state-timeline", [(f'up{{{L}}}', "{{node}} {{job}}")], 0, 61, 24, 8, ds=PROM, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "srv6-core-overview.json").write_text(json.dumps(dashboard("srv6-core-overview", "SRv6 core: overview", p, ["srv6-core", "lab"]), indent=1))
 
 # ---------------------------------------------------------------- node detail (any lab, any node)
