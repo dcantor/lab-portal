@@ -82,3 +82,26 @@ groups:
         for: 5m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.node }}: {{ $labels.mountpoint }} under 10 % free"}
+
+  - name: cat8000v-ipsec
+    rules:
+      - alert: TunnelDown
+        expr: (lab_tunnel_health{lab="cat8000v-ipsec"} < 2) and on (lab) (sum by (lab) (lab_vm_running{role="hub"}) > 0)
+        for: 3m
+        labels: {severity: critical}
+        annotations: {summary: "tunnel {{ $labels.tunnel }} ({{ $labels.headend }} <-> {{ $labels.spoke }}) is {{ if eq $value 1.0 }}degraded (IKE up, VTI or eBGP not){{ else }}down{{ end }}"}
+      - alert: HeadendUnreachable
+        expr: (lab_headend_collect_error{lab="cat8000v-ipsec"} == 1) and on (lab) (sum by (lab) (lab_vm_running{role="hub"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "the portal cannot collect live state from {{ $labels.headend }}"}
+      - alert: HeadendCapacityExhausted
+        expr: lab_headend_effective_free{lab="cat8000v-ipsec"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.headend }} has no free tunnel slot left (binding constraint: tunnels, bandwidth or CPU)"}
+      - alert: HeadendCpuHigh
+        expr: lab_headend_cpu_pct{lab="cat8000v-ipsec"} > 80
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.headend }} control-plane CPU at {{ $value }}%"}

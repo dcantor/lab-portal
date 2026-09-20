@@ -29,7 +29,7 @@ python3 gen_dashboards.py    # after editing a panel
 ```
 
 LAN access from the lab host goes through socat relays (`lab-relay-grafana.service.example`; one unit per port, bound to
-the LAN address) — http://192.168.50.231:3001, :9091 (Prometheus — 9090 on the host is Cockpit), :8428, :9428; Nautobot :8080 and Gitea :3000 the same way. The hub links to them.
+the LAN address) — http://192.168.50.231:3001 (dashboards: SRv6 core overview, **C8000v IPsec overview** — tunnels, headend capacity/CPU, from the IPsec portal's `lab_tunnel_*` / `lab_headend_*` gauges), :9091 (Prometheus — 9090 on the host is Cockpit), :8428, :9428; Nautobot :8080 and Gitea :3000 the same way. The hub links to them.
 
 Alerts are gated on the lab being powered on (`lab_vm_running`), so a stopped lab does not raise ExporterDown / tenant
 alerts; only the portals themselves are expected up at all times.

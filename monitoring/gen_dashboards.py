@@ -18,6 +18,7 @@ def panel(title, kind, targets, x, y, w, h, unit=None, ds=VM, legend=True, **opt
     if kind == "stat": p["options"] = {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value_and_name", "colorMode": "background", "graphMode": "none"}
     if kind == "state-timeline": p["options"] = {"showValue": "never", "mergeValues": True, "rowHeight": 0.8, "legend": {"displayMode": "list", "placement": "bottom"}}
     if kind == "table": p["options"] = {"showHeader": True, "cellHeight": "sm", "footer": {"show": False}}
+    if kind == "bargauge": p["options"] = {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "horizontal", "displayMode": "gradient", "showUnfilled": True}
     for k, v in opts.items():
         if k in ("thresholds", "mappings", "min", "max", "decimals", "color", "custom"): p["fieldConfig"]["defaults"][k] = v
         elif k == "overrides": p["fieldConfig"]["overrides"] = v
@@ -89,6 +90,45 @@ p.append(panel("Core link traffic (bit/s, PE and P data ports, received)", "time
 p.append(panel("Tenant host traffic (bit/s, transmitted)", "timeseries", [(f'rate(node_network_transmit_bytes_total{{{L},role="host",device="eth1"}}[2m]) * 8', "{{node}} ({{tenant}})")], 12, 53, 12, 8, unit="bps", min=0))
 p.append(panel("Exporters up", "state-timeline", [(f'up{{{L}}}', "{{node}} {{job}}")], 0, 61, 24, 8, ds=PROM, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "srv6-core-overview.json").write_text(json.dumps(dashboard("srv6-core-overview", "SRv6 core: overview", p, ["srv6-core", "lab"]), indent=1))
+
+# ---------------------------------------------------------------- C8000v IPsec lab overview (the portal's lab_tunnel_* / lab_headend_* gauges)
+_id[0] = 0
+L = 'lab="cat8000v-ipsec"'
+p = []
+p.append(row("Tunnels", 0))
+p.append(panel("Tunnels up", "stat", [(f"lab_tunnels_up{{{L}}}", "up"), (f"lab_tunnels_total{{{L}}}", "modelled")], 0, 1, 5, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "modelled"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}]}], thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Tunnels down or degraded", "stat", [(f"count(lab_tunnel_health{{{L}}} < 2) or vector(0)", "not up")], 5, 1, 4, 4, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Headends running", "stat", [(f'sum(lab_vm_running{{{L},role="hub"}})', "hubs"), (f'sum(lab_vm_running{{{L},role="spoke"}})', "spokes"), (f'sum(lab_vm_running{{{L},role="firewall"}})', "firewalls")], 9, 1, 6, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Last test run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 15, 1, 5, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}]},
+                          {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}]}}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Tunnel health (IKEv2 SA + VTI + eBGP), per tunnel", "state-timeline", [(f"lab_tunnel_health{{{L}}}", "{{tunnel}} ({{region}})")], 0, 5, 14, 10, mappings=HEALTH, thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 2}]}))
+p.append(panel("IKEv2 SA age per tunnel", "timeseries", [(f"lab_tunnel_ike_sa_age_seconds{{{L}}}", "{{tunnel}}")], 14, 5, 10, 5, unit="s", min=0))
+p.append(panel("Prefixes from the spoke per tunnel (eBGP)", "timeseries", [(f"lab_tunnel_bgp_prefixes{{{L}}}", "{{tunnel}}")], 14, 10, 10, 5, min=0))
+p.append(panel("ESP packets per second per tunnel (encaps + decaps on the headend)", "timeseries", [(f"rate(lab_tunnel_esp_encaps_packets_total{{{L}}}[5m])", "{{tunnel}} encaps"), (f"rate(lab_tunnel_esp_decaps_packets_total{{{L}}}[5m])", "{{tunnel}} decaps")], 0, 15, 12, 7, unit="short", min=0))
+p.append(panel("ESP errors per second per tunnel (send + receive)", "timeseries", [(f"rate(lab_tunnel_esp_send_errors_total{{{L}}}[5m]) + rate(lab_tunnel_esp_recv_errors_total{{{L}}}[5m])", "{{tunnel}}")], 12, 15, 12, 7, unit="short", min=0))
+p.append(panel("VTI traffic per tunnel (bit/s, headend side)", "timeseries", [(f"lab_tunnel_in_bps{{{L}}}", "{{tunnel}} in"), (f"lab_tunnel_out_bps{{{L}}}", "{{tunnel}} out")], 0, 22, 24, 7, unit="bps", min=0))
+
+p.append(row("Headends: capacity and resources", 29))
+p.append(panel("Tunnels per headend: up vs modelled vs capacity", "bargauge", [(f"lab_headend_tunnels_up{{{L}}}", "{{headend}} up"), (f"lab_headend_tunnels{{{L}}}", "{{headend}} modelled")], 0, 30, 8, 7, min=0,
+               thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Utilisation of the binding constraint (tunnels / bandwidth / CPU)", "bargauge", [(f"lab_headend_utilisation_pct{{{L}}}", "{{headend}}")], 8, 30, 8, 7, unit="percent", min=0, max=100,
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 70}, {"color": "red", "value": 90}]}))
+p.append(panel("Free tunnel slots (after every constraint)", "bargauge", [(f"lab_headend_effective_free{{{L}}}", "{{headend}}")], 16, 30, 8, 7, min=0, thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 5}]}))
+p.append(panel("Control-plane CPU %", "timeseries", [(f"lab_headend_cpu_pct{{{L}}}", "{{headend}}")], 0, 37, 8, 7, unit="percent", min=0, max=100))
+p.append(panel("QFP (data-plane) CPU %", "timeseries", [(f"lab_headend_qfp_cpu_pct{{{L}}}", "{{headend}}")], 8, 37, 8, 7, unit="percent", min=0, max=100))
+p.append(panel("DRAM used %", "timeseries", [(f"lab_headend_dram_pct{{{L}}}", "{{headend}}")], 16, 37, 8, 7, unit="percent", min=0, max=100))
+p.append(panel("Bandwidth committed vs firewall bandwidth (Mbit/s)", "timeseries", [(f"lab_headend_bandwidth_used_mbps{{{L}}}", "{{headend}} committed"), (f"lab_headend_bandwidth_mbps{{{L}}}", "{{headend}} firewall", {"hide": False})], 0, 44, 12, 7, min=0,
+               overrides=[{"matcher": {"id": "byRegexp", "options": ".* firewall"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}]}]))
+p.append(panel("IKEv2 sessions per headend", "timeseries", [(f"lab_headend_ike_sessions{{{L}}}", "{{headend}}")], 12, 44, 6, 7, min=0))
+p.append(panel("Headend live collection", "state-timeline", [(f"1 - lab_headend_collect_error{{{L}}}", "{{headend}}")], 18, 44, 6, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+
+p.append(row("Lab and runs", 51))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 52, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 52, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+(OUT / "cat8000v-ipsec-overview.json").write_text(json.dumps(dashboard("cat8000v-ipsec-overview", "C8000v IPsec: overview", p, ["cat8000v-ipsec", "lab"], lab="cat8000v-ipsec"), indent=1))
 
 # ---------------------------------------------------------------- node detail (any lab, any node)
 _id[0] = 0

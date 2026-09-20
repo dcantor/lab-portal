@@ -1,0 +1,1416 @@
+{
+ "uid": "cat8000v-ipsec-overview",
+ "title": "C8000v IPsec: overview",
+ "tags": [
+  "cat8000v-ipsec",
+  "lab"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "annotations": {
+  "list": [
+   {
+    "name": "Runs and tests",
+    "enable": true,
+    "iconColor": "#5794F2",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "cat8000v-ipsec",
+      "run"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Test events (failover, reflector)",
+    "enable": true,
+    "iconColor": "#F2495C",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "cat8000v-ipsec",
+      "test"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Steering changes",
+    "enable": true,
+    "iconColor": "#FF9830",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "cat8000v-ipsec",
+      "steering"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Router syslog alerts (vmalert-logs)",
+    "enable": true,
+    "iconColor": "#B877D9",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "expr": "ALERTS{lab=\"cat8000v-ipsec\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{hostname}}",
+    "tagKeys": "alertname,hostname"
+   }
+  ]
+ },
+ "templating": {
+  "list": []
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "row",
+   "title": "Tunnels",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 2,
+   "title": "Tunnels up",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tunnels_up{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tunnels_total{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "modelled"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "modelled"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "gray"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 3,
+   "title": "Tunnels down or degraded",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 5,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(lab_tunnel_health{lab=\"cat8000v-ipsec\"} < 2) or vector(0)",
+     "legendFormat": "not up"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 4,
+   "title": "Headends running",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 9,
+    "y": 1,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_vm_running{lab=\"cat8000v-ipsec\",role=\"hub\"})",
+     "legendFormat": "hubs"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_vm_running{lab=\"cat8000v-ipsec\",role=\"spoke\"})",
+     "legendFormat": "spokes"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_vm_running{lab=\"cat8000v-ipsec\",role=\"firewall\"})",
+     "legendFormat": "firewalls"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 5,
+   "title": "Last test run",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 15,
+    "y": 1,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tests_last_passed{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "passed"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tests_last_failed{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "failed"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "failed"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 1
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "passed"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 6,
+   "title": "Firing alerts",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(ALERTS{lab=\"cat8000v-ipsec\",alertstate=\"firing\"}) or vector(0)",
+     "legendFormat": "firing"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 7,
+   "title": "Tunnel health (IKEv2 SA + VTI + eBGP), per tunnel",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 5,
+    "w": 14,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tunnel_health{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{tunnel}} ({{region}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "degraded",
+         "color": "orange"
+        },
+        "2": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 8,
+   "title": "IKEv2 SA age per tunnel",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 14,
+    "y": 5,
+    "w": 10,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tunnel_ike_sa_age_seconds{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{tunnel}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "title": "Prefixes from the spoke per tunnel (eBGP)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 14,
+    "y": 10,
+    "w": 10,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tunnel_bgp_prefixes{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{tunnel}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 10,
+   "title": "ESP packets per second per tunnel (encaps + decaps on the headend)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 15,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(lab_tunnel_esp_encaps_packets_total{lab=\"cat8000v-ipsec\"}[5m])",
+     "legendFormat": "{{tunnel}} encaps"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(lab_tunnel_esp_decaps_packets_total{lab=\"cat8000v-ipsec\"}[5m])",
+     "legendFormat": "{{tunnel}} decaps"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 11,
+   "title": "ESP errors per second per tunnel (send + receive)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 15,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(lab_tunnel_esp_send_errors_total{lab=\"cat8000v-ipsec\"}[5m]) + rate(lab_tunnel_esp_recv_errors_total{lab=\"cat8000v-ipsec\"}[5m])",
+     "legendFormat": "{{tunnel}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "title": "VTI traffic per tunnel (bit/s, headend side)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 22,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tunnel_in_bps{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{tunnel}} in"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tunnel_out_bps{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{tunnel}} out"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "type": "row",
+   "title": "Headends: capacity and resources",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 29,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 14,
+   "title": "Tunnels per headend: up vs modelled vs capacity",
+   "type": "bargauge",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 30,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_tunnels_up{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}} up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_tunnels{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}} modelled"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true
+   }
+  },
+  {
+   "id": 15,
+   "title": "Utilisation of the binding constraint (tunnels / bandwidth / CPU)",
+   "type": "bargauge",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 30,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_utilisation_pct{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true
+   }
+  },
+  {
+   "id": 16,
+   "title": "Free tunnel slots (after every constraint)",
+   "type": "bargauge",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 30,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_effective_free{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 5
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true
+   }
+  },
+  {
+   "id": 17,
+   "title": "Control-plane CPU %",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 37,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_cpu_pct{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 18,
+   "title": "QFP (data-plane) CPU %",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 37,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_qfp_cpu_pct{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 19,
+   "title": "DRAM used %",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 37,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_dram_pct{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 20,
+   "title": "Bandwidth committed vs firewall bandwidth (Mbit/s)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 44,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_bandwidth_used_mbps{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}} committed"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_bandwidth_mbps{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}} firewall",
+     "hide": false
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".* firewall"
+      },
+      "properties": [
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "fill": "dash",
+         "dash": [
+          6,
+          4
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "gray"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 21,
+   "title": "IKEv2 sessions per headend",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 44,
+    "w": 6,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_headend_ike_sessions{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 22,
+   "title": "Headend live collection",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 44,
+    "w": 6,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "1 - lab_headend_collect_error{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{headend}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 23,
+   "type": "row",
+   "title": "Lab and runs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 51,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 24,
+   "title": "VMs running",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 52,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_vm_running{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{node}} ({{role}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 25,
+   "title": "Portal runs: last outcome per mode",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 52,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_run_last_success{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{mode}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  }
+ ],
+ "links": [
+  {
+   "title": "Lab hub",
+   "type": "link",
+   "url": "http://192.168.50.231:8088",
+   "targetBlank": true
+  },
+  {
+   "title": "Prometheus alerts",
+   "type": "link",
+   "url": "http://192.168.50.231:9090/alerts",
+   "targetBlank": true
+  }
+ ]
+}
