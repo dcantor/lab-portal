@@ -78,7 +78,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_AUTH_ANONYMOUS_ENABLED: "true"           # lab: dashboards readable without a login
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_USERS_DEFAULT_THEME: light
+      GF_USERS_DEFAULT_THEME: system               # follows the OS / browser dark-mode setting; every dashboard has Dark / Light links to force one
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_INSTALL_PLUGINS: victoriametrics-logs-datasource   # VictoriaLogs (Grafana pulls it from grafana.com at start)

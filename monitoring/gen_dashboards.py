@@ -52,7 +52,12 @@ def annotations(lab):
 def dashboard(uid, title, panels, tags, variables=None, refresh="30s", lab="srv6-core"):
     return {"uid": uid, "title": title, "tags": tags, "timezone": "browser", "schemaVersion": 39, "version": 1, "editable": True, "refresh": refresh, "time": {"from": "now-3h", "to": "now"},
             "annotations": annotations(lab), "templating": {"list": variables or []}, "panels": panels, "links": [{"title": "Lab hub", "type": "link", "url": "http://192.168.50.231:8088", "targetBlank": True},
-                                                                                {"title": "Prometheus alerts", "type": "link", "url": "http://192.168.50.231:9090/alerts", "targetBlank": True}]}
+                                                                                {"title": "Prometheus alerts", "type": "link", "url": "http://192.168.50.231:9091/alerts", "targetBlank": True},
+                                                                                # theme switch: the same dashboard with ?theme=dark / light (time range and variables kept). Grafana only applies
+                                                                                # the theme parameter on a full page load, and in-app links never reload, so these open a new tab. The default
+                                                                                # theme is "system" (GF_USERS_DEFAULT_THEME): the OS / browser dark-mode setting decides unless a link forces it.
+                                                                                {"title": "\u263e Dark", "type": "link", "url": f"http://192.168.50.231:3001/d/{uid}?theme=dark", "keepTime": True, "includeVars": True, "targetBlank": True, "tooltip": "this dashboard in the dark theme (new tab)"},
+                                                                                {"title": "\u2600 Light", "type": "link", "url": f"http://192.168.50.231:3001/d/{uid}?theme=light", "keepTime": True, "includeVars": True, "targetBlank": True, "tooltip": "this dashboard in the light theme (new tab)"}]}
 
 
 # ---------------------------------------------------------------- SRv6 core overview

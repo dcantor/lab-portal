@@ -1402,8 +1402,26 @@
   {
    "title": "Prometheus alerts",
    "type": "link",
-   "url": "http://192.168.50.231:9090/alerts",
+   "url": "http://192.168.50.231:9091/alerts",
    "targetBlank": true
+  },
+  {
+   "title": "\u263e Dark",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/srv6-core-overview?theme=dark",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the dark theme (new tab)"
+  },
+  {
+   "title": "\u2600 Light",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/srv6-core-overview?theme=light",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the light theme (new tab)"
   }
  ]
 }
