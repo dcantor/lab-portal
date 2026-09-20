@@ -60,6 +60,21 @@ def dashboard(uid, title, panels, tags, variables=None, refresh="30s", lab="srv6
                                                                                 {"title": "\u2600 Light", "type": "link", "url": f"http://192.168.50.231:3001/d/{uid}?theme=light", "keepTime": True, "includeVars": True, "targetBlank": True, "tooltip": "this dashboard in the light theme (new tab)"}]}
 
 
+def host_row(p, y):
+    """The Ubuntu KVM host that runs every lab (node_exporter on the OOB bridge): CPU, memory, load, the busiest cores."""
+    HL = 'lab="lab-host"'
+    p.append(row("Ubuntu lab host (KVM): CPU and memory", y))
+    p.append(panel("Host CPU busy %", "stat", [(f'100 * (1 - avg(rate(node_cpu_seconds_total{{{HL},mode="idle"}}[2m])))', "cpu")], 0, y + 1, 4, 4, unit="percent", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 70}, {"color": "red", "value": 90}]}))
+    p.append(panel("Host memory used %", "stat", [(f'100 * (1 - node_memory_MemAvailable_bytes{{{HL}}} / node_memory_MemTotal_bytes{{{HL}}})', "mem")], 4, y + 1, 4, 4, unit="percent", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 75}, {"color": "red", "value": 90}]}))
+    p.append(panel("Host memory used / total", "stat", [(f'node_memory_MemTotal_bytes{{{HL}}} - node_memory_MemAvailable_bytes{{{HL}}}', "used"), (f'node_memory_MemTotal_bytes{{{HL}}}', "total")], 8, y + 1, 5, 4, unit="bytes", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+    p.append(panel("Host load (1 / 5 / 15 min) vs cores", "stat", [(f'node_load1{{{HL}}}', "1m"), (f'node_load5{{{HL}}}', "5m"), (f'node_load15{{{HL}}}', "15m"), (f'count(node_cpu_seconds_total{{{HL},mode="idle"}})', "cores")], 13, y + 1, 7, 4, colorMode="value", decimals=1, thresholds={"steps": [{"color": "green", "value": None}]}))
+    p.append(panel("Host swap used %", "stat", [(f'100 * (1 - node_memory_SwapFree_bytes{{{HL}}} / node_memory_SwapTotal_bytes{{{HL}}})', "swap")], 20, y + 1, 4, 4, unit="percent", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 20}, {"color": "red", "value": 60}]}))
+    p.append(panel("Host CPU busy % (all cores) and per mode", "timeseries", [(f'100 * (1 - avg(rate(node_cpu_seconds_total{{{HL},mode="idle"}}[2m])))', "busy"), (f'100 * avg(rate(node_cpu_seconds_total{{{HL},mode="user"}}[2m]))', "user"), (f'100 * avg(rate(node_cpu_seconds_total{{{HL},mode="system"}}[2m]))', "system"), (f'100 * avg(rate(node_cpu_seconds_total{{{HL},mode="iowait"}}[2m]))', "iowait"), (f'100 * avg(rate(node_cpu_seconds_total{{{HL},mode="steal"}}[2m]))', "steal")], 0, y + 5, 8, 8, unit="percent", min=0, max=100))
+    p.append(panel("Host memory (bytes)", "timeseries", [(f'node_memory_MemTotal_bytes{{{HL}}} - node_memory_MemAvailable_bytes{{{HL}}}', "used"), (f'node_memory_Cached_bytes{{{HL}}} + node_memory_Buffers_bytes{{{HL}}}', "cache + buffers"), (f'node_memory_MemAvailable_bytes{{{HL}}}', "available"), (f'node_memory_SwapTotal_bytes{{{HL}}} - node_memory_SwapFree_bytes{{{HL}}}', "swap used")], 8, y + 5, 8, 8, unit="bytes", min=0))
+    p.append(panel("Busiest host cores (busy %, top 8)", "timeseries", [(f'topk(8, 100 * (1 - rate(node_cpu_seconds_total{{{HL},mode="idle"}}[2m])))', "core {{cpu}}")], 16, y + 5, 8, 8, unit="percent", min=0, max=100))
+    return y + 13
+
+
 # ---------------------------------------------------------------- SRv6 core overview
 L = 'lab="srv6-core"'
 p = []
@@ -94,6 +109,7 @@ p.append(panel("Load (1 min)", "timeseries", [(f'node_load1{{{L}}}', "{{node}}")
 p.append(panel("Core link traffic (bit/s, PE and P data ports, received)", "timeseries", [(f'rate(node_network_receive_bytes_total{{{L},role=~"pe|p",device=~"eth[1-9]"}}[2m]) * 8', "{{node}} {{device}}")], 0, 53, 12, 8, unit="bps", min=0))
 p.append(panel("Tenant host traffic (bit/s, transmitted)", "timeseries", [(f'rate(node_network_transmit_bytes_total{{{L},role="host",device="eth1"}}[2m]) * 8', "{{node}} ({{tenant}})")], 12, 53, 12, 8, unit="bps", min=0))
 p.append(panel("Exporters up", "state-timeline", [(f'up{{{L}}}', "{{node}} {{job}}")], 0, 61, 24, 8, ds=PROM, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 69)
 (OUT / "srv6-core-overview.json").write_text(json.dumps(dashboard("srv6-core-overview", "SRv6 core: overview", p, ["srv6-core", "lab"]), indent=1))
 
 # ---------------------------------------------------------------- C8000v IPsec lab overview (the portal's lab_tunnel_* / lab_headend_* gauges)
@@ -130,9 +146,10 @@ p.append(panel("Bandwidth committed vs firewall bandwidth (Mbit/s)", "timeseries
 p.append(panel("IKEv2 sessions per headend", "timeseries", [(f"lab_headend_ike_sessions{{{L}}}", "{{headend}}")], 12, 44, 6, 7, min=0))
 p.append(panel("Headend live collection", "state-timeline", [(f"1 - lab_headend_collect_error{{{L}}}", "{{headend}}")], 18, 44, 6, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 
-p.append(row("Lab and runs", 51))
-p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 52, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 52, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+y = host_row(p, 51)
+p.append(row("Lab and runs", y))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "cat8000v-ipsec-overview.json").write_text(json.dumps(dashboard("cat8000v-ipsec-overview", "C8000v IPsec: overview", p, ["cat8000v-ipsec", "lab"], lab="cat8000v-ipsec"), indent=1))
 
 # ---------------------------------------------------------------- node detail (any lab, any node)
@@ -172,6 +189,7 @@ p.append(panel("Tests: passed / failed per lab", "timeseries", [("lab_tests_last
 p.append(panel("Firing alerts", "table", [('ALERTS{alertstate="firing"}', "", {"instant": True, "format": "table"})], 12, 13, 12, 7, ds=PROM))
 p.append(panel("Samples scraped / s (Prometheus)", "timeseries", [('rate(prometheus_tsdb_head_samples_appended_total[5m])', "samples/s")], 0, 20, 12, 6, min=0, ds=PROM))
 p.append(panel("VictoriaMetrics: active series", "timeseries", [('vm_cache_entries{type="storage/hour_metric_ids"}', "active series")], 12, 20, 12, 6, min=0))
+host_row(p, 26)
 (OUT / "labs-fleet.json").write_text(json.dumps(dashboard("labs-fleet", "Labs: fleet and monitoring", p, ["lab", "fleet"]), indent=1))
 # ---------------------------------------------------------------- VyOS Telegraf (pushed by the nodes) + syslog (VictoriaLogs)
 _id[0] = 0

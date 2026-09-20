@@ -28,6 +28,13 @@ scrape_configs:
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
 
+  - job_name: lab-host                                             # the Ubuntu KVM host itself (node_exporter as a user service on the OOB bridge)
+    static_configs:
+      - targets: [10.0.0.1:9100]
+        labels: {lab: lab-host, node: ubuntu, role: hypervisor}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
+
   - job_name: monitoring
     static_configs:
       - targets: [prometheus:9090]

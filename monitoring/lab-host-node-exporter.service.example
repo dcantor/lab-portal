@@ -1,0 +1,11 @@
+[Unit]
+Description=node_exporter for the Ubuntu lab host (scraped by the NMS Prometheus over the OOB bridge)
+After=network-online.target
+
+[Service]
+ExecStart=/home/dcantor/.local/bin/node_exporter --web.listen-address=10.0.0.1:9100 --collector.disable-defaults --collector.cpu --collector.meminfo --collector.loadavg --collector.filesystem --collector.netdev --collector.diskstats --collector.uname --collector.time --collector.stat --collector.pressure --collector.hwmon --collector.thermal_zone --collector.vmstat
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

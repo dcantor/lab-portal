@@ -1254,7 +1254,7 @@
   {
    "id": 23,
    "type": "row",
-   "title": "Lab and runs",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1266,6 +1266,520 @@
   },
   {
    "id": 24,
+   "title": "Host CPU busy %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 52,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "cpu"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 25,
+   "title": "Host memory used %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 52,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - node_memory_MemAvailable_bytes{lab=\"lab-host\"} / node_memory_MemTotal_bytes{lab=\"lab-host\"})",
+     "legendFormat": "mem"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 75
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 26,
+   "title": "Host memory used / total",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 52,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"} - node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "used"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"}",
+     "legendFormat": "total"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 27,
+   "title": "Host load (1 / 5 / 15 min) vs cores",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 13,
+    "y": 52,
+    "w": 7,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load1{lab=\"lab-host\"}",
+     "legendFormat": "1m"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load5{lab=\"lab-host\"}",
+     "legendFormat": "5m"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load15{lab=\"lab-host\"}",
+     "legendFormat": "15m"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"})",
+     "legendFormat": "cores"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 1,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 28,
+   "title": "Host swap used %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 52,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - node_memory_SwapFree_bytes{lab=\"lab-host\"} / node_memory_SwapTotal_bytes{lab=\"lab-host\"})",
+     "legendFormat": "swap"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 20
+       },
+       {
+        "color": "red",
+        "value": 60
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 29,
+   "title": "Host CPU busy % (all cores) and per mode",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 56,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "busy"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"user\"}[2m]))",
+     "legendFormat": "user"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"system\"}[2m]))",
+     "legendFormat": "system"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"iowait\"}[2m]))",
+     "legendFormat": "iowait"
+    },
+    {
+     "refId": "E",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"steal\"}[2m]))",
+     "legendFormat": "steal"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 30,
+   "title": "Host memory (bytes)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 56,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"} - node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "used"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_Cached_bytes{lab=\"lab-host\"} + node_memory_Buffers_bytes{lab=\"lab-host\"}",
+     "legendFormat": "cache + buffers"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "available"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_SwapTotal_bytes{lab=\"lab-host\"} - node_memory_SwapFree_bytes{lab=\"lab-host\"}",
+     "legendFormat": "swap used"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 31,
+   "title": "Busiest host cores (busy %, top 8)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 56,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "topk(8, 100 * (1 - rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "core {{cpu}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 32,
+   "type": "row",
+   "title": "Lab and runs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 64,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 33,
    "title": "VMs running",
    "type": "state-timeline",
    "datasource": {
@@ -1274,7 +1788,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 52,
+    "y": 65,
     "w": 12,
     "h": 9
    },
@@ -1332,7 +1846,7 @@
    }
   },
   {
-   "id": 25,
+   "id": 34,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -1341,7 +1855,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 52,
+    "y": 65,
     "w": 12,
     "h": 9
    },

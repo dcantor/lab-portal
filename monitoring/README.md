@@ -31,6 +31,12 @@ python3 gen_dashboards.py    # after editing a panel
 LAN access from the lab host goes through socat relays (`lab-relay-grafana.service.example`; one unit per port, bound to
 the LAN address) — http://192.168.50.231:3001 (theme: Grafana follows the OS / browser dark-mode setting; the ☾ Dark / ☀ Light links on every dashboard open it in a new tab with the theme forced — the `theme=` URL parameter only takes effect on a full page load) (dashboards: SRv6 core overview, **C8000v IPsec overview** — tunnels, headend capacity/CPU, from the IPsec portal's `lab_tunnel_*` / `lab_headend_*` gauges), :9091 (Prometheus — 9090 on the host is Cockpit), :8428, :9428; Nautobot :8080 and Gitea :3000 the same way. The hub links to them.
 
+The **Ubuntu lab host itself** is scraped too (job `lab-host`, labels `lab="lab-host", node="ubuntu", role="hypervisor"`):
+`node_exporter` 1.12 runs as a `systemd --user` unit on the host (`lab-host-node-exporter.service.example` — install it under
+`~/.config/systemd/user/`, binary in `~/.local/bin`) listening on the OOB bridge address 10.0.0.1:9100, which the NMS reaches.
+Every overview dashboard ends with a "Ubuntu lab host (KVM): CPU and memory" row — busy %, memory, load vs cores, swap, per
+mode and the busiest cores — so a lab's behaviour can be read against what the hypervisor has left.
+
 Alerts are gated on the lab being powered on (`lab_vm_running`), so a stopped lab does not raise ExporterDown / tenant
 alerts; only the portals themselves are expected up at all times.
 
