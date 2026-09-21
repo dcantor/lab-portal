@@ -4,7 +4,7 @@ Runs on the NMS VM (10.0.0.10) next to Nautobot and Gitea, and serves every lab 
 
 | Component | Port | Role |
 |---|---|---|
-| Prometheus v3 | 9090 | scrapes every target every 30 s, evaluates `prometheus/alerts.yml`, keeps 2 days locally, remote-writes everything to VictoriaMetrics |
+| Prometheus v3 | 9090 | scrapes every target every 30 s, evaluates `prometheus/alerts.yml` (per lab: internet breakout, tunnels, headend reachability / capacity / CPU, and for the IPsec lab's certificate mode `CertificateExpiringSoon` < 30 days / `CertificateExpired` from the portal's `lab_cert_not_after_seconds`), keeps 2 days locally, remote-writes everything to VictoriaMetrics |
 | VictoriaMetrics | 8428 | the store of record: 180-day retention, Prometheus-compatible query API, `/vmui` |
 | VictoriaLogs | 9428 (HTTP), 5514/udp (syslog) | the VyOS nodes' syslog (`system syslog remote`), streams by hostname / app_name, 90-day retention, `/select/vmui`; Grafana datasource plugin `victoriametrics-logs-datasource` |
 | vmalert-logs | 8880 | log-derived alerts: LogsQL rules (`vmalert/logs-alerts.yml`) against VictoriaLogs every minute — BGP neighbour down, IS-IS adjacency change, BFD session change, FRR daemon restart, zebra install failures, commits, SSH failures, silent node; for the IPsec lab's VyOS firewalls (remote syslog, `lab=cat8000v-ipsec` on the rule) `FirewallDropBurst` (>20 drops from one source in 5 min) and `FirewallDroppingPeerTraffic` (IKE / ESP hitting the drop rule); alert state is remote-written to VictoriaMetrics as `ALERTS{evaluator="vmalert-logs"}` (no Alertmanager yet: `--notifier.blackhole`) |

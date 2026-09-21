@@ -105,3 +105,14 @@ groups:
         for: 5m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.headend }} control-plane CPU at {{ $value }}%"}
+      # IKE certificate authentication: the router certificates the lab CA issued (pki/index.json via the portal's /metrics)
+      - alert: CertificateExpiringSoon
+        expr: (lab_cert_not_after_seconds{lab="cat8000v-ipsec"} - time()) / 86400 < 30 and (lab_cert_not_after_seconds{lab="cat8000v-ipsec"} - time()) > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.device }}: router certificate expires in {{ $value | printf \"%.0f\" }} days — renew it (Renew cert… in the portal, or the next deploy's pki step)"}
+      - alert: CertificateExpired
+        expr: lab_cert_not_after_seconds{lab="cat8000v-ipsec"} - time() <= 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.device }}: router certificate has expired — its tunnels cannot re-authenticate"}

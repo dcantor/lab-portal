@@ -1253,19 +1253,148 @@
   },
   {
    "id": 23,
+   "title": "Router certificates: days to expiry (lab CA)",
+   "type": "bargauge",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 51,
+    "w": 16,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "(lab_cert_not_after_seconds{lab=\"cat8000v-ipsec\"} - time()) / 86400",
+     "legendFormat": "{{device}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "d",
+     "min": 0,
+     "max": 365,
+     "decimals": 0,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 30
+       },
+       {
+        "color": "green",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true
+   }
+  },
+  {
+   "id": 24,
+   "title": "IKE authentication",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 51,
+    "w": 8,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_ike_certificate_auth{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "mode"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "pre-shared keys",
+         "color": "orange"
+        },
+        "1": {
+         "text": "certificates (rsa-sig)",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "orange",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 25,
    "type": "row",
    "title": "Firewalls: forward filter (syslog -> VictoriaLogs)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 51,
+    "y": 57,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 24,
+   "id": 26,
    "title": "Dropped packets / 5 min per firewall (rule 900)",
    "type": "timeseries",
    "datasource": {
@@ -1274,7 +1403,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 52,
+    "y": 58,
     "w": 8,
     "h": 7
    },
@@ -1307,7 +1436,7 @@
    }
   },
   {
-   "id": 25,
+   "id": 27,
    "title": "New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)",
    "type": "timeseries",
    "datasource": {
@@ -1316,7 +1445,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 52,
+    "y": 58,
     "w": 8,
     "h": 7
    },
@@ -1349,7 +1478,7 @@
    }
   },
   {
-   "id": 26,
+   "id": 28,
    "title": "Drops / 5 min by source (all firewalls)",
    "type": "timeseries",
    "datasource": {
@@ -1358,7 +1487,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 52,
+    "y": 58,
     "w": 8,
     "h": 7
    },
@@ -1391,7 +1520,7 @@
    }
   },
   {
-   "id": 27,
+   "id": 29,
    "title": "Top dropped flows (selected range)",
    "type": "table",
    "datasource": {
@@ -1400,7 +1529,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 59,
+    "y": 65,
     "w": 12,
     "h": 9
    },
@@ -1463,7 +1592,7 @@
    ]
   },
   {
-   "id": 28,
+   "id": 30,
    "title": "Firewall log (newest first)",
    "type": "logs",
    "datasource": {
@@ -1472,7 +1601,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 59,
+    "y": 65,
     "w": 12,
     "h": 9
    },
@@ -1498,20 +1627,20 @@
    }
   },
   {
-   "id": 29,
+   "id": 31,
    "type": "row",
    "title": "Ubuntu lab host (KVM): CPU and memory",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 68,
+    "y": 74,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 30,
+   "id": 32,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1520,7 +1649,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 69,
+    "y": 75,
     "w": 4,
     "h": 4
    },
@@ -1569,7 +1698,7 @@
    }
   },
   {
-   "id": 31,
+   "id": 33,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1578,7 +1707,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 69,
+    "y": 75,
     "w": 4,
     "h": 4
    },
@@ -1627,7 +1756,7 @@
    }
   },
   {
-   "id": 32,
+   "id": 34,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1636,7 +1765,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 69,
+    "y": 75,
     "w": 5,
     "h": 4
    },
@@ -1686,7 +1815,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 35,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1695,7 +1824,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 69,
+    "y": 75,
     "w": 7,
     "h": 4
    },
@@ -1763,7 +1892,7 @@
    }
   },
   {
-   "id": 34,
+   "id": 36,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1772,7 +1901,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 69,
+    "y": 75,
     "w": 4,
     "h": 4
    },
@@ -1821,7 +1950,7 @@
    }
   },
   {
-   "id": 35,
+   "id": 37,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1830,7 +1959,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 73,
+    "y": 79,
     "w": 8,
     "h": 8
    },
@@ -1900,7 +2029,7 @@
    }
   },
   {
-   "id": 36,
+   "id": 38,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1909,7 +2038,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 73,
+    "y": 79,
     "w": 8,
     "h": 8
    },
@@ -1969,7 +2098,7 @@
    }
   },
   {
-   "id": 37,
+   "id": 39,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1978,7 +2107,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 73,
+    "y": 79,
     "w": 8,
     "h": 8
    },
@@ -2012,20 +2141,20 @@
    }
   },
   {
-   "id": 38,
+   "id": 40,
    "type": "row",
    "title": "Lab and runs",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 81,
+    "y": 87,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 39,
+   "id": 41,
    "title": "VMs running",
    "type": "state-timeline",
    "datasource": {
@@ -2034,7 +2163,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 82,
+    "y": 88,
     "w": 12,
     "h": 9
    },
@@ -2092,7 +2221,7 @@
    }
   },
   {
-   "id": 40,
+   "id": 42,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -2101,7 +2230,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 82,
+    "y": 88,
     "w": 12,
     "h": 9
    },

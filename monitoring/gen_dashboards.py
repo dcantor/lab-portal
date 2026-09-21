@@ -154,19 +154,24 @@ p.append(panel("Bandwidth committed vs firewall bandwidth (Mbit/s)", "timeseries
                overrides=[{"matcher": {"id": "byRegexp", "options": ".* firewall"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}]}]))
 p.append(panel("IKEv2 sessions per headend", "timeseries", [(f"lab_headend_ike_sessions{{{L}}}", "{{headend}}")], 12, 44, 6, 7, min=0))
 p.append(panel("Headend live collection", "state-timeline", [(f"1 - lab_headend_collect_error{{{L}}}", "{{headend}}")], 18, 44, 6, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+# IKE certificate authentication (intent profile.ike.authentication = certificate): days left on every router certificate the lab CA issued
+p.append(panel("Router certificates: days to expiry (lab CA)", "bargauge", [(f"(lab_cert_not_after_seconds{{{L}}} - time()) / 86400", "{{device}}")], 0, 51, 16, 6, unit="d", min=0, max=365, decimals=0,
+               thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 30}, {"color": "green", "value": 90}]}))
+p.append(panel("IKE authentication", "stat", [(f"lab_ike_certificate_auth{{{L}}}", "mode")], 16, 51, 8, 6, colorMode="background",
+               mappings=[{"type": "value", "options": {"0": {"text": "pre-shared keys", "color": "orange"}, "1": {"text": "certificates (rsa-sig)", "color": "green"}}}], thresholds={"steps": [{"color": "orange", "value": None}, {"color": "green", "value": 1}]}))
 
 # the VyOS firewalls' kernel forward-filter log, shipped by syslog to VictoriaLogs (render_vyos: system syslog remote). Rule 900 is the
 # logged drop at the end of the policy; the IKE / ESP / ICMP accept rules log the first packet of each flow (later packets take rule 5)
 FW = 'hostname:fw-* app_name:kernel "FWD-filter" '
 FWX = '| extract "[ipv4-<fwd>-filter-<rule>-<verdict>]IN=<in> OUT=<out> " | extract " SRC=<src> DST=<dst> " | extract " PROTO=<proto> " | extract " DPT=<dport> " '
-p.append(row("Firewalls: forward filter (syslog -> VictoriaLogs)", 51))
-p.append(panel("Dropped packets / 5 min per firewall (rule 900)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" | stats by (_time:5m, hostname) count() as drops', "{{hostname}}")], 0, 52, 8, 7, ds=VL, min=0))
-p.append(panel("New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)", "timeseries", [logs_ts(FW + '"-A]IN=" | stats by (_time:5m, hostname) count() as accepts', "{{hostname}}")], 8, 52, 8, 7, ds=VL, min=0))   # the accept tags end in -A]
-p.append(panel("Drops / 5 min by source (all firewalls)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (_time:5m, src) count() as drops', "{{src}}")], 16, 52, 8, 7, ds=VL, min=0))
-p.append(panel("Top dropped flows (selected range)", "table", [(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20', "", {"queryType": "stats"})], 0, 59, 12, 9, ds=VL, columns=["hostname", "in", "out", "src", "dst", "proto", "dport"]))
-p.append(panel("Firewall log (newest first)", "logs", [(FW, "")], 12, 59, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+p.append(row("Firewalls: forward filter (syslog -> VictoriaLogs)", 57))
+p.append(panel("Dropped packets / 5 min per firewall (rule 900)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" | stats by (_time:5m, hostname) count() as drops', "{{hostname}}")], 0, 58, 8, 7, ds=VL, min=0))
+p.append(panel("New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)", "timeseries", [logs_ts(FW + '"-A]IN=" | stats by (_time:5m, hostname) count() as accepts', "{{hostname}}")], 8, 58, 8, 7, ds=VL, min=0))   # the accept tags end in -A]
+p.append(panel("Drops / 5 min by source (all firewalls)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (_time:5m, src) count() as drops', "{{src}}")], 16, 58, 8, 7, ds=VL, min=0))
+p.append(panel("Top dropped flows (selected range)", "table", [(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20', "", {"queryType": "stats"})], 0, 65, 12, 9, ds=VL, columns=["hostname", "in", "out", "src", "dst", "proto", "dport"]))
+p.append(panel("Firewall log (newest first)", "logs", [(FW, "")], 12, 65, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
 
-y = host_row(p, 68)
+y = host_row(p, 74)
 p.append(row("Lab and runs", y))
 p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
