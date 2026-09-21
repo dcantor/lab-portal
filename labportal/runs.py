@@ -3,9 +3,10 @@
 A portal subclasses RunBase: `plan()` returns the ordered step names for the run's mode, `STEP_TITLES` names them, and a
 `do_<step>(self, step)` method implements each one (raise to fail the run). RunBase does the rest: ids, step records,
 streamed log, persistence to runs/<id>.json, execution with failure handling, and carrying successful steps over when a
-failed or interrupted run is resumed. RunRegistry keeps the live runs, serialises them (one at a time), and
-install_runs_api() mounts the common endpoints (list, get with incremental log, resume) plus the startup hook that marks
-runs interrupted by a restart. POST /api/runs stays in the portal (its validation is lab-specific) and calls registry.start()."""
+failed or interrupted run is resumed. RunRegistry keeps the live runs and queues them: one worker executes them in the
+order they were started (a second operator's run waits — `queue_position` says where — instead of being refused), a queued
+run can be cancelled. install_runs_api() mounts the common endpoints (list, get with incremental log, resume, cancel) plus the
+startup hook that marks runs interrupted by a restart. POST /api/runs stays in the portal (its validation is lab-specific) and calls registry.start()."""
 import json, os, subprocess, threading, time, uuid, xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -101,28 +102,62 @@ def parse_robot(path):
 
 
 class RunRegistry:
+    """The live runs and the one worker that executes them: runs are queued in the order they were started and run one at a time
+    (the lab has one Terraform state, one lab.conf, one intent — two operators no longer collide, the second one waits its turn).
+    A queued run can be cancelled; a running one cannot."""
     def __init__(self, runs_dir):
         self.runs_dir = Path(runs_dir); self.runs_dir.mkdir(exist_ok=True)
-        self.runs, self.lock, self.worker = {}, threading.Lock(), threading.Lock()
+        self.runs, self.lock = {}, threading.Lock()
+        self.queue, self.wake, self.worker = [], threading.Condition(), None
 
     def busy(self): return any(r.status in ("queued", "running") for r in self.runs.values())
+    def queued(self): return [r for r in self.queue if r.status == "queued"]
+    def active(self): return next((r for r in self.runs.values() if r.status == "running"), None)
+
+    def position(self, run):
+        """1-based place in the queue (None once running / finished)."""
+        q = self.queued(); return q.index(run) + 1 if run in q else None
 
     def start(self, run):
-        with self.lock:
-            if self.busy(): raise RuntimeError("a run is already in progress")
-            self.runs[run.id] = run
-        def work():
-            with self.worker: run.execute()
-        threading.Thread(target=work, daemon=True).start(); return run.to_dict(with_log=False)
+        with self.wake:
+            self.runs[run.id] = run; run.status = "queued"; self.queue.append(run); run.persist()
+            if self.worker is None or not self.worker.is_alive():
+                self.worker = threading.Thread(target=self._work, daemon=True); self.worker.start()
+            self.wake.notify()
+        return self.describe(run)
+
+    def describe(self, run):
+        d = run.to_dict(with_log=False)
+        if run.status == "queued":
+            d["queue_position"] = self.position(run); a = self.active()
+            d["waiting_for"] = a.id if a else None
+        return d
+
+    def _work(self):
+        while True:
+            with self.wake:
+                while not self.queued(): self.wake.wait(timeout=60)
+                run = self.queued()[0]; self.queue.remove(run)
+            run.execute()
+
+    def cancel(self, run_id):
+        """Drop a queued run (it never starts); returns its record, or None if it is not queued."""
+        with self.wake:
+            run = self.runs.get(run_id)
+            if not run or run.status != "queued": return None
+            self.queue.remove(run); run.status = "cancelled"; run.finished = time.time(); run.error = "cancelled before it started"
+            for st in run.steps:
+                if st["status"] == "pending": st["status"] = "skipped"
+            run.persist(); return run.to_dict(with_log=False)
 
     def load(self, run_id):
         run = self.runs.get(run_id)
-        if run: return run.to_dict()
+        if run: return {**run.to_dict(), **({"queue_position": self.position(run), "waiting_for": (self.active() or run).id if self.active() else None} if run.status == "queued" else {})}
         f = self.runs_dir / f"{run_id}.json"
         return json.loads(f.read_text()) if f.exists() else None
 
     def list(self, limit=30):
-        items = [r.to_dict(with_log=False) for r in self.runs.values()]; seen = {r["id"] for r in items}
+        items = [self.describe(r) for r in self.runs.values()]; seen = {r["id"] for r in items}
         for f in sorted(self.runs_dir.glob("*.json"), reverse=True):
             if f.name.endswith(".intent.json") or f.stem in seen: continue
             try: d = json.loads(f.read_text()); d.pop("log", None); items.append(d)
@@ -166,3 +201,12 @@ def install_runs_api(app, registry, resume_factory, tag="runs"):
         if d["status"] not in ("failed", "interrupted"): raise HTTPException(409, f"run is {d['status']}")
         try: return registry.start(resume_factory(d))
         except RuntimeError as e: raise HTTPException(409, str(e))
+
+    @app.delete("/api/runs/{run_id}", tags=[tag], summary="Cancel a queued run (one that has not started yet)", responses={404: {"description": "no such run"}, 409: {"description": "not queued"}})
+    def cancel_run(run_id: str = PathParam(..., description="id of the queued run")):
+        d = registry.cancel(run_id)
+        if d is None:
+            cur = registry.load(run_id)
+            if cur is None: raise HTTPException(404, "no such run")
+            raise HTTPException(409, f"run is {cur['status']}: only a queued run can be cancelled")
+        return d
