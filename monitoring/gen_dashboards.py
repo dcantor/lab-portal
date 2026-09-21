@@ -6,6 +6,9 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "grafana" / "dashboards"; OUT.mkdir(exist_ok=True)
 VM, PROM = {"type": "prometheus", "uid": "victoriametrics"}, {"type": "prometheus", "uid": "prometheus"}
+VL = {"type": "victoriametrics-logs-datasource", "uid": "victorialogs"}
+def logs_ts(q, legend): return (q, legend, {"queryType": "statsRange"})   # VictoriaLogs `stats by (_time:step, ...)` as time series: statsRange runs it over the
+# dashboard range and returns one series per label set (queryType stats + format time_series returns one single-point frame per bucket instead)
 _id = [0]
 
 
@@ -18,6 +21,12 @@ def panel(title, kind, targets, x, y, w, h, unit=None, ds=VM, legend=True, **opt
     if kind == "stat": p["options"] = {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value_and_name", "colorMode": "background", "graphMode": "none"}
     if kind == "state-timeline": p["options"] = {"showValue": "never", "mergeValues": True, "rowHeight": 0.8, "legend": {"displayMode": "list", "placement": "bottom"}}
     if kind == "table": p["options"] = {"showHeader": True, "cellHeight": "sm", "footer": {"show": False}}
+    if kind == "table" and ds is VL and opts.get("columns"):   # a LogsQL `stats by (...)` with ONE stats value arrives as one single-row frame per group:
+        # labels -> columns, frames -> rows, drop the query time and the metric name; the group-by columns in the given order, the value (named after its `as`) last
+        cols = opts.pop("columns")
+        stat = targets[0][0].rsplit(" as ", 1)[-1].split()[0].strip("|")
+        p["transformations"] = [{"id": "labelsToFields", "options": {"mode": "columns"}}, {"id": "merge", "options": {}},
+                                {"id": "organize", "options": {"excludeByName": {"Time": True, "__name__": True}, "renameByName": {"Value": stat}, "indexByName": {c: i for i, c in enumerate(cols + ["Value"])}}}]
     if kind == "bargauge": p["options"] = {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "horizontal", "displayMode": "gradient", "showUnfilled": True}
     for k, v in opts.items():
         if k in ("thresholds", "mappings", "min", "max", "decimals", "color", "custom"): p["fieldConfig"]["defaults"][k] = v
@@ -146,7 +155,18 @@ p.append(panel("Bandwidth committed vs firewall bandwidth (Mbit/s)", "timeseries
 p.append(panel("IKEv2 sessions per headend", "timeseries", [(f"lab_headend_ike_sessions{{{L}}}", "{{headend}}")], 12, 44, 6, 7, min=0))
 p.append(panel("Headend live collection", "state-timeline", [(f"1 - lab_headend_collect_error{{{L}}}", "{{headend}}")], 18, 44, 6, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 
-y = host_row(p, 51)
+# the VyOS firewalls' kernel forward-filter log, shipped by syslog to VictoriaLogs (render_vyos: system syslog remote). Rule 900 is the
+# logged drop at the end of the policy; the IKE / ESP / ICMP accept rules log the first packet of each flow (later packets take rule 5)
+FW = 'hostname:fw-* app_name:kernel "FWD-filter" '
+FWX = '| extract "[ipv4-<fwd>-filter-<rule>-<verdict>]IN=<in> OUT=<out> " | extract " SRC=<src> DST=<dst> " | extract " PROTO=<proto> " | extract " DPT=<dport> " '
+p.append(row("Firewalls: forward filter (syslog -> VictoriaLogs)", 51))
+p.append(panel("Dropped packets / 5 min per firewall (rule 900)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" | stats by (_time:5m, hostname) count() as drops', "{{hostname}}")], 0, 52, 8, 7, ds=VL, min=0))
+p.append(panel("New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)", "timeseries", [logs_ts(FW + '"-A]IN=" | stats by (_time:5m, hostname) count() as accepts', "{{hostname}}")], 8, 52, 8, 7, ds=VL, min=0))   # the accept tags end in -A]
+p.append(panel("Drops / 5 min by source (all firewalls)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (_time:5m, src) count() as drops', "{{src}}")], 16, 52, 8, 7, ds=VL, min=0))
+p.append(panel("Top dropped flows (selected range)", "table", [(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20', "", {"queryType": "stats"})], 0, 59, 12, 9, ds=VL, columns=["hostname", "in", "out", "src", "dst", "proto", "dport"]))
+p.append(panel("Firewall log (newest first)", "logs", [(FW, "")], 12, 59, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+y = host_row(p, 68)
 p.append(row("Lab and runs", y))
 p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
@@ -193,7 +213,6 @@ host_row(p, 26)
 (OUT / "labs-fleet.json").write_text(json.dumps(dashboard("labs-fleet", "Labs: fleet and monitoring", p, ["lab", "fleet"]), indent=1))
 # ---------------------------------------------------------------- VyOS Telegraf (pushed by the nodes) + syslog (VictoriaLogs)
 _id[0] = 0
-VL = {"type": "victoriametrics-logs-datasource", "uid": "victorialogs"}
 TV = [{"name": "lab", "type": "query", "datasource": VM, "query": "label_values(cpu_usage_idle, lab)", "refresh": 2, "includeAll": False, "current": {"text": "srv6-core", "value": "srv6-core"}}]
 T = 'lab="$lab"'
 p = []
@@ -218,7 +237,6 @@ p.append(panel("Commits and configuration changes (vyos-configd / commit)", "log
 _id[0] = 0
 FL = 'sampler_address:* '                                   # every sFlow record (goflow2 JSON, one per sampled packet)
 SR = FL + 'proto:"IPv6-Route" '                              # SRv6-encapsulated packets: outer IPv6 with a routing header
-def logs_ts(q, legend): return (q, legend, {"queryType": "stats", "format": "time_series"})   # VictoriaLogs stats over _time buckets
 p = []
 p.append(panel("Sampled packets / min per exporter", "stat", [(FL + '| stats by (sampler_address) count() as samples', "{{sampler_address}}", {"queryType": "stats"})], 0, 0, 12, 4, ds=VL, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]}))
 p.append(panel("SRv6 traffic seen in the core (sampled bytes × rate, last range)", "stat", [(SR + '| stats sum(bytes) as b | math b * 16 as bytes | fields bytes', "bytes", {"queryType": "stats"})], 12, 0, 6, 4, ds=VL, unit="bytes", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))

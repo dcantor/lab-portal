@@ -344,8 +344,7 @@
      },
      "expr": "sampler_address:* proto:\"IPv6-Route\" | stats by (_time:1m, dst_addr) sum(bytes) as sampled | math sampled * 16 as bytes | fields _time, dst_addr, bytes",
      "legendFormat": "{{dst_addr}}",
-     "queryType": "stats",
-     "format": "time_series"
+     "queryType": "statsRange"
     }
    ],
    "fieldConfig": {
@@ -388,8 +387,7 @@
      },
      "expr": "sampler_address:* | stats by (_time:1m, sampler_address) count() as samples",
      "legendFormat": "{{sampler_address}}",
-     "queryType": "stats",
-     "format": "time_series"
+     "queryType": "statsRange"
     }
    ],
    "fieldConfig": {

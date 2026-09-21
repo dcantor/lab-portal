@@ -1254,7 +1254,7 @@
   {
    "id": 23,
    "type": "row",
-   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "title": "Firewalls: forward filter (syslog -> VictoriaLogs)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1266,6 +1266,252 @@
   },
   {
    "id": 24,
+   "title": "Dropped packets / 5 min per firewall (rule 900)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 52,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "hostname:fw-* app_name:kernel \"FWD-filter\" \"FWD-filter-900-D\" | stats by (_time:5m, hostname) count() as drops",
+     "legendFormat": "{{hostname}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 25,
+   "title": "New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 52,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "hostname:fw-* app_name:kernel \"FWD-filter\" \"-A]IN=\" | stats by (_time:5m, hostname) count() as accepts",
+     "legendFormat": "{{hostname}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 26,
+   "title": "Drops / 5 min by source (all firewalls)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 52,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "hostname:fw-* app_name:kernel \"FWD-filter\" \"FWD-filter-900-D\" | extract \"[ipv4-<fwd>-filter-<rule>-<verdict>]IN=<in> OUT=<out> \" | extract \" SRC=<src> DST=<dst> \" | extract \" PROTO=<proto> \" | extract \" DPT=<dport> \" | stats by (_time:5m, src) count() as drops",
+     "legendFormat": "{{src}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 27,
+   "title": "Top dropped flows (selected range)",
+   "type": "table",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 59,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "hostname:fw-* app_name:kernel \"FWD-filter\" \"FWD-filter-900-D\" | extract \"[ipv4-<fwd>-filter-<rule>-<verdict>]IN=<in> OUT=<out> \" | extract \" SRC=<src> DST=<dst> \" | extract \" PROTO=<proto> \" | extract \" DPT=<dport> \" | stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20",
+     "legendFormat": "",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   },
+   "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {
+      "mode": "columns"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true
+      },
+      "renameByName": {
+       "Value": "hits"
+      },
+      "indexByName": {
+       "hostname": 0,
+       "in": 1,
+       "out": 2,
+       "src": 3,
+       "dst": 4,
+       "proto": 5,
+       "dport": 6,
+       "Value": 7
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 28,
+   "title": "Firewall log (newest first)",
+   "type": "logs",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 59,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "hostname:fw-* app_name:kernel \"FWD-filter\" ",
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": false,
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 29,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 68,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 30,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1274,7 +1520,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 52,
+    "y": 69,
     "w": 4,
     "h": 4
    },
@@ -1323,7 +1569,7 @@
    }
   },
   {
-   "id": 25,
+   "id": 31,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1332,7 +1578,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 52,
+    "y": 69,
     "w": 4,
     "h": 4
    },
@@ -1381,7 +1627,7 @@
    }
   },
   {
-   "id": 26,
+   "id": 32,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1390,7 +1636,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 52,
+    "y": 69,
     "w": 5,
     "h": 4
    },
@@ -1440,7 +1686,7 @@
    }
   },
   {
-   "id": 27,
+   "id": 33,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1449,7 +1695,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 52,
+    "y": 69,
     "w": 7,
     "h": 4
    },
@@ -1517,7 +1763,7 @@
    }
   },
   {
-   "id": 28,
+   "id": 34,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1526,7 +1772,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 52,
+    "y": 69,
     "w": 4,
     "h": 4
    },
@@ -1575,7 +1821,7 @@
    }
   },
   {
-   "id": 29,
+   "id": 35,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1584,7 +1830,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 56,
+    "y": 73,
     "w": 8,
     "h": 8
    },
@@ -1654,7 +1900,7 @@
    }
   },
   {
-   "id": 30,
+   "id": 36,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1663,7 +1909,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 56,
+    "y": 73,
     "w": 8,
     "h": 8
    },
@@ -1723,7 +1969,7 @@
    }
   },
   {
-   "id": 31,
+   "id": 37,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1732,7 +1978,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 56,
+    "y": 73,
     "w": 8,
     "h": 8
    },
@@ -1766,20 +2012,20 @@
    }
   },
   {
-   "id": 32,
+   "id": 38,
    "type": "row",
    "title": "Lab and runs",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 64,
+    "y": 81,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 33,
+   "id": 39,
    "title": "VMs running",
    "type": "state-timeline",
    "datasource": {
@@ -1788,7 +2034,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 65,
+    "y": 82,
     "w": 12,
     "h": 9
    },
@@ -1846,7 +2092,7 @@
    }
   },
   {
-   "id": 34,
+   "id": 40,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -1855,7 +2101,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 65,
+    "y": 82,
     "w": 12,
     "h": 9
    },

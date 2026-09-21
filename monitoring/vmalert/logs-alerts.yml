@@ -45,3 +45,19 @@ groups:
         expr: '_time:10m hostname:* | stats by (hostname) count() as lines | filter lines:<1'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: no syslog for 10 minutes"}
+
+  # The cat8000v-ipsec lab's VyOS firewalls (fw-east / fw-central / fw-west) forward their kernel firewall log here: rule 900 is the
+  # logged drop at the end of the forward filter, the IKE / ESP / ICMP accept rules log the first packet of every flow. The rule label
+  # `lab` overrides the evaluator's external label so the IPsec dashboard annotates these and the SRv6 one does not.
+  - name: firewall-events
+    type: vlogs
+    interval: 1m
+    rules:
+      - alert: FirewallDropBurst
+        expr: '_time:5m hostname:fw-* app_name:kernel "FWD-filter-900-D" | extract " SRC=<src> DST=<dst> " | stats by (hostname, src) count() as drops | filter drops:>20'
+        labels: {severity: warning, source: syslog, lab: cat8000v-ipsec}
+        annotations: {summary: "{{ $labels.hostname }}: {{ $value }} packets from {{ $labels.src }} dropped in 5 minutes (forward filter rule 900)"}
+      - alert: FirewallDroppingPeerTraffic         # a modelled VPN peer hitting the drop rule: the policy and the wiring disagree (a re-homed spoke, a stale address group)
+        expr: '_time:5m hostname:fw-* app_name:kernel "FWD-filter-900-D" (" PROTO=ESP" OR " DPT=500 " OR " DPT=4500 ") | extract " SRC=<src> DST=<dst> " | stats by (hostname, src, dst) count() as drops'
+        labels: {severity: critical, source: syslog, lab: cat8000v-ipsec}
+        annotations: {summary: "{{ $labels.hostname }}: IKE / ESP from {{ $labels.src }} to {{ $labels.dst }} dropped ({{ $value }} packets in 5 minutes) — not a modelled peer pair"}
