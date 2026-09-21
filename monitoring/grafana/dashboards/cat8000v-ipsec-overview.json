@@ -235,7 +235,7 @@
   },
   {
    "id": 4,
-   "title": "Headends running",
+   "title": "VMs running",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
@@ -274,6 +274,15 @@
      },
      "expr": "sum(lab_vm_running{lab=\"cat8000v-ipsec\",role=\"firewall\"})",
      "legendFormat": "firewalls"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_vm_running{lab=\"cat8000v-ipsec\",role=\"host\"})",
+     "legendFormat": "LAN hosts"
     }
    ],
    "fieldConfig": {
