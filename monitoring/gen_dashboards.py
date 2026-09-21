@@ -154,11 +154,11 @@ p.append(panel("Bandwidth committed vs firewall bandwidth (Mbit/s)", "timeseries
                overrides=[{"matcher": {"id": "byRegexp", "options": ".* firewall"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}]}]))
 p.append(panel("IKEv2 sessions per headend", "timeseries", [(f"lab_headend_ike_sessions{{{L}}}", "{{headend}}")], 12, 44, 6, 7, min=0))
 p.append(panel("Headend live collection", "state-timeline", [(f"1 - lab_headend_collect_error{{{L}}}", "{{headend}}")], 18, 44, 6, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-# IKE certificate authentication (intent profile.ike.authentication = certificate): days left on every router certificate the lab CA issued
+# IKE certificate authentication (chosen per spoke): days left on every router certificate the lab CA issued, and each spoke's method
 p.append(panel("Router certificates: days to expiry (lab CA)", "bargauge", [(f"(lab_cert_not_after_seconds{{{L}}} - time()) / 86400", "{{device}}")], 0, 51, 16, 6, unit="d", min=0, max=365, decimals=0,
                thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 30}, {"color": "green", "value": 90}]}))
-p.append(panel("IKE authentication", "stat", [(f"lab_ike_certificate_auth{{{L}}}", "mode")], 16, 51, 8, 6, colorMode="background",
-               mappings=[{"type": "value", "options": {"0": {"text": "pre-shared keys", "color": "orange"}, "1": {"text": "certificates (rsa-sig)", "color": "green"}}}], thresholds={"steps": [{"color": "orange", "value": None}, {"color": "green", "value": 1}]}))
+p.append(panel("IKE authentication per spoke (each branch chooses; default: lab_ike_certificate_auth)", "stat", [(f"lab_spoke_certificate_auth{{{L}}}", "{{spoke}}")], 16, 51, 8, 6, colorMode="background",
+               mappings=[{"type": "value", "options": {"0": {"text": "PSK", "color": "orange"}, "1": {"text": "certificate", "color": "green"}}}], thresholds={"steps": [{"color": "orange", "value": None}, {"color": "green", "value": 1}]}))
 
 # the VyOS firewalls' kernel forward-filter log, shipped by syslog to VictoriaLogs (render_vyos: system syslog remote). Rule 900 is the
 # logged drop at the end of the policy; the IKE / ESP / ICMP accept rules log the first packet of each flow (later packets take rule 5)

@@ -1314,7 +1314,7 @@
   },
   {
    "id": 24,
-   "title": "IKE authentication",
+   "title": "IKE authentication per spoke (each branch chooses; default: lab_ike_certificate_auth)",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
@@ -1333,8 +1333,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_ike_certificate_auth{lab=\"cat8000v-ipsec\"}",
-     "legendFormat": "mode"
+     "expr": "lab_spoke_certificate_auth{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{spoke}}"
     }
    ],
    "fieldConfig": {
@@ -1344,11 +1344,11 @@
        "type": "value",
        "options": {
         "0": {
-         "text": "pre-shared keys",
+         "text": "PSK",
          "color": "orange"
         },
         "1": {
-         "text": "certificates (rsa-sig)",
+         "text": "certificate",
          "color": "green"
         }
        }
