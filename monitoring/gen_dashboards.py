@@ -164,14 +164,25 @@ p.append(panel("IKE authentication per spoke (each branch chooses; default: lab_
 # logged drop at the end of the policy; the IKE / ESP / ICMP accept rules log the first packet of each flow (later packets take rule 5)
 FW = 'hostname:fw-* app_name:kernel "FWD-filter" '
 FWX = '| extract "[ipv4-<fwd>-filter-<rule>-<verdict>]IN=<in> OUT=<out> " | extract " SRC=<src> DST=<dst> " | extract " PROTO=<proto> " | extract " DPT=<dport> " '
-p.append(row("Firewalls: forward filter (syslog -> VictoriaLogs)", 57))
-p.append(panel("Dropped packets / 5 min per firewall (rule 900)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" | stats by (_time:5m, hostname) count() as drops', "{{hostname}}")], 0, 58, 8, 7, ds=VL, min=0))
-p.append(panel("New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)", "timeseries", [logs_ts(FW + '"-A]IN=" | stats by (_time:5m, hostname) count() as accepts', "{{hostname}}")], 8, 58, 8, 7, ds=VL, min=0))   # the accept tags end in -A]
-p.append(panel("Drops / 5 min by source (all firewalls)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (_time:5m, src) count() as drops', "{{src}}")], 16, 58, 8, 7, ds=VL, min=0))
-p.append(panel("Top dropped flows (selected range)", "table", [(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20', "", {"queryType": "stats"})], 0, 65, 12, 9, ds=VL, columns=["hostname", "in", "out", "src", "dst", "proto", "dport"]))
-p.append(panel("Firewall log (newest first)", "logs", [(FW, "")], 12, 65, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+# configuration compliance: Nautobot Golden Config's verdict per router, exported by the portal (/api/compliance -> /metrics); the portal
+# schedules a Golden Config run every GOLDEN_INTERVAL_HOURS, so drift surfaces here (and as the ConfigDrift alert) without an operator
+p.append(row("Configuration compliance (Nautobot Golden Config, scheduled by the portal)", 57))
+p.append(panel("Compliant vs drifted per router (1 = every feature matches the model)", "state-timeline", [(f"lab_config_compliance_ok{{{L}}}", "{{device}}")], 0, 58, 12, 7,
+               mappings=[{"type": "value", "options": {"0": {"text": "drifted", "color": "red"}, "1": {"text": "compliant", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Drifted compliance features per router", "bargauge", [(f"lab_config_noncompliant_features{{{L}}}", "{{device}}")], 12, 58, 6, 7, min=0, max=5, decimals=0,
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Hours since the last compliance run", "stat", [(f"(time() - lab_config_compliance_last_run_timestamp_seconds{{{L}}}) / 3600", "since last run")], 18, 58, 6, 4, unit="h", decimals=1,
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 7}, {"color": "red", "value": 13}]}))
+p.append(panel("Routers compliant / scheduled every", "stat", [(f"sum(lab_config_compliance_ok{{{L}}})", "compliant"), (f"count(lab_config_compliance_ok{{{L}}})", "routers"), (f"lab_config_compliance_interval_seconds{{{L}}} / 3600", "interval (h)")], 18, 62, 6, 3, colorMode="none", decimals=0))
 
-y = host_row(p, 74)
+p.append(row("Firewalls: forward filter (syslog -> VictoriaLogs)", 65))
+p.append(panel("Dropped packets / 5 min per firewall (rule 900)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" | stats by (_time:5m, hostname) count() as drops', "{{hostname}}")], 0, 66, 8, 7, ds=VL, min=0))
+p.append(panel("New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)", "timeseries", [logs_ts(FW + '"-A]IN=" | stats by (_time:5m, hostname) count() as accepts', "{{hostname}}")], 8, 66, 8, 7, ds=VL, min=0))   # the accept tags end in -A]
+p.append(panel("Drops / 5 min by source (all firewalls)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (_time:5m, src) count() as drops', "{{src}}")], 16, 66, 8, 7, ds=VL, min=0))
+p.append(panel("Top dropped flows (selected range)", "table", [(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20', "", {"queryType": "stats"})], 0, 73, 12, 9, ds=VL, columns=["hostname", "in", "out", "src", "dst", "proto", "dport"]))
+p.append(panel("Firewall log (newest first)", "logs", [(FW, "")], 12, 73, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+y = host_row(p, 82)
 p.append(row("Lab and runs", y))
 p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))

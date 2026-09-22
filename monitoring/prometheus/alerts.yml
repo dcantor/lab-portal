@@ -116,3 +116,15 @@ groups:
         for: 1m
         labels: {severity: critical}
         annotations: {summary: "{{ $labels.device }}: router certificate has expired — its tunnels cannot re-authenticate"}
+      # configuration compliance: Nautobot Golden Config's verdict per router (the portal exports it and schedules a Golden Config run
+      # every GOLDEN_INTERVAL_HOURS, 6 by default) — a router that stays non-compliant has drifted from the model
+      - alert: ConfigDrift
+        expr: lab_config_compliance_ok{lab="cat8000v-ipsec"} == 0
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.device }} drifted from the model: Nautobot Golden Config reports non-compliant feature(s) — Remediate / Re-apply from the model on the portal's Compliance page"}
+      - alert: ConfigComplianceStale
+        expr: (time() - lab_config_compliance_last_run_timestamp_seconds{lab="cat8000v-ipsec"}) > 2 * lab_config_compliance_interval_seconds{lab="cat8000v-ipsec"} > 0 and on(lab) max by(lab) (lab_vm_running{lab="cat8000v-ipsec",role="hub"}) == 1
+        for: 30m
+        labels: {severity: warning}
+        annotations: {summary: "cat8000v-ipsec: no Golden Config compliance run for {{ $value | humanizeDuration }} while the lab is up — the portal's scheduled run is not happening"}
