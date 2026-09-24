@@ -29,9 +29,22 @@ install_runs_api(app, registry, resume_factory=lambda d: Run(d["mode"], d.get("o
 ```
 
 ## The hub (`lab-hub`, port 8088)
-One page: every lab with its VMs (running / total, from `lab.sh status`), the portal's health and last run, the last
-Robot result (from `results/latest`), host memory and load, and links to the portal, its API, Nautobot, the Gitea
-configuration repo and GitHub. Read-only by design — it never starts, stops or changes a lab.
+One page: the host's **CPU, memory and disk** (busy percentage and load, memory with swap, every filesystem the labs
+live on — each with a bar), then every lab with its VMs (running / total, from `lab.sh status`), the portal's health and
+last run, the last Robot result (from `results/latest`), and links to the portal, its API, Nautobot, the Gitea
+configuration repo and GitHub.
+
+**Power**: each lab can be brought up or shut down from here — the whole lab with the two buttons, or any single VM by
+clicking its name. Every one of them asks first, saying what it will do and what it costs ("Shut down host-spoke2 in
+cat8000v-ipsec? It is running. A router saves its configuration first…"). The hub runs that lab's own `lab.sh up|down [node…]`, so a shutdown still saves each router's
+configuration first, and the page shows what the command printed. One operation at a time per lab; the whole lab needs
+an explicit confirmation (`confirm: true` on the API); and a shutdown is refused while the lab's portal has a run in
+progress, so nothing pulls the rug from under a Terraform apply (`force: true` overrides). `LAB_HUB_POWER=off` makes
+the hub read-only again. Everything else about a lab — provisioning, day-2 changes, tests — stays in its own portal.
+
+    POST /api/labs/cat8000v-ipsec/power  {"action": "up", "confirm": true}
+    POST /api/labs/cat8000v-ipsec/power  {"action": "down", "nodes": ["spoke1"]}
+    GET  /api/labs/cat8000v-ipsec/power                     # the current or last operation, with lab.sh's output
 
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 

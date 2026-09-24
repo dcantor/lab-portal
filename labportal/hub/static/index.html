@@ -10,14 +10,67 @@
   .kv { display:grid; grid-template-columns:130px 1fr; gap:4px 10px; font-size:13px } .kv dt { color:var(--muted) } .kv dd { margin:0 }
   .vms { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px } .vm { font:11px ui-monospace, monospace; padding:2px 6px; border-radius:4px; background:#fee2e2; color:var(--bad) } .vm.running { background:#dcfce7; color:var(--ok) }
   .links a { margin-right:12px; font-size:13px } .links { margin-top:10px } .hint { color:var(--muted); font-size:12px }
+  button { font:inherit; font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); cursor:pointer }
+  button:hover:not(:disabled) { border-color:#94a3b8 } button:disabled { opacity:.5; cursor:not-allowed }
+  button.up { border-color:#86efac; background:#f0fdf4; color:var(--ok) } button.down { border-color:#fecaca; background:#fef2f2; color:var(--bad) }
+  .power { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px }
+  .vm { cursor:pointer; border:1px solid transparent } .vm:hover { border-color:#94a3b8 }
+  .op { margin-top:8px; font-size:12px; border-left:3px solid #94a3b8; padding:4px 0 4px 8px; color:var(--muted) }
+  .op.running { border-color:var(--warn) } .op.failed { border-color:var(--bad); color:var(--bad) } .op.done { border-color:var(--ok) }
+  .op pre { margin:4px 0 0; font:11px/1.35 ui-monospace, monospace; max-height:120px; overflow:auto; white-space:pre-wrap }
+  .host { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; margin-bottom:16px }
+  .stat { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px }
+  .stat .l { color:var(--muted); font-size:12px } .stat .v { font-size:20px; font-weight:600; margin:2px 0 6px }
+  .stat .s { color:var(--muted); font-size:12px }
+  .bar { height:6px; border-radius:3px; background:#e2e8f0; overflow:hidden; margin-bottom:6px } .bar > i { display:block; height:100%; background:var(--ok) }
+  .bar > i.warn { background:#f59e0b } .bar > i.bad { background:var(--bad) }
 </style></head><body>
 <header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right" id="host"></span></header>
-<main><div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
+<main><div class="host" id="hoststats"></div><div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
 <script>
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let POWER = true, timer = null;
+const busy = l => l.power && l.power.status === 'running';
+
+// what the lab is doing, or what it last did: lab.sh's own output, tail first
+function opView(op) {
+  if (!op) return '';
+  const what = `${op.action === 'up' ? 'bringing up' : 'shutting down'} ${op.nodes.length ? op.nodes.join(', ') : 'the whole lab'}`;
+  const head = op.status === 'running' ? `⏳ ${what}…`
+    : `${op.status === 'done' ? '✓' : '✕'} ${op.action === 'up' ? 'brought up' : 'shut down'} ${op.nodes.length ? op.nodes.join(', ') : 'the whole lab'}`
+      + ` · ${new Date((op.finished || op.started) * 1000).toLocaleTimeString()} · ${Math.round(((op.finished || Date.now() / 1000) - op.started))}s`;
+  return `<div class="op ${esc(op.status)}">${esc(head)}${op.log && op.log.length ? `<pre>${esc(op.log.slice(-6).join('\n'))}</pre>` : ''}</div>`;
+}
+
+async function power(lab, action, nodes, question) {
+  if (!confirm(question)) return;
+  const r = await fetch(`/api/labs/${encodeURIComponent(lab)}/power`, { method: 'POST', headers: { 'content-type': 'application/json' },
+                                                                        body: JSON.stringify({ action, nodes, confirm: true }) });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); return; }
+  load();                       // the operation shows up straight away; the poll below follows it
+}
+// the host itself: what CPU, memory and disk are left for the labs
+function bar(pct) { const c = pct >= 90 ? 'bad' : pct >= 75 ? 'warn' : ''; return `<div class="bar"><i class="${c}" style="width:${Math.min(100, pct || 0)}%"></i></div>`; }
+
+function renderHost(h) {
+  if (!h) return;
+  const cpu = h.cpu || {}, mem = h.memory, disks = h.disks || [];
+  const cards = [];
+  cards.push(`<div class="stat"><div class="l">CPU</div><div class="v">${cpu.pct == null ? '–' : cpu.pct + '%'}</div>
+    ${bar(cpu.pct)}<div class="s">${cpu.cores} cores · load ${(cpu.load || []).join(' ')}</div></div>`);
+  if (mem) cards.push(`<div class="stat"><div class="l">Memory</div><div class="v">${mem.used_gib} / ${mem.total_gib} GiB</div>
+    ${bar(mem.pct)}<div class="s">${mem.available_gib} GiB available${mem.swap_total_gib ? ` · swap ${mem.swap_used_gib} / ${mem.swap_total_gib} GiB` : ''}</div></div>`);
+  disks.forEach(dk => cards.push(`<div class="stat"><div class="l">Disk ${esc(dk.path)}</div><div class="v">${dk.used_gib} / ${dk.total_gib} GiB</div>
+    ${bar(dk.pct)}<div class="s">${dk.free_gib} GiB free</div></div>`));
+  const running = [...document.querySelectorAll('.vm.running')].length;
+  document.getElementById('hoststats').innerHTML = cards.join('');
+  document.getElementById('host').textContent = `${cpu.cores} cores · ${mem ? mem.available_gib + ' GiB memory available' : ''} · load ${(cpu.load || [])[0]}`;
+}
+
 async function load() {
   const d = await (await fetch('/api/labs')).json();
-  document.getElementById('host').textContent = d.host.memory ? `host memory ${d.host.used_gib ?? d.host.memory.used_gib} / ${d.host.memory.total_gib} GiB used (${d.host.memory.available_gib} available) · load ${d.host.load.map(x => x.toFixed(1)).join(' ')}` : '';
+  POWER = d.power_enabled !== false;
+  renderHost(d.host);
   document.getElementById('labs').innerHTML = d.labs.map(l => {
     const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
     return `<div class="card"><h2><a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span></h2>
@@ -25,10 +78,36 @@ async function load() {
       <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
       <dt>Last tests</dt><dd>${t ? (t.error ? esc(t.error) : `<span class="pill ${t.failed ? 'bad' : 'ok'}">${t.passed} passed, ${t.failed} failed</span> <span class="hint">${esc(t.when)} · ${t.suites.map(s => esc(s.name.replace(/^\\d+ /, '')) + (s.status === 'PASS' ? '' : ' ✗')).join(', ')}</span>`) : '<span class="hint">no results yet</span>'}</dd>
       <dt>Directory</dt><dd><code>${esc(l.dir)}</code></dd></dl>
-      <div class="vms">${Object.entries(l.vms).filter(([, v]) => typeof v === 'object' && v.state).map(([n, v]) => `<span class="vm ${v.state === 'running' ? 'running' : ''}" title="${esc(v.role)} · ${esc(v.state)}">${esc(n)}</span>`).join('')}</div>
+      <div class="vms">${Object.entries(l.vms).filter(([, v]) => typeof v === 'object' && v.state).map(([n, v]) => `<span class="vm ${v.state === 'running' ? 'running' : ''}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(v.state)}" title="${esc(v.role)} · ${esc(v.state)} — click to ${v.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div>
+      ${POWER ? `<div class="power">
+        <button class="up" data-lab="${esc(l.name)}" data-action="up" ${busy(l) ? 'disabled' : ''} title="start every VM of this lab (lab.sh up)">⏻ Bring up the lab</button>
+        <button class="down" data-lab="${esc(l.name)}" data-action="down" ${busy(l) ? 'disabled' : ''} title="stop every VM of this lab — each router saves its configuration first (lab.sh down)">⏻ Shut down the lab</button>
+        <span class="hint">or click a VM above to start or stop it</span></div>` : ''}
+      ${opView(l.power)}
       <div class="links"><a href="${l.portal}" target="_blank">portal</a><a href="${l.portal}/docs" target="_blank">API</a><a href="${l.nautobot}" target="_blank">Nautobot</a>${l.gitea ? `<a href="${l.gitea}" target="_blank">Gitea configs</a>` : ''}${l.grafana ? `<a href="${l.grafana}" target="_blank">Grafana</a>` : ''}<a href="${l.repo}" target="_blank">GitHub</a></div></div>`; }).join('');
   const m = d.monitoring || {}; document.getElementById('mon').innerHTML = m.grafana ? `monitoring: <a href="${m.grafana}" target="_blank">Grafana</a> · <a href="${m.prometheus}/targets" target="_blank">Prometheus targets</a> · <a href="${m.prometheus}/alerts" target="_blank">alerts</a> · <a href="${m.victoriametrics}/vmui" target="_blank">VictoriaMetrics</a>${m.victorialogs ? ` · <a href="${m.victorialogs}/select/vmui" target="_blank">VictoriaLogs</a>` : ''}` : '';
-  document.getElementById('gen').textContent = 'refreshed ' + new Date(d.generated * 1000).toLocaleTimeString() + ' · read-only: use a lab\'s portal or lab.sh to change anything';
+  schedule(d.labs);
+  document.getElementById('gen').textContent = 'refreshed ' + new Date(d.generated * 1000).toLocaleTimeString()
+    + (POWER ? ' · power control runs each lab\'s own lab.sh; everything else about a lab is changed from its portal'
+             : ' · read-only: use a lab\'s portal or lab.sh to change anything');
 }
+// while a lab is powering up or down, follow it closely; otherwise the slow refresh is plenty
+function schedule(labs) {
+  clearInterval(timer);
+  timer = setInterval(load, labs.some(busy) ? 4000 : 30000);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button[data-action]');
+  if (b) return power(b.dataset.lab, b.dataset.action, [],
+                      b.dataset.action === 'up' ? `Bring up every VM of ${b.dataset.lab}?\n\nThe routers take a few minutes to boot.`
+                                                : `Shut down every VM of ${b.dataset.lab}?\n\nEach router saves its configuration first. The lab is unusable until you bring it back up.`);
+  const vm = e.target.closest('.vm[data-node]');
+  if (vm && POWER) {
+    const running = vm.dataset.state === 'running', node = vm.dataset.node;
+    power(vm.dataset.lab, running ? 'down' : 'up', [node],
+          running ? `Shut down ${node} in ${vm.dataset.lab}?\n\nIt is running. A router saves its configuration first; anything using it loses it until you start it again.`
+                  : `Start ${node} in ${vm.dataset.lab}?\n\nIt is shut off; a router can take a few minutes to boot.`);
+  }
+});
 load(); setInterval(load, 30000);
 </script></body></html>
