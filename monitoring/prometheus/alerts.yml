@@ -118,6 +118,44 @@ groups:
         annotations: {summary: "{{ $labels.device }}: router certificate has expired — its tunnels cannot re-authenticate"}
       # configuration compliance: Nautobot Golden Config's verdict per router (the portal exports it and schedules a Golden Config run
       # every GOLDEN_INTERVAL_HOURS, 6 by default) — a router that stays non-compliant has drifted from the model
+      # the data-centre interconnect: the DCI's twice-NAT, the aggregates the two sides exchange instead of their overlapping
+      # prefixes, and the two DNS zones (portal /metrics <- webapp/interconnect.py). 2002 static translations come from one
+      # `scale` block in the intent: 2000 means a chunk of a CLI template did not make it onto the box.
+      - alert: NatTranslationsMissing
+        expr: (lab_nat_static_translations{lab="cat8000v-ipsec"} < lab_nat_static_translations_expected{lab="cat8000v-ipsec"}) and on (lab) (sum by (lab) (lab_vm_running{lab="cat8000v-ipsec",role="dci"}) > 0)
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.router }} holds {{ $value }} static translations, fewer than the model's — overlapping prefixes are unreachable in both directions"}
+      - alert: NatDrops
+        expr: increase(lab_nat_drops_total{lab="cat8000v-ipsec"}[15m]) > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.router }}: {{ $value | printf \"%.0f\" }} packets dropped {{ $labels.direction }} for want of a translation in the last 15 minutes"}
+      - alert: NatAggregateRouteMissing
+        expr: (lab_nat_aggregate_route{lab="cat8000v-ipsec"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="cat8000v-ipsec",role="dci"}) > 0)
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.router }} has no route for {{ $labels.prefix }} ({{ $labels.kind }}) — the translated range the other side is told to use is not reachable"}
+      - alert: DnsZoneShrunk
+        expr: (lab_dns_zone_records{lab="cat8000v-ipsec"} < lab_dns_zone_records_expected{lab="cat8000v-ipsec"}) and on (lab) (sum by (lab) (lab_vm_running{lab="cat8000v-ipsec",role="dci"}) > 0)
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.router }} answers for {{ $labels.zone }} with {{ $value }} records, fewer than the model's"}
+      - alert: DnsServerDown
+        expr: (lab_dns_server_up{lab="cat8000v-ipsec"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="cat8000v-ipsec",role="dci"}) > 0)
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.router }} no longer answers for {{ $labels.zone }} (ip dns server is gone)"}
+      - alert: DnsFixupFailing
+        expr: lab_dns_fixup_ok{lab="cat8000v-ipsec"} == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "the last packet capture on both sides of {{ $labels.router }} shows a DNS answer that was NOT translated — a client resolving across the interconnect gets an address it cannot reach"}
+      - alert: InterconnectUnreachable
+        expr: (lab_interconnect_collect_error{lab="cat8000v-ipsec"} == 1) and on (lab) (sum by (lab) (lab_vm_running{lab="cat8000v-ipsec",role="dci"}) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "the portal cannot read the interconnect state from {{ $labels.router }}"}
       - alert: ConfigDrift
         expr: lab_config_compliance_ok{lab="cat8000v-ipsec"} == 0
         for: 10m

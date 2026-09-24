@@ -175,14 +175,39 @@ p.append(panel("Hours since the last compliance run", "stat", [(f"(time() - lab_
                thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 7}, {"color": "red", "value": 13}]}))
 p.append(panel("Routers compliant / scheduled every", "stat", [(f"sum(lab_config_compliance_ok{{{L}}})", "compliant"), (f"count(lab_config_compliance_ok{{{L}}})", "routers"), (f"lab_config_compliance_interval_seconds{{{L}}} / 3600", "interval (h)")], 18, 62, 6, 3, colorMode="none", decimals=0))
 
-p.append(row("Firewalls: forward filter (syslog -> VictoriaLogs)", 65))
-p.append(panel("Dropped packets / 5 min per firewall (rule 900)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" | stats by (_time:5m, hostname) count() as drops', "{{hostname}}")], 0, 66, 8, 7, ds=VL, min=0))
-p.append(panel("New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)", "timeseries", [logs_ts(FW + '"-A]IN=" | stats by (_time:5m, hostname) count() as accepts', "{{hostname}}")], 8, 66, 8, 7, ds=VL, min=0))   # the accept tags end in -A]
-p.append(panel("Drops / 5 min by source (all firewalls)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (_time:5m, src) count() as drops', "{{src}}")], 16, 66, 8, 7, ds=VL, min=0))
-p.append(panel("Top dropped flows (selected range)", "table", [(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20', "", {"queryType": "stats"})], 0, 73, 12, 9, ds=VL, columns=["hostname", "in", "out", "src", "dst", "proto", "dport"]))
-p.append(panel("Firewall log (newest first)", "logs", [(FW, "")], 12, 73, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+# the data-centre interconnect: it carries no tunnels, so its health is the NAT table, the aggregates the two sides exchange
+# instead of their overlapping prefixes, and the two DNS zones (portal /metrics <- webapp/interconnect.py). The fix-up verdict
+# is what the packet capture of the last test run saw on both sides of the DCI.
+p.append(row("Data-centre interconnect: twice-NAT, aggregates and the DNS fix-up", 65))
+p.append(panel("Static translations on the DCI (two per overlapping prefix)", "stat",
+               [(f"lab_nat_static_translations{{{L}}}", "on the router"), (f"lab_nat_static_translations_expected{{{L}}}", "the model says")],
+               0, 66, 5, 7, decimals=0, colorMode="none"))
+p.append(panel("Static translations missing (router vs model)", "stat",
+               [(f"lab_nat_static_translations_expected{{{L}}} - lab_nat_static_translations{{{L}}}", "missing")], 5, 66, 4, 7, decimals=0,
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("NAT table on the DCI", "timeseries",
+               [(f"lab_nat_active_translations{{{L}}}", "active"), (f"lab_nat_static_translations{{{L}}}", "static")], 9, 66, 8, 7, min=0, decimals=0))
+p.append(panel("Packets dropped for want of a translation (per 15 min)", "timeseries",
+               [(f"increase(lab_nat_drops_total{{{L}}}[15m])", "{{direction}}")], 17, 66, 7, 7, min=0, decimals=0,
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Aggregates in the DCI's routing table (what crosses instead of the overlapping prefixes)", "state-timeline",
+               [(f"lab_nat_aggregate_route{{{L}}}", "{{prefix}} ({{kind}}, {{source}})")], 0, 73, 12, 6,
+               mappings=[{"type": "value", "options": {"0": {"text": "missing", "color": "red"}, "1": {"text": "routed", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("DNS records per zone (router vs model)", "timeseries",
+               [(f"lab_dns_zone_records{{{L}}}", "{{zone}} on {{router}}"), (f"lab_dns_zone_records_expected{{{L}}}", "{{zone}} in the model")], 12, 73, 7, 6, min=0, decimals=0))
+p.append(panel("DNS fix-up, last capture on both sides", "stat", [(f"lab_dns_fixup_ok{{{L}}}", "fix-up")], 19, 73, 5, 3,
+               mappings=[{"type": "value", "options": {"0": {"text": "NOT translated", "color": "red"}, "1": {"text": "proven on the wire", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Hours since that capture", "stat", [(f"(time() - lab_dns_fixup_timestamp_seconds{{{L}}}) / 3600", "since the capture")], 19, 76, 5, 3, unit="h", decimals=1,
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 24}, {"color": "red", "value": 72}]}))
 
-y = host_row(p, 82)
+p.append(row("Firewalls: forward filter (syslog -> VictoriaLogs)", 79))
+p.append(panel("Dropped packets / 5 min per firewall (rule 900)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" | stats by (_time:5m, hostname) count() as drops', "{{hostname}}")], 0, 80, 8, 7, ds=VL, min=0))
+p.append(panel("New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)", "timeseries", [logs_ts(FW + '"-A]IN=" | stats by (_time:5m, hostname) count() as accepts', "{{hostname}}")], 8, 80, 8, 7, ds=VL, min=0))   # the accept tags end in -A]
+p.append(panel("Drops / 5 min by source (all firewalls)", "timeseries", [logs_ts(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (_time:5m, src) count() as drops', "{{src}}")], 16, 80, 8, 7, ds=VL, min=0))
+p.append(panel("Top dropped flows (selected range)", "table", [(FW + '"FWD-filter-900-D" ' + FWX + '| stats by (hostname, in, out, src, dst, proto, dport) count() as hits | sort by (hits desc) | limit 20', "", {"queryType": "stats"})], 0, 87, 12, 9, ds=VL, columns=["hostname", "in", "out", "src", "dst", "proto", "dport"]))
+p.append(panel("Firewall log (newest first)", "logs", [(FW, "")], 12, 87, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+y = host_row(p, 96)
 p.append(row("Lab and runs", y))
 p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))

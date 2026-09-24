@@ -1647,7 +1647,7 @@
   {
    "id": 30,
    "type": "row",
-   "title": "Firewalls: forward filter (syslog -> VictoriaLogs)",
+   "title": "Data-centre interconnect: twice-NAT, aggregates and the DNS fix-up",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1659,6 +1659,474 @@
   },
   {
    "id": 31,
+   "title": "Static translations on the DCI (two per overlapping prefix)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 66,
+    "w": 5,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_nat_static_translations{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "on the router"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_nat_static_translations_expected{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "the model says"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "none",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 32,
+   "title": "Static translations missing (router vs model)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 5,
+    "y": 66,
+    "w": 4,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_nat_static_translations_expected{lab=\"cat8000v-ipsec\"} - lab_nat_static_translations{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "missing"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 0,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 33,
+   "title": "NAT table on the DCI",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 9,
+    "y": 66,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_nat_active_translations{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "active"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_nat_static_translations{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "static"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 34,
+   "title": "Packets dropped for want of a translation (per 15 min)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 17,
+    "y": 66,
+    "w": 7,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "increase(lab_nat_drops_total{lab=\"cat8000v-ipsec\"}[15m])",
+     "legendFormat": "{{direction}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 35,
+   "title": "Aggregates in the DCI's routing table (what crosses instead of the overlapping prefixes)",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 73,
+    "w": 12,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_nat_aggregate_route{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{prefix}} ({{kind}}, {{source}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "missing",
+         "color": "red"
+        },
+        "1": {
+         "text": "routed",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 36,
+   "title": "DNS records per zone (router vs model)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 73,
+    "w": 7,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_dns_zone_records{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{zone}} on {{router}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_dns_zone_records_expected{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "{{zone}} in the model"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 37,
+   "title": "DNS fix-up, last capture on both sides",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 19,
+    "y": 73,
+    "w": 5,
+    "h": 3
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_dns_fixup_ok{lab=\"cat8000v-ipsec\"}",
+     "legendFormat": "fix-up"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "NOT translated",
+         "color": "red"
+        },
+        "1": {
+         "text": "proven on the wire",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 38,
+   "title": "Hours since that capture",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 19,
+    "y": 76,
+    "w": 5,
+    "h": 3
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "(time() - lab_dns_fixup_timestamp_seconds{lab=\"cat8000v-ipsec\"}) / 3600",
+     "legendFormat": "since the capture"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "h",
+     "decimals": 1,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 24
+       },
+       {
+        "color": "red",
+        "value": 72
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 39,
+   "type": "row",
+   "title": "Firewalls: forward filter (syslog -> VictoriaLogs)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 79,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 40,
    "title": "Dropped packets / 5 min per firewall (rule 900)",
    "type": "timeseries",
    "datasource": {
@@ -1667,7 +2135,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 66,
+    "y": 80,
     "w": 8,
     "h": 7
    },
@@ -1700,7 +2168,7 @@
    }
   },
   {
-   "id": 32,
+   "id": 41,
    "title": "New flows accepted / 5 min per firewall (IKE, ESP, ICMP first packets)",
    "type": "timeseries",
    "datasource": {
@@ -1709,7 +2177,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 66,
+    "y": 80,
     "w": 8,
     "h": 7
    },
@@ -1742,7 +2210,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 42,
    "title": "Drops / 5 min by source (all firewalls)",
    "type": "timeseries",
    "datasource": {
@@ -1751,7 +2219,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 66,
+    "y": 80,
     "w": 8,
     "h": 7
    },
@@ -1784,7 +2252,7 @@
    }
   },
   {
-   "id": 34,
+   "id": 43,
    "title": "Top dropped flows (selected range)",
    "type": "table",
    "datasource": {
@@ -1793,7 +2261,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 73,
+    "y": 87,
     "w": 12,
     "h": 9
    },
@@ -1856,7 +2324,7 @@
    ]
   },
   {
-   "id": 35,
+   "id": 44,
    "title": "Firewall log (newest first)",
    "type": "logs",
    "datasource": {
@@ -1865,7 +2333,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 73,
+    "y": 87,
     "w": 12,
     "h": 9
    },
@@ -1891,20 +2359,20 @@
    }
   },
   {
-   "id": 36,
+   "id": 45,
    "type": "row",
    "title": "Ubuntu lab host (KVM): CPU and memory",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 82,
+    "y": 96,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 37,
+   "id": 46,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1913,7 +2381,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 83,
+    "y": 97,
     "w": 4,
     "h": 4
    },
@@ -1962,7 +2430,7 @@
    }
   },
   {
-   "id": 38,
+   "id": 47,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1971,7 +2439,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 83,
+    "y": 97,
     "w": 4,
     "h": 4
    },
@@ -2020,7 +2488,7 @@
    }
   },
   {
-   "id": 39,
+   "id": 48,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -2029,7 +2497,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 83,
+    "y": 97,
     "w": 5,
     "h": 4
    },
@@ -2079,7 +2547,7 @@
    }
   },
   {
-   "id": 40,
+   "id": 49,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -2088,7 +2556,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 83,
+    "y": 97,
     "w": 7,
     "h": 4
    },
@@ -2156,7 +2624,7 @@
    }
   },
   {
-   "id": 41,
+   "id": 50,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -2165,7 +2633,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 83,
+    "y": 97,
     "w": 4,
     "h": 4
    },
@@ -2214,7 +2682,7 @@
    }
   },
   {
-   "id": 42,
+   "id": 51,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -2223,7 +2691,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 87,
+    "y": 101,
     "w": 8,
     "h": 8
    },
@@ -2293,7 +2761,7 @@
    }
   },
   {
-   "id": 43,
+   "id": 52,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -2302,7 +2770,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 87,
+    "y": 101,
     "w": 8,
     "h": 8
    },
@@ -2362,7 +2830,7 @@
    }
   },
   {
-   "id": 44,
+   "id": 53,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -2371,7 +2839,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 87,
+    "y": 101,
     "w": 8,
     "h": 8
    },
@@ -2405,20 +2873,20 @@
    }
   },
   {
-   "id": 45,
+   "id": 54,
    "type": "row",
    "title": "Lab and runs",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 95,
+    "y": 109,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 46,
+   "id": 55,
    "title": "VMs running",
    "type": "state-timeline",
    "datasource": {
@@ -2427,7 +2895,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 96,
+    "y": 110,
     "w": 12,
     "h": 9
    },
@@ -2485,7 +2953,7 @@
    }
   },
   {
-   "id": 47,
+   "id": 56,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -2494,7 +2962,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 96,
+    "y": 110,
     "w": 12,
     "h": 9
    },
