@@ -118,7 +118,20 @@ p.append(panel("Load (1 min)", "timeseries", [(f'node_load1{{{L}}}', "{{node}}")
 p.append(panel("Core link traffic (bit/s, PE and P data ports, received)", "timeseries", [(f'rate(node_network_receive_bytes_total{{{L},role=~"pe|p",device=~"eth[1-9]"}}[2m]) * 8', "{{node}} {{device}}")], 0, 53, 12, 8, unit="bps", min=0))
 p.append(panel("Tenant host traffic (bit/s, transmitted)", "timeseries", [(f'rate(node_network_transmit_bytes_total{{{L},role="host",device="eth1"}}[2m]) * 8', "{{node}} ({{tenant}})")], 12, 53, 12, 8, unit="bps", min=0))
 p.append(panel("Exporters up", "state-timeline", [(f'up{{{L}}}', "{{node}} {{job}}")], 0, 61, 24, 8, ds=PROM, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-host_row(p, 69)
+# The BGP looking glass (the lg VM: a passive route collector peering with every reflector). Its own /metrics carries what
+# the core's VPN table holds and how much it moves — the detail behind each prefix lives in the looking glass itself.
+LG = f'{L},job="lookingglass"'
+p.append(row("BGP looking glass (route collector)", 69))
+p.append(panel("Prefixes in the core (collector)", "stat", [(f'sum(lg_prefixes{{{L},source="collector",afi="ipv4"}})', "VPNv4"), (f'sum(lg_prefixes{{{L},source="collector",afi="ipv6"}})', "VPNv6")], 0, 70, 5, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Collector sessions to the reflectors", "stat", [(f'sum(lg_session_up{{{L}}})', "up"), (f'count(lg_session_up{{{L}}})', "sessions")], 5, 70, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 1}]}))
+p.append(panel("Changes in the last hour", "stat", [(f'sum(lg_events_1h{{{L},kind="announce"}}) or vector(0)', "announce"), (f'sum(lg_events_1h{{{L},kind="change"}}) or vector(0)', "change"), (f'sum(lg_events_1h{{{L},kind="withdraw"}}) or vector(0)', "withdraw")], 9, 70, 6, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("History kept", "stat", [(f'lg_db_events{{{L}}}', "events"), (f'lg_db_paths{{{L}}}', "live paths"), (f'lg_db_bytes{{{L}}}', "database")], 15, 70, 5, 4, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]},
+               overrides=[{"matcher": {"id": "byName", "options": "database"}, "properties": [{"id": "unit", "value": "bytes"}]}]))
+p.append(panel("Oldest collection (age)", "stat", [(f'max(lg_poll_age_seconds{{{L}}})', "age")], 20, 70, 4, 4, unit="s", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 300}, {"color": "red", "value": 900}]}))
+p.append(panel("Paths the collector holds, per tenant VRF and family", "timeseries", [(f'lg_paths{{{L},source="collector"}}', "{{afi}} {{safi}} {{vrf}}")], 0, 74, 8, 8, min=0))
+p.append(panel("Table movement (announce / change / withdraw per 5 min)", "timeseries", [(f'lg_events_5m{{{L}}}', "{{kind}}")], 8, 74, 8, 8, min=0))
+p.append(panel("Collector sessions and per-VRF collections", "state-timeline", [(f'lg_session_up{{{L}}}', "session {{peer}}"), (f'lg_poll_ok{{{L}}}', "collection {{source}}")], 16, 74, 8, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 82)
 (OUT / "srv6-core-overview.json").write_text(json.dumps(dashboard("srv6-core-overview", "SRv6 core: overview", p, ["srv6-core", "lab"]), indent=1))
 
 # ---------------------------------------------------------------- C8000v IPsec lab overview (the portal's lab_tunnel_* / lab_headend_* gauges)

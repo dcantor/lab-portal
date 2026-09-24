@@ -1394,7 +1394,7 @@
   {
    "id": 26,
    "type": "row",
-   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "title": "BGP looking glass (route collector)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1406,7 +1406,7 @@
   },
   {
    "id": 27,
-   "title": "Host CPU busy %",
+   "title": "Prefixes in the core (collector)",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
@@ -1415,6 +1415,502 @@
    "gridPos": {
     "x": 0,
     "y": 70,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lg_prefixes{lab=\"srv6-core\",source=\"collector\",afi=\"ipv4\"})",
+     "legendFormat": "VPNv4"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lg_prefixes{lab=\"srv6-core\",source=\"collector\",afi=\"ipv6\"})",
+     "legendFormat": "VPNv6"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 28,
+   "title": "Collector sessions to the reflectors",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 5,
+    "y": 70,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lg_session_up{lab=\"srv6-core\"})",
+     "legendFormat": "up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(lg_session_up{lab=\"srv6-core\"})",
+     "legendFormat": "sessions"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 29,
+   "title": "Changes in the last hour",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 9,
+    "y": 70,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lg_events_1h{lab=\"srv6-core\",kind=\"announce\"}) or vector(0)",
+     "legendFormat": "announce"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lg_events_1h{lab=\"srv6-core\",kind=\"change\"}) or vector(0)",
+     "legendFormat": "change"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lg_events_1h{lab=\"srv6-core\",kind=\"withdraw\"}) or vector(0)",
+     "legendFormat": "withdraw"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 30,
+   "title": "History kept",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 15,
+    "y": 70,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_db_events{lab=\"srv6-core\"}",
+     "legendFormat": "events"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_db_paths{lab=\"srv6-core\"}",
+     "legendFormat": "live paths"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_db_bytes{lab=\"srv6-core\"}",
+     "legendFormat": "database"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "database"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "bytes"
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 31,
+   "title": "Oldest collection (age)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 70,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "max(lg_poll_age_seconds{lab=\"srv6-core\"})",
+     "legendFormat": "age"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 300
+       },
+       {
+        "color": "red",
+        "value": 900
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 32,
+   "title": "Paths the collector holds, per tenant VRF and family",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 74,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_paths{lab=\"srv6-core\",source=\"collector\"}",
+     "legendFormat": "{{afi}} {{safi}} {{vrf}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 33,
+   "title": "Table movement (announce / change / withdraw per 5 min)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 74,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_events_5m{lab=\"srv6-core\"}",
+     "legendFormat": "{{kind}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 34,
+   "title": "Collector sessions and per-VRF collections",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 74,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_session_up{lab=\"srv6-core\"}",
+     "legendFormat": "session {{peer}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_poll_ok{lab=\"srv6-core\"}",
+     "legendFormat": "collection {{source}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 35,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 82,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 36,
+   "title": "Host CPU busy %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 83,
     "w": 4,
     "h": 4
    },
@@ -1463,7 +1959,7 @@
    }
   },
   {
-   "id": 28,
+   "id": 37,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1472,7 +1968,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 70,
+    "y": 83,
     "w": 4,
     "h": 4
    },
@@ -1521,7 +2017,7 @@
    }
   },
   {
-   "id": 29,
+   "id": 38,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1530,7 +2026,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 70,
+    "y": 83,
     "w": 5,
     "h": 4
    },
@@ -1580,7 +2076,7 @@
    }
   },
   {
-   "id": 30,
+   "id": 39,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1589,7 +2085,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 70,
+    "y": 83,
     "w": 7,
     "h": 4
    },
@@ -1657,7 +2153,7 @@
    }
   },
   {
-   "id": 31,
+   "id": 40,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1666,7 +2162,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 70,
+    "y": 83,
     "w": 4,
     "h": 4
    },
@@ -1715,7 +2211,7 @@
    }
   },
   {
-   "id": 32,
+   "id": 41,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1724,7 +2220,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 74,
+    "y": 87,
     "w": 8,
     "h": 8
    },
@@ -1794,7 +2290,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 42,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1803,7 +2299,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 74,
+    "y": 87,
     "w": 8,
     "h": 8
    },
@@ -1863,7 +2359,7 @@
    }
   },
   {
-   "id": 34,
+   "id": 43,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1872,7 +2368,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 74,
+    "y": 87,
     "w": 8,
     "h": 8
    },

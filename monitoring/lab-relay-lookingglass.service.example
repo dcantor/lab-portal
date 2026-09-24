@@ -1,0 +1,11 @@
+[Unit]
+Description=Relay the srv6-core BGP looking glass (lg VM 10.3.0.70:8080) to the LAN on port 8092
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/socat TCP-LISTEN:8092,fork,reuseaddr,bind=192.168.50.231 TCP:10.3.0.70:8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
