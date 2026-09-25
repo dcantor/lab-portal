@@ -1813,7 +1813,7 @@
   },
   {
    "id": 34,
-   "title": "Collector sessions and per-VRF collections",
+   "title": "Collector sessions and per-router collections",
    "type": "state-timeline",
    "datasource": {
     "type": "prometheus",
@@ -1842,7 +1842,7 @@
       "uid": "victoriametrics"
      },
      "expr": "lg_poll_ok{lab=\"srv6-core\"}",
-     "legendFormat": "collection {{source}}"
+     "legendFormat": "{{source}} ({{via}})"
     }
    ],
    "fieldConfig": {
@@ -1889,19 +1889,142 @@
   },
   {
    "id": 35,
+   "title": "Read from the routers: RIB entries per router",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 82,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (source) (lg_paths{lab=\"srv6-core\",safi=\"rib\"})",
+     "legendFormat": "{{source}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 36,
+   "title": "Paths by how they were read",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 82,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (via) (lg_paths{lab=\"srv6-core\"})",
+     "legendFormat": "{{via}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 37,
+   "title": "IS-IS adjacencies the routers report (through their API)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 82,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lg_isis_adjacencies_up{lab=\"srv6-core\"}",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 38,
    "type": "row",
    "title": "Ubuntu lab host (KVM): CPU and memory",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 82,
+    "y": 89,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 36,
+   "id": 39,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1910,7 +2033,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 83,
+    "y": 90,
     "w": 4,
     "h": 4
    },
@@ -1959,7 +2082,7 @@
    }
   },
   {
-   "id": 37,
+   "id": 40,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1968,7 +2091,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 83,
+    "y": 90,
     "w": 4,
     "h": 4
    },
@@ -2017,7 +2140,7 @@
    }
   },
   {
-   "id": 38,
+   "id": 41,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -2026,7 +2149,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 83,
+    "y": 90,
     "w": 5,
     "h": 4
    },
@@ -2076,7 +2199,7 @@
    }
   },
   {
-   "id": 39,
+   "id": 42,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -2085,7 +2208,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 83,
+    "y": 90,
     "w": 7,
     "h": 4
    },
@@ -2153,7 +2276,7 @@
    }
   },
   {
-   "id": 40,
+   "id": 43,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -2162,7 +2285,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 83,
+    "y": 90,
     "w": 4,
     "h": 4
    },
@@ -2211,7 +2334,7 @@
    }
   },
   {
-   "id": 41,
+   "id": 44,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -2220,7 +2343,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 87,
+    "y": 94,
     "w": 8,
     "h": 8
    },
@@ -2290,7 +2413,7 @@
    }
   },
   {
-   "id": 42,
+   "id": 45,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -2299,7 +2422,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 87,
+    "y": 94,
     "w": 8,
     "h": 8
    },
@@ -2359,7 +2482,7 @@
    }
   },
   {
-   "id": 43,
+   "id": 46,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -2368,7 +2491,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 87,
+    "y": 94,
     "w": 8,
     "h": 8
    },

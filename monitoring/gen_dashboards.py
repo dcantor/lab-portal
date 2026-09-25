@@ -130,8 +130,12 @@ p.append(panel("History kept", "stat", [(f'lg_db_events{{{L}}}', "events"), (f'l
 p.append(panel("Oldest collection (age)", "stat", [(f'max(lg_poll_age_seconds{{{L}}})', "age")], 20, 70, 4, 4, unit="s", colorMode="value", thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 300}, {"color": "red", "value": 900}]}))
 p.append(panel("Paths the collector holds, per tenant VRF and family", "timeseries", [(f'lg_paths{{{L},source="collector"}}', "{{afi}} {{safi}} {{vrf}}")], 0, 74, 8, 8, min=0))
 p.append(panel("Table movement (announce / change / withdraw per 5 min)", "timeseries", [(f'lg_events_5m{{{L}}}', "{{kind}}")], 8, 74, 8, 8, min=0))
-p.append(panel("Collector sessions and per-VRF collections", "state-timeline", [(f'lg_session_up{{{L}}}', "session {{peer}}"), (f'lg_poll_ok{{{L}}}', "collection {{source}}")], 16, 74, 8, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-host_row(p, 82)
+p.append(panel("Collector sessions and per-router collections", "state-timeline", [(f'lg_session_up{{{L}}}', "session {{peer}}"), (f'lg_poll_ok{{{L}}}', "{{source}} ({{via}})")], 16, 74, 8, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+# what the looking glass reads from the routers themselves (their own HTTPS API) beside what the session delivers
+p.append(panel("Read from the routers: RIB entries per router", "timeseries", [(f'sum by (source) (lg_paths{{{L},safi="rib"}})', "{{source}}")], 0, 82, 8, 7, min=0))
+p.append(panel("Paths by how they were read", "timeseries", [(f'sum by (via) (lg_paths{{{L}}})', "{{via}}")], 8, 82, 8, 7, min=0))
+p.append(panel("IS-IS adjacencies the routers report (through their API)", "timeseries", [(f'lg_isis_adjacencies_up{{{L}}}', "{{node}}")], 16, 82, 8, 7, min=0))
+host_row(p, 89)
 (OUT / "srv6-core-overview.json").write_text(json.dumps(dashboard("srv6-core-overview", "SRv6 core: overview", p, ["srv6-core", "lab"]), indent=1))
 
 # ---------------------------------------------------------------- C8000v IPsec lab overview (the portal's lab_tunnel_* / lab_headend_* gauges)
