@@ -98,35 +98,36 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.node }}: {{ $labels.mountpoint }} under 10 % free"}
 
-  - name: c8000v-dmvpn-lab           # every rule gated on the lab's C8000vs running, so a stopped lab raises nothing
+  - name: c8000v-dmvpn-lab           # every rule gated on the lab's C8000vs running, so a stopped lab raises nothing, and
+    #                                   silent for a node under announced maintenance (lab_maintenance, the portal's maint.py)
     rules:
       - alert: DmvpnCustomerNotRegistered
-        expr: (lab_dmvpn_nhs_up{lab="c8000v-dmvpn-lab"} < lab_dmvpn_nhs_expected{lab="c8000v-dmvpn-lab"}) and on (lab) (sum by (lab) (lab_vm_running{lab="c8000v-dmvpn-lab",role="hub"}) > 0)
+        expr: ((lab_dmvpn_nhs_up{lab="c8000v-dmvpn-lab"} < lab_dmvpn_nhs_expected{lab="c8000v-dmvpn-lab"}) and on (lab) (sum by (lab) (lab_vm_running{lab="c8000v-dmvpn-lab",role="hub"}) > 0)) unless on (lab, router) (lab_maintenance{lab="c8000v-dmvpn-lab"} == 1)
         for: 3m
         labels: {severity: critical}
         annotations: {summary: "{{ $labels.router }} is registered with {{ $value }} hub(s), not all of them — NHRP to the missing hub is down"}
       - alert: DmvpnProviderSessionDown
-        expr: (lab_bgp_underlay_up{lab="c8000v-dmvpn-lab"} < 1) and on (lab) (sum by (lab) (lab_vm_running{lab="c8000v-dmvpn-lab",role="provider"}) > 0)
+        expr: ((lab_bgp_underlay_up{lab="c8000v-dmvpn-lab"} < 1) and on (lab) (sum by (lab) (lab_vm_running{lab="c8000v-dmvpn-lab",role="provider"}) > 0)) unless on (lab, router) (lab_maintenance{lab="c8000v-dmvpn-lab"} == 1)
         for: 2m
         labels: {severity: critical}
         annotations: {summary: "{{ $labels.router }} has no eBGP session with the provider: its NBMA address is withdrawn and its tunnels cannot form"}
       - alert: DmvpnOverlayBgpDown
-        expr: (lab_bgp_overlay_up{lab="c8000v-dmvpn-lab"} < lab_bgp_overlay_sessions{lab="c8000v-dmvpn-lab"}) and on (lab) (sum by (lab) (lab_vm_running{lab="c8000v-dmvpn-lab",role="hub"}) > 0)
+        expr: ((lab_bgp_overlay_up{lab="c8000v-dmvpn-lab"} < lab_bgp_overlay_sessions{lab="c8000v-dmvpn-lab"}) and on (lab) (sum by (lab) (lab_vm_running{lab="c8000v-dmvpn-lab",role="hub"}) > 0)) unless on (lab, router) (lab_maintenance{lab="c8000v-dmvpn-lab"} == 1)
         for: 3m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.router }}: not every overlay iBGP session is Established"}
       - alert: DmvpnRouterUnreachable
-        expr: (lab_router_reachable{lab="c8000v-dmvpn-lab"} == 0) and on (lab, router) label_replace(lab_vm_running{lab="c8000v-dmvpn-lab"} == 1, "router", "$1", "node", "(.*)")
+        expr: ((lab_router_reachable{lab="c8000v-dmvpn-lab"} == 0) and on (lab, router) label_replace(lab_vm_running{lab="c8000v-dmvpn-lab"} == 1, "router", "$1", "node", "(.*)")) unless on (lab, router) (lab_maintenance{lab="c8000v-dmvpn-lab"} == 1)
         for: 3m
         labels: {severity: warning}
         annotations: {summary: "the portal cannot read {{ $labels.router }} over SSH"}
       - alert: DmvpnLanHostDown
-        expr: (lab_host_up{lab="c8000v-dmvpn-lab"} == 0) and on (lab, host) label_replace(lab_vm_running{lab="c8000v-dmvpn-lab"} == 1, "host", "$1", "node", "(.*)")
+        expr: ((lab_host_up{lab="c8000v-dmvpn-lab"} == 0) and on (lab, host) label_replace(lab_vm_running{lab="c8000v-dmvpn-lab"} == 1, "host", "$1", "node", "(.*)")) unless on (lab, host) label_replace(lab_maintenance{lab="c8000v-dmvpn-lab"} == 1, "host", "$1", "router", "(.*)")
         for: 3m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.host }} is running but does not answer on its OOB address"}
       - alert: DmvpnRouterCpuHigh
-        expr: lab_router_cpu_pct{lab="c8000v-dmvpn-lab"} > 80
+        expr: (lab_router_cpu_pct{lab="c8000v-dmvpn-lab"} > 80) unless on (lab, router) (lab_maintenance{lab="c8000v-dmvpn-lab"} == 1)
         for: 5m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.router }} CPU at {{ $value }}% (one-minute average)"}
