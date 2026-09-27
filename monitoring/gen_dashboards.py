@@ -230,6 +230,50 @@ p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{n
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "cat8000v-ipsec-overview.json").write_text(json.dumps(dashboard("cat8000v-ipsec-overview", "C8000v IPsec: overview", p, ["cat8000v-ipsec", "lab"], lab="cat8000v-ipsec"), indent=1))
 
+# ---------------------------------------------------------------- c8000v-dmvpn-lab overview (the portal measures the C8000vs; the
+# VyOS provider is scraped and pushes Telegraf; every router's syslog is in VictoriaLogs)
+_id[0] = 0
+L = 'lab="c8000v-dmvpn-lab"'
+IOS = 'facility_keyword:local7 '                                     # IOS-XE syslog (origin-id hostname: the router is in the message)
+IOSX = '| extract "<seq>: <router>: " '
+p = []
+p.append(row("The DMVPN cloud", 0))
+p.append(panel("Health", "stat", [(f"lab_health_ok{{{L}}}", "health")], 0, 1, 4, 4, colorMode="background",
+               mappings=[{"type": "value", "options": {"0": {"text": "problems", "color": "red"}, "1": {"text": "healthy", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Registrations (customers x hubs)", "stat", [(f"sum(lab_dmvpn_nhs_up{{{L}}})", "up"), (f"sum(lab_dmvpn_nhs_expected{{{L}}})", "expected")], 4, 1, 5, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Sites peering with the provider", "stat", [(f"sum(lab_provider_customers_up{{{L}}})", "up"), (f"sum(lab_provider_customers_expected{{{L}}})", "expected")], 9, 1, 5, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Shortcuts live (customer pairs)", "stat", [(f"sum(lab_dmvpn_shortcuts{{{L}}}) / 2", "pairs")], 14, 1, 3, 4, colorMode="value", decimals=0, thresholds={"steps": [{"color": "blue", "value": None}]}))
+p.append(panel("Last test run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 17, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}]},
+                          {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}]}}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing"}}) or vector(0)', "firing")], 21, 1, 3, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Customer registered with every hub (NHRP NHS up = expected)", "state-timeline", [(f"lab_dmvpn_nhs_up{{{L}}} == bool lab_dmvpn_nhs_expected{{{L}}}", "{{router}} ({{region}})")], 0, 5, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("eBGP session with the provider, per router", "state-timeline", [(f"lab_bgp_underlay_up{{{L}}} > bool 0", "{{router}}")], 12, 5, 12, 7, mappings=SITE_MAP, thresholds=UPDOWN))
+p.append(panel("Registrations held by each hub", "timeseries", [(f"lab_dmvpn_registrations{{{L}}}", "{{router}}")], 0, 12, 8, 7, min=0, decimals=0))
+p.append(panel("Customer-to-customer shortcuts (phase 3), per customer", "timeseries", [(f"lab_dmvpn_shortcuts{{{L}}}", "{{router}}")], 8, 12, 8, 7, min=0, decimals=0))
+p.append(panel("IPsec sessions UP-ACTIVE per router", "timeseries", [(f"lab_ipsec_sessions_up{{{L}}}", "{{router}}")], 16, 12, 8, 7, min=0, decimals=0))
+p.append(panel("Overlay iBGP: Established / sessions per router", "timeseries", [(f"lab_bgp_overlay_up{{{L}}}", "{{router}} up"), (f"lab_bgp_overlay_sessions{{{L}}}", "{{router}} sessions")], 0, 19, 12, 7, min=0, decimals=0,
+               overrides=[{"matcher": {"id": "byRegexp", "options": ".* sessions"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}}]}]))
+p.append(panel("C8000v CPU % (one-minute average)", "timeseries", [(f"lab_router_cpu_pct{{{L}}}", "{{router}}")], 12, 19, 12, 7, unit="percent", min=0, max=100))
+
+p.append(row("The provider (VyOS: exporters and Telegraf)", 26))
+p.append(panel("Sites peering with the provider", "timeseries", [(f"lab_provider_customers_up{{{L}}}", "up"), (f"lab_provider_customers_expected{{{L}}}", "expected")], 0, 27, 8, 7, min=0, decimals=0))
+p.append(panel("Provider CPU busy %", "timeseries", [(f'100 * (1 - avg by (node) (rate(node_cpu_seconds_total{{{L},node="mpls",mode="idle"}}[2m])))', "{{node}}")], 8, 27, 8, 7, unit="percent", min=0, max=100))
+p.append(panel("Access links: traffic per port (bit/s)", "timeseries", [(f'8 * rate(node_network_receive_bytes_total{{{L},node="mpls",device=~"eth([1-9]|1[0-2])"}}[2m])', "{{device}} in"), (f'8 * rate(node_network_transmit_bytes_total{{{L},node="mpls",device=~"eth([1-9]|1[0-2])"}}[2m])', "{{device}} out")], 16, 27, 8, 7, unit="bps", min=0))
+
+p.append(row("Router syslog (VictoriaLogs)", 34))
+p.append(panel("BGP neighbour Down events / 5 min per router", "timeseries", [logs_ts(IOS + '"%BGP-5-ADJCHANGE" "Down" ' + IOSX + '| stats by (_time:5m, router) count() as downs', "{{router}}")], 0, 35, 8, 7, ds=VL, min=0))
+p.append(panel("NHRP / IKE / IPsec events / 5 min per router", "timeseries", [logs_ts(IOS + '("%DMVPN-" OR "%NHRP-" OR "%IKEV2-" OR "%CRYPTO-") ' + IOSX + '| stats by (_time:5m, router) count() as events', "{{router}}")], 8, 35, 8, 7, ds=VL, min=0))
+p.append(panel("Syslog lines / 5 min per router", "timeseries", [logs_ts(IOS + IOSX + '| stats by (_time:5m, router) count() as lines', "{{router}}"), logs_ts('hostname:mpls | stats by (_time:5m) count() as lines', "mpls")], 16, 35, 8, 7, ds=VL, min=0))
+p.append(panel("C8000v syslog (newest first)", "logs", [(IOS, "")], 0, 42, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+y = host_row(p, 51)
+p.append(row("Lab and runs", y))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 8, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("LAN hosts answering", "state-timeline", [(f"lab_host_up{{{L}}}", "{{host}}")], 8, y + 1, 8, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 16, y + 1, 8, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+(OUT / "c8000v-dmvpn-lab-overview.json").write_text(json.dumps(dashboard("c8000v-dmvpn-lab-overview", "C8000v DMVPN: overview", p, ["c8000v-dmvpn-lab", "lab"], lab="c8000v-dmvpn-lab"), indent=1))
+
 # ---------------------------------------------------------------- node detail (any lab, any node)
 _id[0] = 0
 NV = [{"name": "lab", "type": "query", "datasource": VM, "query": "label_values(node_uname_info, lab)", "refresh": 2, "includeAll": False, "current": {"text": "srv6-core", "value": "srv6-core"}},

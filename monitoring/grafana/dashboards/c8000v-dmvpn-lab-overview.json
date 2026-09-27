@@ -1,0 +1,1964 @@
+{
+ "uid": "c8000v-dmvpn-lab-overview",
+ "title": "C8000v DMVPN: overview",
+ "tags": [
+  "c8000v-dmvpn-lab",
+  "lab"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "annotations": {
+  "list": [
+   {
+    "name": "Runs and tests",
+    "enable": true,
+    "iconColor": "#5794F2",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "c8000v-dmvpn-lab",
+      "run"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Test events (failover, reflector)",
+    "enable": true,
+    "iconColor": "#F2495C",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "c8000v-dmvpn-lab",
+      "test"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Steering changes",
+    "enable": true,
+    "iconColor": "#FF9830",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "c8000v-dmvpn-lab",
+      "steering"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Router syslog alerts (vmalert-logs)",
+    "enable": true,
+    "iconColor": "#B877D9",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "expr": "ALERTS{lab=\"c8000v-dmvpn-lab\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{hostname}}",
+    "tagKeys": "alertname,hostname"
+   }
+  ]
+ },
+ "templating": {
+  "list": []
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "row",
+   "title": "The DMVPN cloud",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 2,
+   "title": "Health",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_health_ok{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "health"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "problems",
+         "color": "red"
+        },
+        "1": {
+         "text": "healthy",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 3,
+   "title": "Registrations (customers x hubs)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 1,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_dmvpn_nhs_up{lab=\"c8000v-dmvpn-lab\"})",
+     "legendFormat": "up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_dmvpn_nhs_expected{lab=\"c8000v-dmvpn-lab\"})",
+     "legendFormat": "expected"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 4,
+   "title": "Sites peering with the provider",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 9,
+    "y": 1,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_provider_customers_up{lab=\"c8000v-dmvpn-lab\"})",
+     "legendFormat": "up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_provider_customers_expected{lab=\"c8000v-dmvpn-lab\"})",
+     "legendFormat": "expected"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 5,
+   "title": "Shortcuts live (customer pairs)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 14,
+    "y": 1,
+    "w": 3,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_dmvpn_shortcuts{lab=\"c8000v-dmvpn-lab\"}) / 2",
+     "legendFormat": "pairs"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 0,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 6,
+   "title": "Last test run",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 17,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tests_last_passed{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "passed"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tests_last_failed{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "failed"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "failed"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 1
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "passed"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 7,
+   "title": "Firing alerts",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 21,
+    "y": 1,
+    "w": 3,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(ALERTS{lab=\"c8000v-dmvpn-lab\",alertstate=\"firing\"}) or vector(0)",
+     "legendFormat": "firing"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 8,
+   "title": "Customer registered with every hub (NHRP NHS up = expected)",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 5,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_dmvpn_nhs_up{lab=\"c8000v-dmvpn-lab\"} == bool lab_dmvpn_nhs_expected{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{router}} ({{region}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "title": "eBGP session with the provider, per router",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 5,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_bgp_underlay_up{lab=\"c8000v-dmvpn-lab\"} > bool 0",
+     "legendFormat": "{{router}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "Established",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 10,
+   "title": "Registrations held by each hub",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 12,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_dmvpn_registrations{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{router}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 11,
+   "title": "Customer-to-customer shortcuts (phase 3), per customer",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 12,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_dmvpn_shortcuts{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{router}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "title": "IPsec sessions UP-ACTIVE per router",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 12,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_ipsec_sessions_up{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{router}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "title": "Overlay iBGP: Established / sessions per router",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 19,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_bgp_overlay_up{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{router}} up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_bgp_overlay_sessions{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{router}} sessions"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".* sessions"
+      },
+      "properties": [
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "fill": "dash",
+         "dash": [
+          6,
+          4
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 14,
+   "title": "C8000v CPU % (one-minute average)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 19,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_router_cpu_pct{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{router}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 15,
+   "type": "row",
+   "title": "The provider (VyOS: exporters and Telegraf)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 26,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 16,
+   "title": "Sites peering with the provider",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 27,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_provider_customers_up{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_provider_customers_expected{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "expected"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 17,
+   "title": "Provider CPU busy %",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 27,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - avg by (node) (rate(node_cpu_seconds_total{lab=\"c8000v-dmvpn-lab\",node=\"mpls\",mode=\"idle\"}[2m])))",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 18,
+   "title": "Access links: traffic per port (bit/s)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 27,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "8 * rate(node_network_receive_bytes_total{lab=\"c8000v-dmvpn-lab\",node=\"mpls\",device=~\"eth([1-9]|1[0-2])\"}[2m])",
+     "legendFormat": "{{device}} in"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "8 * rate(node_network_transmit_bytes_total{lab=\"c8000v-dmvpn-lab\",node=\"mpls\",device=~\"eth([1-9]|1[0-2])\"}[2m])",
+     "legendFormat": "{{device}} out"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 19,
+   "type": "row",
+   "title": "Router syslog (VictoriaLogs)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 34,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 20,
+   "title": "BGP neighbour Down events / 5 min per router",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 35,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "facility_keyword:local7 \"%BGP-5-ADJCHANGE\" \"Down\" | extract \"<seq>: <router>: \" | stats by (_time:5m, router) count() as downs",
+     "legendFormat": "{{router}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 21,
+   "title": "NHRP / IKE / IPsec events / 5 min per router",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 35,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "facility_keyword:local7 (\"%DMVPN-\" OR \"%NHRP-\" OR \"%IKEV2-\" OR \"%CRYPTO-\") | extract \"<seq>: <router>: \" | stats by (_time:5m, router) count() as events",
+     "legendFormat": "{{router}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 22,
+   "title": "Syslog lines / 5 min per router",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 35,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "facility_keyword:local7 | extract \"<seq>: <router>: \" | stats by (_time:5m, router) count() as lines",
+     "legendFormat": "{{router}}",
+     "queryType": "statsRange"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "hostname:mpls | stats by (_time:5m) count() as lines",
+     "legendFormat": "mpls",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 23,
+   "title": "C8000v syslog (newest first)",
+   "type": "logs",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 42,
+    "w": 24,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "facility_keyword:local7 ",
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": false,
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 24,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 51,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 25,
+   "title": "Host CPU busy %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 52,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "cpu"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 26,
+   "title": "Host memory used %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 52,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - node_memory_MemAvailable_bytes{lab=\"lab-host\"} / node_memory_MemTotal_bytes{lab=\"lab-host\"})",
+     "legendFormat": "mem"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 75
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 27,
+   "title": "Host memory used / total",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 52,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"} - node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "used"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"}",
+     "legendFormat": "total"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 28,
+   "title": "Host load (1 / 5 / 15 min) vs cores",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 13,
+    "y": 52,
+    "w": 7,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load1{lab=\"lab-host\"}",
+     "legendFormat": "1m"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load5{lab=\"lab-host\"}",
+     "legendFormat": "5m"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load15{lab=\"lab-host\"}",
+     "legendFormat": "15m"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"})",
+     "legendFormat": "cores"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 1,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 29,
+   "title": "Host swap used %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 52,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - node_memory_SwapFree_bytes{lab=\"lab-host\"} / node_memory_SwapTotal_bytes{lab=\"lab-host\"})",
+     "legendFormat": "swap"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 20
+       },
+       {
+        "color": "red",
+        "value": 60
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 30,
+   "title": "Host CPU busy % (all cores) and per mode",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 56,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "busy"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"user\"}[2m]))",
+     "legendFormat": "user"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"system\"}[2m]))",
+     "legendFormat": "system"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"iowait\"}[2m]))",
+     "legendFormat": "iowait"
+    },
+    {
+     "refId": "E",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"steal\"}[2m]))",
+     "legendFormat": "steal"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 31,
+   "title": "Host memory (bytes)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 56,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"} - node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "used"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_Cached_bytes{lab=\"lab-host\"} + node_memory_Buffers_bytes{lab=\"lab-host\"}",
+     "legendFormat": "cache + buffers"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "available"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_SwapTotal_bytes{lab=\"lab-host\"} - node_memory_SwapFree_bytes{lab=\"lab-host\"}",
+     "legendFormat": "swap used"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 32,
+   "title": "Busiest host cores (busy %, top 8)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 56,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "topk(8, 100 * (1 - rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "core {{cpu}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 33,
+   "type": "row",
+   "title": "Lab and runs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 64,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 34,
+   "title": "VMs running",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 65,
+    "w": 8,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_vm_running{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{node}} ({{role}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 35,
+   "title": "LAN hosts answering",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 65,
+    "w": 8,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_host_up{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{host}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 36,
+   "title": "Portal runs: last outcome per mode",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 65,
+    "w": 8,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_run_last_success{lab=\"c8000v-dmvpn-lab\"}",
+     "legendFormat": "{{mode}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  }
+ ],
+ "links": [
+  {
+   "title": "Lab hub",
+   "type": "link",
+   "url": "http://192.168.50.231:8088",
+   "targetBlank": true
+  },
+  {
+   "title": "Prometheus alerts",
+   "type": "link",
+   "url": "http://192.168.50.231:9091/alerts",
+   "targetBlank": true
+  },
+  {
+   "title": "\u263e Dark",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/c8000v-dmvpn-lab-overview?theme=dark",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the dark theme (new tab)"
+  },
+  {
+   "title": "\u2600 Light",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/c8000v-dmvpn-lab-overview?theme=light",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the light theme (new tab)"
+  }
+ ]
+}

@@ -61,3 +61,22 @@ groups:
         expr: '_time:5m hostname:fw-* app_name:kernel "FWD-filter-900-D" (" PROTO=ESP" OR " DPT=500 " OR " DPT=4500 ") | extract " SRC=<src> DST=<dst> " | stats by (hostname, src, dst) count() as drops'
         labels: {severity: critical, source: syslog, lab: cat8000v-ipsec}
         annotations: {summary: "{{ $labels.hostname }}: IKE / ESP from {{ $labels.src }} to {{ $labels.dst }} dropped ({{ $value }} packets in 5 minutes) — not a modelled peer pair"}
+
+  # c8000v-dmvpn-lab: IOS-XE syslog (logging host ... vrf Mgmt-vrf, origin-id hostname). IOS sends no RFC 3164 hostname
+  # field, so the router is extracted from the message ("<seq>: <router>: *<time>: %FAC-SEV-MNEMONIC: ...").
+  - name: c8000v-dmvpn-lab-events
+    type: vlogs
+    interval: 1m
+    rules:
+      - alert: DmvpnBgpNeighborDownLogged
+        expr: '_time:3m facility_keyword:local7 "%BGP-5-ADJCHANGE" "Down" | extract "<seq>: <router>: " | stats by (router) count() as downs'
+        labels: {severity: warning, source: syslog, lab: c8000v-dmvpn-lab}
+        annotations: {summary: "{{ $labels.router }}: BGP logged {{ $value }} neighbour Down transition(s) in the last 3 minutes"}
+      - alert: DmvpnNhsDownLogged
+        expr: '_time:3m facility_keyword:local7 "NHRP_NHS_DOWN" | extract "<seq>: <router>: " | stats by (router) count() as downs'
+        labels: {severity: warning, source: syslog, lab: c8000v-dmvpn-lab}
+        annotations: {summary: "{{ $labels.router }}: an NHRP next-hop server went down {{ $value }} time(s) in the last 3 minutes"}
+      - alert: DmvpnIkeSaDownLogged
+        expr: '_time:3m facility_keyword:local7 ("%IKEV2-5-SA_DOWN" OR "%CRYPTO-5-SESSION_STATUS" "DOWN") | extract "<seq>: <router>: " | stats by (router) count() as downs'
+        labels: {severity: warning, source: syslog, lab: c8000v-dmvpn-lab}
+        annotations: {summary: "{{ $labels.router }}: {{ $value }} IKE / IPsec session(s) went down in the last 3 minutes"}
