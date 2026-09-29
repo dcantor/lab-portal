@@ -79,6 +79,21 @@ groups:
         expr: lab_tests_last_failed > 0
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.lab }}: {{ $value }} Robot test(s) failed in the last run"}
+      - alert: TenantSlaBreach       # the portal probes every pair of a tenant's sites host to host each minute (lab_tenant_*)
+        expr: (lab_tenant_sla_ok{lab="srv6-core"} == 0) and (lab_tenant_loss_ratio < 1) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.tenant }} {{ $labels.src }} ({{ $labels.src_dc }}) → {{ $labels.dst }} ({{ $labels.dst_dc }}): outside its SLA for 5 min (delay or loss above target)"}
+      - alert: TenantSlaDown
+        expr: (lab_tenant_loss_ratio{lab="srv6-core"} == 1) and on (lab) (sum by (lab) (lab_vm_running) > 0)
+        for: 3m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.tenant }} {{ $labels.src }} ({{ $labels.src_dc }}) → {{ $labels.dst }} ({{ $labels.dst_dc }}): no answer at all for 3 min"}
+      - alert: LabNoRoomForTenant
+        expr: lab_capacity_room_tenants{lab="srv6-core", scope="every_dc"} == 0
+        for: 30m
+        labels: {severity: info}
+        annotations: {summary: "srv6-core: no room for another tenant at every data centre — the portal's Capacity view names the limit"}
 
   - name: nodes
     rules:
