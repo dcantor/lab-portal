@@ -1,33 +1,55 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Lab hub</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try { const t = localStorage.getItem('hub-theme'); document.documentElement.dataset.theme = t ? t : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch (e) { }</script>
 <style>
-  :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --ok:#15803d; --warn:#b45309; --bad:#b91c1c }
+  /* light / dark: the same palette as the lab portals; the theme follows the OS until chosen with the header toggle */
+  :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#fff; --ok:#15803d; --warn:#b45309; --bad:#b91c1c; --link:#1d4ed8;
+          --pill:#e2e8f0; --ok-bg:#dcfce7; --warn-bg:#fef3c7; --bad-bg:#fee2e2; --ok-soft:#f0fdf4; --bad-soft:#fef2f2; --ok-edge:#86efac; --bad-edge:#fecaca;
+          --edge:#94a3b8; --amber:#f59e0b; --code:#f1f5f9; --header:#0b1020; --header-ink:#e2e8f0; --header-muted:#94a3b8; --header-link:#7dd3fc }
+  html[data-theme="dark"] { --ink:#e6edf7; --muted:#8fa3bf; --line:#263449; --bg:#0b1220; --card:#131c2e; --ok:#3ddc84; --warn:#ffb454; --bad:#ff6b6b; --link:#7fb2ff;
+          --pill:#243656; --ok-bg:#12351f; --warn-bg:#3d2c0f; --bad-bg:#3d1a1a; --ok-soft:#10261a; --bad-soft:#2a1515; --ok-edge:#1f6b3d; --bad-edge:#7a2e2e;
+          --edge:#5b6f8c; --amber:#ffb454; --code:#1a2438; --header:#070d1a; --header-ink:#e6edf7; --header-muted:#8fa3bf; --header-link:#7dd3fc; color-scheme:dark }
+  a { color:var(--link) } code { background:var(--code); padding:0 4px; border-radius:4px }
   * { box-sizing:border-box } body { margin:0; font:14px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg) }
-  header { background:#0b1020; color:#e2e8f0; padding:14px 26px; display:flex; align-items:baseline; gap:18px } header h1 { font-size:19px; margin:0 } header .sub { color:#94a3b8; font-size:12px } header .right { margin-left:auto; color:#94a3b8; font-size:12px }
+  header { background:var(--header); color:var(--header-ink); padding:14px 26px; display:flex; align-items:baseline; gap:18px; flex-wrap:wrap } header h1 { font-size:19px; margin:0 } header .sub { color:var(--header-muted); font-size:12px } header .right { margin-left:auto; color:var(--header-muted); font-size:12px } header .right a { color:var(--header-link); text-decoration:none }
   main { max-width:1300px; margin:0 auto; padding:18px 26px } .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:16px }
-  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px 18px } .card h2 { font-size:17px; margin:0 0 4px } .card h2 a { color:inherit; text-decoration:none } .desc { color:var(--muted); font-size:13px; margin:0 0 10px }
-  .pill { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:#e2e8f0 } .pill.ok { background:#dcfce7; color:var(--ok) } .pill.warn { background:#fef3c7; color:var(--warn) } .pill.bad { background:#fee2e2; color:var(--bad) }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px } .card h2 { font-size:17px; margin:0 0 4px } .card h2 a { color:inherit; text-decoration:none } .desc { color:var(--muted); font-size:13px; margin:0 0 10px }
+  .pill { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--pill) } .pill.ok { background:var(--ok-bg); color:var(--ok) } .pill.warn { background:var(--warn-bg); color:var(--warn) } .pill.bad { background:var(--bad-bg); color:var(--bad) }
   .kv { display:grid; grid-template-columns:130px 1fr; gap:4px 10px; font-size:13px } .kv dt { color:var(--muted) } .kv dd { margin:0 }
-  .vms { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px } .vm { font:11px ui-monospace, monospace; padding:2px 6px; border-radius:4px; background:#fee2e2; color:var(--bad) } .vm.running { background:#dcfce7; color:var(--ok) }
+  .vms { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px } .vm { font:11px ui-monospace, monospace; padding:2px 6px; border-radius:4px; background:var(--bad-bg); color:var(--bad) } .vm.running { background:var(--ok-bg); color:var(--ok) }
   .links a { margin-right:12px; font-size:13px } .links { margin-top:10px } .hint { color:var(--muted); font-size:12px }
-  button { font:inherit; font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); cursor:pointer }
-  button:hover:not(:disabled) { border-color:#94a3b8 } button:disabled { opacity:.5; cursor:not-allowed }
-  button.up { border-color:#86efac; background:#f0fdf4; color:var(--ok) } button.down { border-color:#fecaca; background:#fef2f2; color:var(--bad) }
+  button { font:inherit; font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); cursor:pointer }
+  button:hover:not(:disabled) { border-color:var(--edge) } button:disabled { opacity:.5; cursor:not-allowed }
+  button.up { border-color:var(--ok-edge); background:var(--ok-soft); color:var(--ok) } button.down { border-color:var(--bad-edge); background:var(--bad-soft); color:var(--bad) }
   .power { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px }
-  .vm { cursor:pointer; border:1px solid transparent } .vm:hover { border-color:#94a3b8 }
-  .op { margin-top:8px; font-size:12px; border-left:3px solid #94a3b8; padding:4px 0 4px 8px; color:var(--muted) }
+  .vm { cursor:pointer; border:1px solid transparent } .vm:hover { border-color:var(--edge) }
+  .op { margin-top:8px; font-size:12px; border-left:3px solid var(--edge); padding:4px 0 4px 8px; color:var(--muted) }
   .op.running { border-color:var(--warn) } .op.failed { border-color:var(--bad); color:var(--bad) } .op.done { border-color:var(--ok) }
   .op pre { margin:4px 0 0; font:11px/1.35 ui-monospace, monospace; max-height:120px; overflow:auto; white-space:pre-wrap }
   .host { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; margin-bottom:16px }
-  .stat { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px }
   .stat .l { color:var(--muted); font-size:12px } .stat .v { font-size:20px; font-weight:600; margin:2px 0 6px }
   .stat .s { color:var(--muted); font-size:12px }
-  .bar { height:6px; border-radius:3px; background:#e2e8f0; overflow:hidden; margin-bottom:6px } .bar > i { display:block; height:100%; background:var(--ok) }
-  .bar > i.warn { background:#f59e0b } .bar > i.bad { background:var(--bad) }
+  .bar { height:6px; border-radius:3px; background:var(--pill); overflow:hidden; margin-bottom:6px } .bar > i { display:block; height:100%; background:var(--ok) }
+  .bar > i.warn { background:var(--amber) } .bar > i.bad { background:var(--bad) }
 </style></head><body>
-<header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right" id="host"></span></header>
+<header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a></span></header>
 <main><div class="host" id="hoststats"></div><div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
 <script>
+// light / dark: a choice made here is remembered; until then the page follows the OS, live
+function applyTheme() {
+  let t = null; try { t = localStorage.getItem('hub-theme'); } catch (e) { }
+  const dark = t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.getElementById('theme-toggle').textContent = dark ? '☀ light' : '☾ dark';
+}
+document.getElementById('theme-toggle').onclick = e => {
+  e.preventDefault();
+  try { localStorage.setItem('hub-theme', document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); } catch (x) { }
+  applyTheme();
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+applyTheme();
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let POWER = true, timer = null;
 const busy = l => l.power && l.power.status === 'running';
