@@ -7,6 +7,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.3.0] — 2026-09-30
+
+### Added
+- **Lab Hub: shared services.** A card for the NMS VM and each service on it: Prometheus, VictoriaMetrics, VictoriaLogs,
+  Grafana, Gitea and Nautobot.
+  - Each service shows whether it answers, what it is used for, and a link.
+  - A plain warning appears when the NMS is off.
+  - **Start the NMS** waits until every service answers; **Shut down the NMS** is a clean ACPI shutdown.
+  - API: `GET /api/services`, `POST /api/services/power`. Configured in `~/.config/lab-hub/services.json`, or the
+    defaults in `labportal/hub/shared.py`.
+- **Lab Hub: CI per lab**, for labs with a `ci` entry in `labs.json`:
+  - the latest run on the local Gitea, with each job's result and the test counts CI committed back;
+  - a strip of the last runs, the commits not tested yet, and the mirror's last sync.
+  - **Run CI** syncs the mirror or dispatches the workflow.
+  - **Stop CI** stops the job carefully: the step's shells are killed so nothing is committed, then Robot is
+    interrupted once so its teardowns run. Gitea's own cancel skips the teardowns.
+  - API: `GET /api/labs/{name}/ci`, `POST /api/labs/{name}/ci/run`, `POST /api/labs/{name}/ci/stop`.
+- `labs.example.json`: srv6-core's `ci` entry.
+
+### Fixed
+- The hub page no longer polls twice: one schedule refreshes every 30 s, and every 4 s while a lab, the NMS or a CI run
+  is changing.
+
 ## [0.2.0] — 2026-09-30
 
 ### Added

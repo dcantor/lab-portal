@@ -6,13 +6,18 @@ portal, Nautobot, Gitea and GitHub. Labs are declared in ~/.config/lab-hub/labs.
 It reads the labs, and it can **power them**: a whole lab up or down, or any single VM, by running that lab's own
 `lab.sh up|down [node...]` — the same command an operator would type, so a shutdown still saves each router's
 configuration first. Nothing else about a lab is changed here; provisioning stays in the lab's own portal.
-Set LAB_HUB_POWER=off to make the hub read-only again. Run with `lab-hub` (uvicorn, port 8088)."""
+Set LAB_HUB_POWER=off to make the hub read-only again. Run with `lab-hub` (uvicorn, port 8088).
+
+It also shows the **shared services** every lab depends on — the NMS VM and Prometheus, VictoriaMetrics, VictoriaLogs,
+Grafana, Gitea and Nautobot on it — and can start or shut down that VM (shared.py); and each lab's **CI** — the last runs
+on the local Gitea, the tests they committed back, the commits not tested yet — with a run / stop button (ci.py)."""
 import json, os, re, shutil, subprocess, threading, time, uuid, xml.etree.ElementTree as ET
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import requests
+from . import ci as CI, shared as SHARED
 
 CONFIG = Path(os.environ.get("LAB_HUB_CONFIG", Path.home() / ".config" / "lab-hub" / "labs.json"))
 MONITORING = json.loads(os.environ["LAB_HUB_MONITORING"]) if os.environ.get("LAB_HUB_MONITORING") else \
@@ -117,8 +122,10 @@ def api_labs():
     for lab in labs():
         vms = vm_states(lab["dir"]); running = sum(1 for v in vms.values() if isinstance(v, dict) and v.get("state") == "running")
         out.append({**lab, "vms": vms, "running": running, "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
-                    "tests": last_tests(lab["dir"]), "nautobot": lab.get("nautobot", NAUTOBOT), "power": OPS.get(lab["name"])})
-    return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER, "generated": time.time()}
+                    "tests": last_tests(lab["dir"]), "nautobot": lab.get("nautobot", NAUTOBOT), "power": OPS.get(lab["name"]),
+                    "ci_status": CI.status(lab["ci"]) if lab.get("ci") else None})
+    return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER,
+            "services": {**SHARED.status(), "power": SERVICE_OP.get("op")}, "generated": time.time()}
 
 
 # ---- powering a lab: one operation at a time per lab, run in the background ------------------------------------------
@@ -178,6 +185,64 @@ def power_status(name: str):
     op = OPS.get(name)
     if op is None: raise HTTPException(404, "no power operation for this lab yet")
     return op
+
+
+# ---- shared services: the NMS VM -------------------------------------------------------------------------------------
+SERVICE_OP = {}
+
+
+class ConfirmedPower(BaseModel):
+    action: str                                  # up | down
+    confirm: bool = False
+
+
+@app.get("/api/services", summary="The shared services every lab depends on: the NMS VM and each service on it")
+def services(): return {**SHARED.status(), "power": SERVICE_OP.get("op")}
+
+
+@app.post("/api/services/power", summary="Start the NMS VM, or shut it down cleanly (monitoring, CI, Gitea and Nautobot go with it)")
+def services_power(req: ConfirmedPower):
+    if not POWER: raise HTTPException(403, "power control is disabled on this hub (LAB_HUB_POWER=off)")
+    if req.action not in ("up", "down"): raise HTTPException(422, "action must be up or down")
+    if not req.confirm: raise HTTPException(422, "send confirm: true")
+    with _ops_lock:
+        cur = SERVICE_OP.get("op")
+        if cur and cur["status"] == "running": raise HTTPException(409, f"already {'starting' if cur['action'] == 'up' else 'shutting down'} the NMS")
+        op = SERVICE_OP["op"] = {"id": uuid.uuid4().hex[:8], "action": req.action, "nodes": [SHARED.config()["vm"]], "started": time.time(),
+                                 "finished": None, "status": "running", "log": []}
+    threading.Thread(target=SHARED.power, args=(op,), name="power-nms", daemon=True).start()
+    return op
+
+
+# ---- CI ---------------------------------------------------------------------------------------------------------------
+def _ci_lab(name):
+    lab = next((l for l in labs() if l["name"] == name), None)
+    if lab is None: raise HTTPException(404, f"no such lab: {name}")
+    if not lab.get("ci"): raise HTTPException(404, f"{name} has no CI configured in labs.json")
+    return lab
+
+
+@app.get("/api/labs/{name}/ci", summary="A lab's CI: the last runs, test counts, commits not tested yet")
+def ci_status(name: str): return CI.status(_ci_lab(name)["ci"], max_age=0)
+
+
+@app.post("/api/labs/{name}/ci/run", summary="Start CI now: sync the mirror from GitHub, or dispatch the workflow on main")
+def ci_run(name: str):
+    if not POWER: raise HTTPException(403, "control is disabled on this hub (LAB_HUB_POWER=off)")
+    try: return CI.start(_ci_lab(name)["ci"])
+    except RuntimeError as e: raise HTTPException(409, str(e))
+
+
+class Confirm(BaseModel):
+    confirm: bool = False
+
+
+@app.post("/api/labs/{name}/ci/stop", summary="Stop the running CI job carefully: nothing is committed, Robot runs its teardowns")
+def ci_stop(name: str, req: Confirm):
+    if not POWER: raise HTTPException(403, "control is disabled on this hub (LAB_HUB_POWER=off)")
+    if not req.confirm: raise HTTPException(422, "send confirm: true")
+    try: return CI.stop(_ci_lab(name)["ci"])
+    except RuntimeError as e: raise HTTPException(409, str(e))
 
 
 @app.on_event("startup")

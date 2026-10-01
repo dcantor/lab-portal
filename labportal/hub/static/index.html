@@ -31,10 +31,16 @@
   .stat .l { color:var(--muted); font-size:12px } .stat .v { font-size:20px; font-weight:600; margin:2px 0 6px }
   .stat .s { color:var(--muted); font-size:12px }
   .bar { height:6px; border-radius:3px; background:var(--pill); overflow:hidden; margin-bottom:6px } .bar > i { display:block; height:100%; background:var(--ok) }
-  .bar > i.warn { background:var(--amber) } .bar > i.bad { background:var(--bad) }
+  .bar > i.warn { background:var(--amber) }
+  .svc { margin-bottom:16px } .svc h2 { font-size:17px; margin:0 0 4px; display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 2px } .chip { display:flex; flex-direction:column; gap:1px; border:1px solid var(--line); border-radius:8px; padding:6px 10px; min-width:150px; text-decoration:none; color:var(--ink) }
+  .chip b { font-size:13px; display:flex; align-items:center; gap:6px } .chip small { color:var(--muted); font-size:11px } .chip:hover { border-color:var(--edge) }
+  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; background:var(--bad) } .dot.ok { background:var(--ok) } .dot.warn { background:var(--amber) } .dot.off { background:var(--edge) }
+  .runs { display:inline-flex; gap:3px; vertical-align:middle; margin-left:4px } .runs a { width:10px; height:10px; border-radius:2px; background:var(--edge); display:inline-block } .runs a.success { background:var(--ok) } .runs a.failure { background:var(--bad) } .runs a.running { background:var(--amber) }
+  button.ci { border-color:var(--line) } .cirow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .bar > i.bad { background:var(--bad) }
 </style></head><body>
 <header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a></span></header>
-<main><div class="host" id="hoststats"></div><div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
+<main><div class="host" id="hoststats"></div><div class="card svc" id="services"></div><div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
 <script>
 // light / dark: a choice made here is remembered; until then the page follows the OS, live
 function applyTheme() {
@@ -89,16 +95,69 @@ function renderHost(h) {
   document.getElementById('host').textContent = `${cpu.cores} cores · ${mem ? mem.available_gib + ' GiB memory available' : ''} · load ${(cpu.load || [])[0]}`;
 }
 
+
+// ---- shared services: the NMS VM and what runs on it --------------------------------------------------------------
+const pillOf = st => ({ success: 'ok', ok: 'ok', running: 'warn', degraded: 'warn', failure: 'bad', down: 'bad' }[st] || '');
+const ago = iso => { const s = (Date.now() - new Date(iso).getTime()) / 1000; return s < 90 ? `${Math.round(s)}s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
+function renderServices(sv) {
+  if (!sv) return;
+  const on = sv.vm_state === 'running', busyNms = sv.power && sv.power.status === 'running';
+  const label = { ok: 'all services up', degraded: `${sv.up}/${sv.total} services up`, down: on ? 'services down' : 'everything below is unavailable' }[sv.state];
+  document.getElementById('services').innerHTML = `<h2>Shared services <span class="pill ${on ? 'ok' : 'bad'}">${esc(sv.vm)} VM ${esc(sv.vm_state)}</span>
+      <span class="pill ${pillOf(sv.state)}">${esc(label)}</span></h2>
+    <p class="desc">Every lab depends on these: monitoring and alerts, CI, configuration backups, the source of truth.${on ? '' : ' <b>The NMS is not running</b> — nothing alerts, CI does not run, Nautobot is unreachable.'}</p>
+    <div class="chips">${sv.services.map(x => `<a class="chip" href="${esc(x.link)}" target="_blank" title="${esc(x.check)}${x.up ? ` · ${x.ms} ms` : ` · ${x.error || 'HTTP ' + x.code}`}">
+      <b><span class="dot ${x.up ? 'ok' : (on ? '' : 'off')}"></span>${esc(x.name)}</b><small>${esc(x.used_for || '')}</small></a>`).join('')}</div>
+    ${POWER ? `<div class="power">${on ? `<button class="down" data-nms="down" ${busyNms ? 'disabled' : ''} title="ACPI shutdown of the NMS VM">⏻ Shut down the NMS</button>`
+                                        : `<button class="up" data-nms="up" ${busyNms ? 'disabled' : ''} title="virsh start; waits until every service answers">⏻ Start the NMS</button>`}</div>` : ''}
+    ${opView(sv.power)}`;
+}
+async function nms(action) {
+  if (!confirm(action === 'up' ? 'Start the NMS VM?\n\nThe services take a minute or two to answer.'
+                               : 'Shut down the NMS VM?\n\nMonitoring, alerting, CI, Gitea and Nautobot stop for every lab until it is started again.')) return;
+  const r = await fetch('/api/services/power', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, confirm: true }) });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
+  load();
+}
+
+// ---- CI per lab ------------------------------------------------------------------------------------------------------
+function ciView(l) {
+  const c = l.ci_status;
+  if (!c) return '<span class="hint">not configured</span>';
+  const opl = c.op ? `<div class="op ${esc(c.op.status)}">${c.op.action === 'run' ? '▶ start CI' : '■ stop CI'} · ${esc(c.op.status)}${c.op.log && c.op.log.length ? `<pre>${esc(c.op.log.slice(-4).join('\n'))}</pre>` : ''}</div>` : '';
+  if (c.error) return `<span class="pill bad">unavailable</span> <span class="hint">${esc(c.error)}</span>${opl}`;
+  const r = c.latest;
+  if (!r) return '<span class="hint">no runs yet</span>' + opl;
+  const jobs = r.jobs.map(j => `${esc(j.name)} ${j.status === 'success' ? '✓' : j.status === 'failure' ? '✗' : j.status === 'skipped' ? '–' : '…'}`).join(' · ');
+  const res = r.results ? ` · <span class="pill ${r.results.failed ? 'bad' : 'ok'}">${r.results.passed} passed, ${r.results.failed} failed</span>` : '';
+  const strip = `<span class="runs" title="the last runs, newest first">${c.runs.map(x => `<a class="${esc(x.status)}" href="${esc(x.url)}" target="_blank" title="run ${x.number} · ${esc(x.status)} · ${esc(x.sha.slice(0, 8))}${x.results ? ` · ${x.results.passed} passed, ${x.results.failed} failed` : ''}"></a>`).join('')}</span>`;
+  const un = c.untested.length ? `<span class="pill warn" title="${esc(c.untested.map(u => u.sha + ' ' + u.title).join('\n'))}">${c.untested.length} commit${c.untested.length > 1 ? 's' : ''} not tested</span>` : '<span class="pill ok">every commit tested</span>';
+  const btn = !POWER ? '' : c.running
+    ? `<button class="down" data-ci="stop" data-lab="${esc(l.name)}" title="stop the job on this host; nothing is committed back, Robot runs its teardowns">■ Stop CI</button>`
+    : `<button class="ci" data-ci="run" data-lab="${esc(l.name)}" ${c.op && c.op.status === 'running' ? 'disabled' : ''} title="sync the mirror from GitHub now, or dispatch the workflow on main">▶ Run CI</button>`;
+  return `<div class="cirow"><a href="${esc(r.url)}" target="_blank">run ${r.number}</a> <span class="pill ${pillOf(r.status)}">${esc(r.status)}</span>
+      <code>${esc(r.sha.slice(0, 8))}</code> <span class="hint">${esc(jobs)} · ${ago(r.created)}</span>${res}</div>
+    <div class="cirow" style="margin-top:4px">${strip} ${un} <span class="hint">mirror synced ${c.mirror_updated ? ago(c.mirror_updated) : '?'}</span> ${btn}</div>${opl}`;
+}
+async function ciAction(lab, action) {
+  if (action === 'run' && !confirm(`Start CI for ${lab}?\n\nThe full test job runs against the live lab (about an hour) and commits its results to GitHub.`)) return;
+  if (action === 'stop' && !confirm(`Stop the CI run of ${lab}?\n\nNothing is committed back. Robot finishes the current test's teardown and every suite teardown, so the lab is left as the tests found it.`)) return;
+  const r = await fetch(`/api/labs/${encodeURIComponent(lab)}/ci/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: true }) });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
+  load();
+}
+
 async function load() {
   const d = await (await fetch('/api/labs')).json();
   POWER = d.power_enabled !== false;
-  renderHost(d.host);
+  renderHost(d.host); window.SV = d.services; renderServices(d.services);
   document.getElementById('labs').innerHTML = d.labs.map(l => {
     const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
     return `<div class="card"><h2><a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span></h2>
       <p class="desc">${esc(l.description || '')}</p>
       <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
       <dt>Last tests</dt><dd>${t ? (t.error ? esc(t.error) : `<span class="pill ${t.failed ? 'bad' : 'ok'}">${t.passed} passed, ${t.failed} failed</span> <span class="hint">${esc(t.when)} · ${t.suites.map(s => esc(s.name.replace(/^\\d+ /, '')) + (s.status === 'PASS' ? '' : ' ✗')).join(', ')}</span>`) : '<span class="hint">no results yet</span>'}</dd>
+      <dt>CI</dt><dd>${ciView(l)}</dd>
       <dt>Directory</dt><dd><code>${esc(l.dir)}</code></dd></dl>
       <div class="vms">${Object.entries(l.vms).filter(([, v]) => typeof v === 'object' && v.state).map(([n, v]) => `<span class="vm ${v.state === 'running' ? 'running' : ''}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(v.state)}" title="${esc(v.role)} · ${esc(v.state)} — click to ${v.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div>
       ${POWER ? `<div class="power">
@@ -116,9 +175,13 @@ async function load() {
 // while a lab is powering up or down, follow it closely; otherwise the slow refresh is plenty
 function schedule(labs) {
   clearInterval(timer);
-  timer = setInterval(load, labs.some(busy) ? 4000 : 30000);
+  const following = labs.some(busy) || labs.some(l => l.ci_status && (l.ci_status.running || (l.ci_status.op && l.ci_status.op.status === 'running')))
+                    || (window.SV && SV.power && SV.power.status === 'running');
+  timer = setInterval(load, following ? 4000 : 30000);
 }
 document.addEventListener('click', e => {
+  const n = e.target.closest('button[data-nms]'); if (n) return nms(n.dataset.nms);
+  const c = e.target.closest('button[data-ci]'); if (c) return ciAction(c.dataset.lab, c.dataset.ci);
   const b = e.target.closest('button[data-action]');
   if (b) return power(b.dataset.lab, b.dataset.action, [],
                       b.dataset.action === 'up' ? `Bring up every VM of ${b.dataset.lab}?\n\nThe routers take a few minutes to boot.`
@@ -131,5 +194,5 @@ document.addEventListener('click', e => {
                   : `Start ${node} in ${vm.dataset.lab}?\n\nIt is shut off; a router can take a few minutes to boot.`);
   }
 });
-load(); setInterval(load, 30000);
+load();                                   // schedule() keeps it fresh: every 30 s, every 4 s while something is in progress
 </script></body></html>

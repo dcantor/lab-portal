@@ -46,6 +46,24 @@ the hub read-only again. Everything else about a lab — provisioning, day-2 cha
     POST /api/labs/cat8000v-ipsec/power  {"action": "down", "nodes": ["spoke1"]}
     GET  /api/labs/cat8000v-ipsec/power                     # the current or last operation, with lab.sh's output
 
+**Shared services.** A card above the labs shows the NMS VM and each service on it, with a link to each and what it is
+used for: Prometheus, VictoriaMetrics, VictoriaLogs, Grafana, Gitea and Nautobot.
+- It shows whether each service answers, and states plainly when the NMS is off, because then nothing alerts, CI does not
+  run and Nautobot is unreachable.
+- It can start the NMS, waiting until every service answers, or shut it down cleanly.
+- The services come from `~/.config/lab-hub/services.json`, or the built-in defaults (`labportal/hub/shared.py`).
+
+**CI.** For a lab with a `ci` entry in `labs.json`, its card shows:
+- the latest run on the local Gitea, with each job's result and the test counts CI committed back to GitHub;
+- a strip of the last six runs;
+- the commits CI has not tested yet, and when the mirror last synced.
+
+**▶ Run CI** syncs the mirror from GitHub now, or dispatches the workflow on `main` when there is nothing new.
+
+**■ Stop CI** stops the running job carefully. Gitea's own cancel kills the job outright, so Robot's teardowns never run.
+The hub instead kills the step's shells, so nothing is committed back, and gives Robot one interrupt, so every teardown
+runs and the lab is left as the tests found it.
+
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)
