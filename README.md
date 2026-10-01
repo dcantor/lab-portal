@@ -120,6 +120,13 @@ it with `labportal.secrets.get(name)`: the environment first, then the store.
 - the branch and commit, commits since the last tag, uncommitted files, and how far it is ahead of or behind GitHub
   as of the last `git fetch`.
 
+**Cards or compact.** A toolbar above the labs switches between two views; your browser remembers the choice and
+which cards are folded.
+- **Cards:** each card folds (▾ / ▸) to its title and a one-line summary: tests, CI, version, memory, the next
+  scheduled action, uncommitted files, and ⏻ up / ⏻ down. **Fold all** and **Unfold all** do every card at once.
+- **Compact:** one table row per lab, with VMs, portal, tests, CI, version, memory, schedule and the power buttons. A
+  lab's name opens its card.
+
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)

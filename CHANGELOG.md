@@ -7,6 +7,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.8.0] — 2026-09-30
+
+### Added
+- **Lab Hub: collapsible cards and a compact view.** A toolbar above the labs offers **Cards / Compact**, **Fold all**
+  and **Unfold all**.
+  - A folded card keeps its title and status pills, plus a one-line summary: tests, CI, version, memory, the next
+    scheduled action, uncommitted files, and ⏻ up / ⏻ down.
+  - The compact view is one table row per lab, with VMs, portal, tests, CI, version, memory, schedule and the power
+    buttons. A lab's name opens its card.
+  - The view and the folded cards are remembered per browser. Power buttons in both go through the same guarded checks.
+
 ## [0.7.0] — 2026-09-30
 
 ### Added
