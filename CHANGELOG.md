@@ -7,6 +7,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.15.0] — 2026-10-01
+
+### Added
+- **Monitoring for evpn-fabric** (the 5th lab, EVPN/VXLAN leaf-spine on VyOS).
+  - Prometheus job `evpn-fabric`, discovered from the lab portal's `/api/sd` on 10.6.0.1:8095 — 27 targets: 15
+    node-exporters, 11 frr-exporters, the portal.
+  - Alert group `evpn-fabric`: `EvpnFabricSessionDown`, `EvpnVtepMissingOnVni`, `EvpnSegmentDfNotUnique`,
+    `EvpnDefaultRouteDegraded`, `EvpnEdgeSessionDown`, `EvpnServerBondDegraded`, `EvpnNodeUnhealthy` — all gated on
+    the lab running.
+  - Log rules `evpn-fabric-events` (BGP Down, BFD changes, FRR restarts, commits, the leaves' protodown watcher),
+    labelled `lab: evpn-fabric`.
+  - Dashboard **EVPN fabric: overview** (`evpn-fabric-overview`).
+
+### Changed
+- `deploy.sh` also reloads vmalert-logs: it does not watch its rule file, so new log rules were not picked up.
+
+### Fixed
+- The generic log rules (`routing-events`, `operations-events`) would have raised evpn-fabric's events labelled
+  `lab=srv6-core` (the evaluator's external label); they now exclude its hostnames.
+- The IPsec lab's firewall log rules matched `hostname:fw-*`, which also catches evpn-fabric's `fw-ext`; they now match
+  `fw-(east|central|west)`.
+
 ## [0.14.0] — 2026-09-30
 
 ### Added

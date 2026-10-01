@@ -147,6 +147,44 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.router }} CPU at {{ $value }}% (one-minute average)"}
 
+  - name: evpn-fabric               # every rule gated on the fabric running (a powered-off lab raises nothing); the portal measures it (webapp/state.py)
+    rules:
+      - alert: EvpnFabricSessionDown
+        expr: (lab_bgp_sessions_up{lab="evpn-fabric",afi="ipv4"} < on (lab, node, role) lab_bgp_sessions_expected{lab="evpn-fabric"}) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-fabric"}) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} fabric BGP session(s) Established, fewer than its fabric ports"}
+      - alert: EvpnVtepMissingOnVni
+        expr: (lab_evpn_l2vni_remote_vteps{lab="evpn-fabric"} < scalar(count(lab_vm_running{lab="evpn-fabric",role="leaf"} == 1) - 1)) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-fabric"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: L2VNI {{ $labels.vni }} sees {{ $value }} remote VTEPs, not every other leaf"}
+      - alert: EvpnSegmentDfNotUnique
+        expr: (sum by (lab, esi) (lab_es_df{lab="evpn-fabric"}) != 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-fabric"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "Ethernet Segment {{ $labels.esi }} has {{ $value }} designated forwarders (want exactly 1)"}
+      - alert: EvpnDefaultRouteDegraded
+        expr: (lab_default_route_paths{lab="evpn-fabric",role="leaf"} < 2) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-fabric"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: tenant {{ $labels.tenant }} reaches the outside through {{ $value }} border(s), not both"}
+      - alert: EvpnEdgeSessionDown
+        expr: (lab_edge_session_up{lab="evpn-fabric"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-fabric"}) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "fw-ext: the session to border address {{ $labels.border_ip }} is down — that tenant leaves through one border"}
+      - alert: EvpnServerBondDegraded      # a dual-homed server down to one LACP leg (single-homed servers have no bond: 0 legs)
+        expr: (lab_server_bond_legs_up{lab="evpn-fabric"} == 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-fabric"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: one LACP leg of two — its Ethernet Segment runs on one leaf"}
+      - alert: EvpnNodeUnhealthy
+        expr: (lab_node_health{lab="evpn-fabric"} < 1) and on (lab, node) (lab_vm_running{lab="evpn-fabric"} == 1)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.role }}) is degraded or unreachable in the portal's view"}
+
   - name: cat8000v-ipsec
     rules:
       - alert: TunnelDown

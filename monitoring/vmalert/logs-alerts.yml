@@ -9,23 +9,23 @@ groups:
     interval: 1m
     rules:
       - alert: BgpNeighborDownLogged
-        expr: '_time:3m app_name:bgpd "%ADJCHANGE" "Down" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as downs'
+        expr: '_time:3m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:bgpd "%ADJCHANGE" "Down" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as downs'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: bgpd logged {{ $value }} neighbour Down transition(s) in the last 3 minutes"}
       - alert: IsisAdjacencyChangeLogged
-        expr: '_time:3m app_name:isisd "ADJCHANGE" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as changes'
+        expr: '_time:3m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:isisd "ADJCHANGE" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as changes'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: isisd logged {{ $value }} adjacency change(s) in the last 3 minutes"}
       - alert: BfdSessionChangeLogged
-        expr: '_time:3m app_name:bfdd ("state-change" OR "Down" OR "down") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as changes'
+        expr: '_time:3m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:bfdd ("state-change" OR "Down" OR "down") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as changes'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: bfdd logged {{ $value }} session change(s) in the last 3 minutes"}
       - alert: FrrDaemonRestarted
-        expr: '_time:5m app_name:watchfrr ("restart" OR "crash" OR "Restarting") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as events'
+        expr: '_time:5m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:watchfrr ("restart" OR "crash" OR "Restarting") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as events'
         labels: {severity: critical, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: watchfrr restarted a routing daemon"}
       - alert: ZebraRouteInstallFailure
-        expr: '_time:5m app_name:zebra ("netlink-dp" AND "error") -"platform_labels" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as errors'
+        expr: '_time:5m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:zebra ("netlink-dp" AND "error") -"platform_labels" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as errors'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: zebra failed to install {{ $value }} route(s) in the kernel"}
 
@@ -34,17 +34,44 @@ groups:
     interval: 1m
     rules:
       - alert: ConfigCommitted                     # informational: shows on the alert list and as an event while it lasts
-        expr: '_time:5m app_name:commit "Successful change" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as commits'
+        expr: '_time:5m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:commit "Successful change" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as commits'
         labels: {severity: info, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: {{ $value }} configuration commit(s) in the last 5 minutes"}
       - alert: SshAuthFailures
-        expr: '_time:10m app_name:sshd ("Failed password" OR "Invalid user") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as failures | filter failures:>5'
+        expr: '_time:10m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:sshd ("Failed password" OR "Invalid user") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as failures | filter failures:>5'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: {{ $value }} SSH authentication failures in 10 minutes"}
       - alert: NodeSyslogSilent
-        expr: '_time:10m hostname:* | stats by (hostname) count() as lines | filter lines:<1'
+        expr: '_time:10m -hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" hostname:* | stats by (hostname) count() as lines | filter lines:<1'
         labels: {severity: warning, source: syslog}
         annotations: {summary: "{{ $labels.hostname }}: no syslog for 10 minutes"}
+
+  # evpn-fabric: its VyOS nodes (spines, leaves, borders, fw-ext) — FRR state changes and commits, labelled with their own lab so
+  # the fabric's dashboard annotates them (the generic groups above exclude these hostnames; they would carry lab=srv6-core).
+  - name: evpn-fabric-events
+    type: vlogs
+    interval: 1m
+    rules:
+      - alert: EvpnBgpNeighborDownLogged
+        expr: '_time:3m hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:bgpd "%ADJCHANGE" "Down" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as downs'
+        labels: {severity: warning, source: syslog, lab: evpn-fabric}
+        annotations: {summary: "{{ $labels.hostname }}: bgpd logged {{ $value }} neighbour Down transition(s) in the last 3 minutes"}
+      - alert: EvpnBfdSessionChangeLogged
+        expr: '_time:3m hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:bfdd ("state-change" OR "Down" OR "down") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as changes'
+        labels: {severity: warning, source: syslog, lab: evpn-fabric}
+        annotations: {summary: "{{ $labels.hostname }}: bfdd logged {{ $value }} session change(s) in the last 3 minutes"}
+      - alert: EvpnFrrDaemonRestarted
+        expr: '_time:5m hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:watchfrr ("restart" OR "crash" OR "Restarting") | uniq by (_time, hostname, _msg) | stats by (hostname) count() as events'
+        labels: {severity: critical, source: syslog, lab: evpn-fabric}
+        annotations: {summary: "{{ $labels.hostname }}: watchfrr restarted a routing daemon"}
+      - alert: EvpnConfigCommitted
+        expr: '_time:5m hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" app_name:commit "Successful change" | uniq by (_time, hostname, _msg) | stats by (hostname) count() as commits'
+        labels: {severity: info, source: syslog, lab: evpn-fabric}
+        annotations: {summary: "{{ $labels.hostname }}: {{ $value }} configuration commit(s) in the last 5 minutes"}
+      - alert: EvpnProtodownLogged           # the leaves' protodown watcher (core isolation / startup delay) taking segment ports down
+        expr: '_time:5m hostname:~"^leaf[0-9]+$" app_name:evpn-fabric-protodown "down:" | stats by (hostname) count() as events'
+        labels: {severity: warning, source: syslog, lab: evpn-fabric}
+        annotations: {summary: "{{ $labels.hostname }}: segment port(s) taken down by FRR's protodown (core isolation or startup delay)"}
 
   # The cat8000v-ipsec lab's VyOS firewalls (fw-east / fw-central / fw-west) forward their kernel firewall log here: rule 900 is the
   # logged drop at the end of the forward filter, the IKE / ESP / ICMP accept rules log the first packet of every flow. The rule label
@@ -54,11 +81,11 @@ groups:
     interval: 1m
     rules:
       - alert: FirewallDropBurst
-        expr: '_time:5m hostname:fw-* app_name:kernel "FWD-filter-900-D" | extract " SRC=<src> DST=<dst> " | stats by (hostname, src) count() as drops | filter drops:>20'
+        expr: '_time:5m hostname:~"^fw-(east|central|west)$" app_name:kernel "FWD-filter-900-D" | extract " SRC=<src> DST=<dst> " | stats by (hostname, src) count() as drops | filter drops:>20'
         labels: {severity: warning, source: syslog, lab: cat8000v-ipsec}
         annotations: {summary: "{{ $labels.hostname }}: {{ $value }} packets from {{ $labels.src }} dropped in 5 minutes (forward filter rule 900)"}
       - alert: FirewallDroppingPeerTraffic         # a modelled VPN peer hitting the drop rule: the policy and the wiring disagree (a re-homed spoke, a stale address group)
-        expr: '_time:5m hostname:fw-* app_name:kernel "FWD-filter-900-D" (" PROTO=ESP" OR " DPT=500 " OR " DPT=4500 ") | extract " SRC=<src> DST=<dst> " | stats by (hostname, src, dst) count() as drops'
+        expr: '_time:5m hostname:~"^fw-(east|central|west)$" app_name:kernel "FWD-filter-900-D" (" PROTO=ESP" OR " DPT=500 " OR " DPT=4500 ") | extract " SRC=<src> DST=<dst> " | stats by (hostname, src, dst) count() as drops'
         labels: {severity: critical, source: syslog, lab: cat8000v-ipsec}
         annotations: {summary: "{{ $labels.hostname }}: IKE / ESP from {{ $labels.src }} to {{ $labels.dst }} dropped ({{ $value }} packets in 5 minutes) — not a modelled peer pair"}
 

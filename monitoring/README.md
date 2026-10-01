@@ -29,13 +29,21 @@ python3 gen_dashboards.py    # after editing a panel
 ```
 
 LAN access from the lab host goes through socat relays (`lab-relay-grafana.service.example`; one unit per port, bound to
-the LAN address) — http://192.168.50.231:3001 (theme: Grafana follows the OS / browser dark-mode setting; the ☾ Dark / ☀ Light links on every dashboard open it in a new tab with the theme forced — the `theme=` URL parameter only takes effect on a full page load) (dashboards: SRv6 core overview, **C8000v IPsec overview** — tunnels, headend capacity/CPU, from the IPsec portal's `lab_tunnel_*` / `lab_headend_*` gauges, plus each spoke's IKE authentication (PSK or certificate) and certificate expiry, plus a Firewalls row from the VyOS firewalls' syslog in VictoriaLogs: drops and new flows per firewall, top dropped flows, the kernel log), :9091 (Prometheus — 9090 on the host is Cockpit), :8428, :9428; Nautobot :8080 and Gitea :3000 the same way. The hub links to them.
+the LAN address) — http://192.168.50.231:3001 (theme: Grafana follows the OS / browser dark-mode setting; the ☾ Dark / ☀ Light links on every dashboard open it in a new tab with the theme forced — the `theme=` URL parameter only takes effect on a full page load) (dashboards: SRv6 core overview, **EVPN fabric overview** — node health, fabric BGP / BFD, remote VTEPs per L2VNI, the DF per Ethernet Segment, server LACP legs, default routes via both borders, fw-ext's edge sessions, the fabric's FRR syslog — from the evpn-fabric portal's `lab_bgp_*` / `lab_evpn_*` / `lab_es_df` / `lab_default_route_paths` gauges, **C8000v IPsec overview** — tunnels, headend capacity/CPU, from the IPsec portal's `lab_tunnel_*` / `lab_headend_*` gauges, plus each spoke's IKE authentication (PSK or certificate) and certificate expiry, plus a Firewalls row from the VyOS firewalls' syslog in VictoriaLogs: drops and new flows per firewall, top dropped flows, the kernel log), :9091 (Prometheus — 9090 on the host is Cockpit), :8428, :9428; Nautobot :8080 and Gitea :3000 the same way. The hub links to them.
 
 The **Ubuntu lab host itself** is scraped too (job `lab-host`, labels `lab="lab-host", node="ubuntu", role="hypervisor"`):
 `node_exporter` 1.12 runs as a `systemd --user` unit on the host (`lab-host-node-exporter.service.example` — install it under
 `~/.config/systemd/user/`, binary in `~/.local/bin`) listening on the OOB bridge address 10.0.0.1:9100, which the NMS reaches.
 Every overview dashboard ends with a "Ubuntu lab host (KVM): CPU and memory" row — busy %, memory, load vs cores, swap, per
 mode and the busiest cores — so a lab's behaviour can be read against what the hypervisor has left.
+
+**evpn-fabric** (job `evpn-fabric`, SD `http://10.6.0.1:8095/api/sd`): the NMS reaches the fabric on its own NIC on
+`evpn-oob` (eth6, 10.6.0.10 — `~/cat9000v/lab.sh`, `/etc/netplan/63-evpn-oob.yaml`); the SD labels carry `rack` where the
+other labs have `dc`. Its alert group (`evpn-fabric`) covers fabric sessions, VTEPs missing on a VNI, a segment without
+exactly one DF, a default route through fewer than both borders, fw-ext's edge sessions, a dual-homed server down to one
+LACP leg and node health. Its log rules (`evpn-fabric-events`) carry `lab: evpn-fabric`; the generic `routing-events` and
+`operations-events` exclude its hostnames (they would be labelled `lab=srv6-core` by the evaluator), and the IPsec lab's
+firewall rules match `fw-(east|central|west)` exactly rather than `fw-*` (evpn-fabric has an `fw-ext`).
 
 Alerts are gated on the lab being powered on (`lab_vm_running`), so a stopped lab does not raise ExporterDown / tenant
 alerts; only the portals themselves are expected up at all times.

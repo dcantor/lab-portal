@@ -274,6 +274,48 @@ p.append(panel("LAN hosts answering", "state-timeline", [(f"lab_host_up{{{L}}}",
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 16, y + 1, 8, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "c8000v-dmvpn-lab-overview.json").write_text(json.dumps(dashboard("c8000v-dmvpn-lab-overview", "C8000v DMVPN: overview", p, ["c8000v-dmvpn-lab", "lab"], lab="c8000v-dmvpn-lab"), indent=1))
 
+# ---------------------------------------------------------------- evpn-fabric overview (EVPN/VXLAN leaf-spine on VyOS: the portal measures the
+# fabric — sessions, VNIs, segments, default routes — every node is scraped and pushes Telegraf, every node's syslog is in VictoriaLogs)
+_id[0] = 0
+L = 'lab="evpn-fabric"'
+EVH = 'hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" '
+HEALTH3 = [{"type": "value", "options": {"0": {"text": "down", "color": "red"}, "0.5": {"text": "degraded", "color": "orange"}, "1": {"text": "ok", "color": "green"}}}]
+p = []
+p.append(row("The fabric", 0))
+p.append(panel("Nodes healthy", "stat", [(f"count(lab_node_health{{{L}}} == 1) or vector(0)", "ok"), (f"count(lab_node_health{{{L}}})", "nodes")], 0, 1, 5, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Fabric BGP sessions", "stat", [(f'sum(lab_bgp_sessions_up{{{L},afi="ipv4"}})', "up"), (f"sum(lab_bgp_sessions_expected{{{L}}})", "expected")], 5, 1, 5, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Defaults via both borders (leaf x tenant)", "stat", [(f'count(lab_default_route_paths{{{L},role="leaf"}} >= 2) or vector(0)', "both"), (f'count(lab_default_route_paths{{{L},role="leaf"}})', "of")], 10, 1, 5, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Last test run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 15, 1, 5, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}]},
+                          {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}]}}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Node health (the portal's view)", "state-timeline", [(f"lab_node_health{{{L}}}", "{{node}}")], 0, 5, 24, 9, mappings=HEALTH3,
+               thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 0.5}, {"color": "green", "value": 1}]}))
+
+p.append(row("Underlay and overlay", 14))
+p.append(panel("Fabric BGP sessions Established per node (IPv4 / EVPN)", "timeseries", [(f'lab_bgp_sessions_up{{{L},afi="ipv4"}}', "{{node}}")], 0, 15, 8, 8, min=0, decimals=0))
+p.append(panel("BFD peers up per node", "timeseries", [(f"lab_bfd_peers_up{{{L}}}", "{{node}}")], 8, 15, 8, 8, min=0, decimals=0))
+p.append(panel("Remote VTEPs per L2VNI (each leaf should see the other 5)", "timeseries", [(f"min by (vni) (lab_evpn_l2vni_remote_vteps{{{L}}})", "VNI {{vni}} (worst leaf)")], 16, 15, 8, 8, min=0, decimals=0))
+
+p.append(row("Multihoming and the way out", 23))
+p.append(panel("Designated forwarder per Ethernet Segment", "state-timeline", [(f"lab_es_df{{{L}}}", "{{node}} {{esi}}")], 0, 24, 12, 8,
+               mappings=[{"type": "value", "options": {"0": {"text": "non-DF", "color": "blue"}, "1": {"text": "DF", "color": "green"}}}]))
+p.append(panel("Server LACP legs up", "timeseries", [(f"lab_server_bond_legs_up{{{L}}}", "{{node}}")], 12, 24, 6, 8, min=0, max=2, decimals=0))
+p.append(panel("fw-ext sessions to the borders", "state-timeline", [(f"lab_edge_session_up{{{L}}}", "{{border_ip}}")], 18, 24, 6, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Default-route paths per leaf and tenant (2 = both borders)", "timeseries", [(f'lab_default_route_paths{{{L},role="leaf"}}', "{{node}} {{tenant}}")], 0, 32, 12, 7, min=0, max=2, decimals=0))
+p.append(panel("Fabric traffic: busiest ports (bit/s)", "timeseries", [(f'topk(8, 8 * rate(node_network_transmit_bytes_total{{{L},device=~"eth[1-8]|bond[0-9]+"}}[2m]))', "{{node}} {{device}} out")], 12, 32, 12, 7, unit="bps", min=0))
+
+p.append(row("Node syslog (VictoriaLogs)", 39))
+p.append(panel("BGP / BFD events / 5 min per node", "timeseries", [logs_ts(EVH + '(app_name:bgpd "%ADJCHANGE") OR (app_name:bfdd "state-change") | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events', "{{hostname}}")], 0, 40, 12, 7, ds=VL, min=0))
+p.append(panel("Syslog lines / 5 min per node", "timeseries", [logs_ts(EVH + '| stats by (_time:5m, hostname) count() as lines', "{{hostname}}")], 12, 40, 12, 7, ds=VL, min=0))
+p.append(panel("Fabric syslog: FRR, commits, protodown (newest first)", "logs", [(EVH + '(app_name:bgpd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit OR app_name:evpn-fabric-protodown)', "")], 0, 47, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+y = host_row(p, 56)
+p.append(row("Lab and runs", y))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+(OUT / "evpn-fabric-overview.json").write_text(json.dumps(dashboard("evpn-fabric-overview", "EVPN fabric: overview", p, ["evpn-fabric", "lab"], lab="evpn-fabric"), indent=1))
+
 # ---------------------------------------------------------------- node detail (any lab, any node)
 _id[0] = 0
 NV = [{"name": "lab", "type": "query", "datasource": VM, "query": "label_values(node_uname_info, lab)", "refresh": 2, "includeAll": False, "current": {"text": "srv6-core", "value": "srv6-core"}},

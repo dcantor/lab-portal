@@ -7,3 +7,4 @@ $SSH "$NMS" 'sudo -n true 2>/dev/null && sudo mkdir -p /opt/monitoring && sudo c
 rsync -a --delete -e "$SSH" --exclude deploy.sh "$DIR/" "$NMS:/opt/monitoring/"
 $SSH "$NMS" 'cd /opt/monitoring && docker compose up -d --remove-orphans && sleep 3 && docker compose ps --format "{{.Name}} {{.Status}}"'
 $SSH "$NMS" 'curl -sf -X POST http://localhost:9090/-/reload && echo "prometheus reloaded"' || echo "prometheus reload skipped (not up yet)"
+$SSH "$NMS" 'curl -sf -X POST http://localhost:8880/-/reload && echo "vmalert-logs reloaded"' || echo "vmalert-logs reload skipped (not up yet)"   # it does not watch its rule file
