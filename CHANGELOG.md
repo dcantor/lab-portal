@@ -7,6 +7,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.4.0] — 2026-09-30
+
+### Added
+- **Lab Hub: resource check before power-up.** Starting VMs is checked against the host's available memory (2 GiB
+  reserve, `LAB_HUB_RESERVE_GIB`). The sizes come from libvirt.
+  - When it does not fit, the hub says how much is missing and lists the largest VMs, and asks before going ahead
+    (`override_memory`).
+  - A lab whose VMs cannot be read counts as "memory unknown", not 0 GiB.
+  - Each card shows the lab's total memory.
+- **Lab Hub: dependencies.**
+  - Every lab depends on the NMS (soft).
+  - A lab depends on another lab whose VMs it attaches (hard, read from `EXT_LAB` in its `lab.conf`).
+  - A power-up offers to start the dependencies first, in order (`start_deps`), and counts their memory too.
+  - A shutdown names the running labs that need the lab (`override_dependents`).
+  - Shutting down the NMS names the running labs that use it, and is refused while a portal run is in progress (`force`).
+  - API: `GET /api/labs/{name}/plan`, `GET /api/services/plan`.
+- **Lab Hub: schedules and idle shutdown.**
+  - Start and stop times per lab on chosen days, and shutdown after N idle hours.
+  - An "I'm using it" button restarts the idle clock.
+  - Every scheduled action goes through the same checks, and its result or the reason it was skipped is kept on the card.
+  - API: `GET/PUT/DELETE /api/labs/{name}/schedule`, `POST /api/labs/{name}/keepawake`.
+
+### Changed
+- A lab shutdown is also refused while a CI run is testing that lab (`force` overrides it, as for a portal run).
+- Power operations from buttons and from the scheduler go through one function, so they apply the same checks.
+
 ## [0.3.0] — 2026-09-30
 
 ### Added

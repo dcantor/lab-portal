@@ -37,9 +37,22 @@
   .chip b { font-size:13px; display:flex; align-items:center; gap:6px } .chip small { color:var(--muted); font-size:11px } .chip:hover { border-color:var(--edge) }
   .dot { width:8px; height:8px; border-radius:50%; display:inline-block; background:var(--bad) } .dot.ok { background:var(--ok) } .dot.warn { background:var(--amber) } .dot.off { background:var(--edge) }
   .runs { display:inline-flex; gap:3px; vertical-align:middle; margin-left:4px } .runs a { width:10px; height:10px; border-radius:2px; background:var(--edge); display:inline-block } .runs a.success { background:var(--ok) } .runs a.failure { background:var(--bad) } .runs a.running { background:var(--amber) }
-  button.ci { border-color:var(--line) } .cirow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .bar > i.bad { background:var(--bad) }
+  button.ci { border-color:var(--line) } button.link { border:none; background:none; color:var(--link); padding:0 2px; font-size:12px }
+  dialog { border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); padding:18px 20px; width:min(460px, 94vw) } dialog::backdrop { background:rgba(0,0,0,.45) }
+  dialog h3 { margin:0 0 10px; font-size:16px } dialog label { display:block; font-size:12px; color:var(--muted); margin:10px 0 3px }
+  dialog input[type=time], dialog input[type=number] { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink) }
+  .days { display:flex; gap:6px; flex-wrap:wrap } .days label { display:flex; gap:4px; align-items:center; margin:0; color:var(--ink); font-size:13px }
+  .ev { font-size:11px; color:var(--muted) } .ev.bad { color:var(--bad) } .cirow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .bar > i.bad { background:var(--bad) }
 </style></head><body>
 <header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a></span></header>
+<dialog id="sched"><h3 id="sd-title">Schedule</h3>
+  <label><input type="checkbox" id="sd-en"> enabled</label>
+  <label>Start the lab at</label><input type="time" id="sd-start"> <button class="link" onclick="document.getElementById('sd-start').value=''">clear</button>
+  <label>Shut it down at</label><input type="time" id="sd-stop"> <button class="link" onclick="document.getElementById('sd-stop').value=''">clear</button>
+  <label>On these days</label><div class="days" id="sd-days"></div>
+  <label>Shut it down when idle for (hours; empty = never)</label><input type="number" id="sd-idle" min="0.25" max="168" step="0.25" placeholder="e.g. 4">
+  <p class="hint">Idle = no start, portal run, CI run or "I'm using it" for that long; a lab with a portal or CI run in progress is never idle. Every scheduled action goes through the same checks as the buttons: memory, dependencies, runs in progress. Host local time.</p>
+  <div class="power"><button class="up" id="sd-save">Save</button><button id="sd-del">Remove schedule</button><button onclick="document.getElementById('sched').close()">Cancel</button></div></dialog>
 <main><div class="host" id="hoststats"></div><div class="card svc" id="services"></div><div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
 <script>
 // light / dark: a choice made here is remembered; until then the page follows the OS, live
@@ -70,13 +83,8 @@ function opView(op) {
   return `<div class="op ${esc(op.status)}">${esc(head)}${op.log && op.log.length ? `<pre>${esc(op.log.slice(-6).join('\n'))}</pre>` : ''}</div>`;
 }
 
-async function power(lab, action, nodes, question) {
-  if (!confirm(question)) return;
-  const r = await fetch(`/api/labs/${encodeURIComponent(lab)}/power`, { method: 'POST', headers: { 'content-type': 'application/json' },
-                                                                        body: JSON.stringify({ action, nodes, confirm: true }) });
-  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); return; }
-  load();                       // the operation shows up straight away; the poll below follows it
-}
+// every power button goes through the guarded flow above: plan first, then only the questions that apply
+async function power(lab, action, nodes, question) { return guardedPower(lab, action, nodes, question); }
 // the host itself: what CPU, memory and disk are left for the labs
 function bar(pct) { const c = pct >= 90 ? 'bad' : pct >= 75 ? 'warn' : ''; return `<div class="bar"><i class="${c}" style="width:${Math.min(100, pct || 0)}%"></i></div>`; }
 
@@ -113,8 +121,11 @@ function renderServices(sv) {
     ${opView(sv.power)}`;
 }
 async function nms(action) {
+  let users = '';
+  if (action === 'down') { const p = await (await fetch('/api/services/plan')).json(); const names = [...new Set(p.dependents_up.map(d => d.lab))];
+    users = names.length ? `\n\nRunning labs that use it: ${names.join(', ')}.` : '\n\nNo lab is running.'; }
   if (!confirm(action === 'up' ? 'Start the NMS VM?\n\nThe services take a minute or two to answer.'
-                               : 'Shut down the NMS VM?\n\nMonitoring, alerting, CI, Gitea and Nautobot stop for every lab until it is started again.')) return;
+                               : 'Shut down the NMS VM?\n\nMonitoring, alerting, CI, Gitea and Nautobot stop for every lab until it is started again.' + users)) return;
   const r = await fetch('/api/services/power', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, confirm: true }) });
   if (!r.ok) { const e = await r.json().catch(() => ({})); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
   load();
@@ -147,16 +158,94 @@ async function ciAction(lab, action) {
   load();
 }
 
+
+// ---- guarded power: ask the plan first, then only the questions that apply -------------------------------------------
+const depName = d => d.on === 'nms' ? 'the NMS' : d.on;
+async function guardedPower(lab, action, nodes, question) {
+  const p = await (await fetch(`/api/labs/${encodeURIComponent(lab)}/plan?action=${action}&nodes=${encodeURIComponent(nodes.join(','))}`)).json();
+  const body = { action, nodes, confirm: true };
+  if (action === 'up') {
+    const m = p.memory;
+    let q = question + (m.unreadable ? `\n\nMemory: unknown — ${lab}'s lab.sh status lists no VMs. ${m.available_gib} GiB available.`
+                                     : `\n\nMemory: ${m.need_gib} GiB for ${m.vms_to_start} VM(s); ${m.available_gib} GiB available (${m.reserve_gib} GiB kept in reserve).`);
+    if (!confirm(q)) return;
+    if (p.deps_down.length) {
+      body.start_deps = confirm(`${lab} depends on ${p.deps_down.map(d => `${depName(d)} (${d.why})`).join(', ')} — not running.\n\nOK = start ${p.deps_down.length > 1 ? 'them' : 'it'} first, then ${lab} (+${m.deps_need_gib} GiB)\nCancel = start ${lab} only`);
+    }
+    const fits = body.start_deps ? m.fits_with_deps : m.fits;
+    if (!fits) {
+      if (m.unreadable ? !confirm(`${lab}'s VMs could not be read, so the hub cannot check that the host has the memory for them.\n\nStart anyway?`) :
+          !confirm(`Not enough memory: ${lab} needs ${(m.need_gib + (body.start_deps ? m.deps_need_gib : 0)).toFixed(1)} GiB, the host has ${m.available_gib} GiB available and keeps ${m.reserve_gib} GiB in reserve.\nLargest VMs: ${m.largest.map(x => x[0] + ' ' + x[1] + ' GiB').join(', ')}\n\nStarting it anyway can make the host swap or kill VMs. Start anyway?`)) return;
+      body.override_memory = true;
+    }
+  } else {
+    if (!confirm(question)) return;
+    if (p.dependents_up.length) {
+      if (!confirm(`Running labs depend on ${lab}:\n${p.dependents_up.map(d => `• ${d.lab}: ${d.why}`).join('\n')}\n\nShut it down anyway?`)) return;
+      body.override_dependents = true;
+    }
+  }
+  const r = await fetch(`/api/labs/${encodeURIComponent(lab)}/power`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); const d = e.detail; alert(typeof d === 'string' ? d : (d && d.message) || JSON.stringify(d)); }
+  load();
+}
+
+// ---- schedule row and editor ------------------------------------------------------------------------------------------
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const when = t => { const d = new Date(t * 1000), today = new Date(); const same = d.toDateString() === today.toDateString();
+  return (same ? '' : d.toLocaleDateString([], { weekday: 'short' }) + ' ') + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
+const dur = s => s < 3600 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`;
+function schedView(l) {
+  const v = l.schedule || {}, s = v.schedule;
+  const ev = (v.events || []).slice(0, 2).map(e => `<div class="ev ${e.ok ? '' : 'bad'}">${when(e.at)} · ${esc(e.text)}</div>`).join('');
+  const edit = POWER ? ` <button class="link" data-sched="${esc(l.name)}">${s ? 'edit' : 'set one'}</button>` : '';
+  if (!s) return `<span class="hint">none</span>${edit}${ev}`;
+  if (!s.enabled) return `<span class="pill">off</span>${edit}${ev}`;
+  const days = s.days.length === 7 ? 'every day' : s.days.join(' ') === 'mon tue wed thu fri' ? 'weekdays' : s.days.join(', ');
+  const parts = [s.start && `start ${s.start}`, s.stop && `stop ${s.stop}`].filter(Boolean).join(' · ');
+  let idle = '';
+  if (s.idle_hours) {
+    const i = v.idle;
+    idle = !i ? ` · idle shutdown after ${s.idle_hours} h` : i.busy ? ` · idle shutdown after ${s.idle_hours} h <span class="pill warn">busy: never idle now</span>`
+      : ` · idle ${i.since ? dur(Date.now() / 1000 - i.since) : '?'} of ${s.idle_hours} h <span class="hint">(${esc(i.why || 'no activity seen')})</span>`
+        + (POWER ? ` <button class="link" data-awake="${esc(l.name)}" title="restart the idle clock">I'm using it</button>` : '');
+  }
+  const nxt = v.next ? ` · <span class="pill">next: ${v.next.action} ${when(v.next.at)}</span>` : '';
+  return `${parts ? esc(parts) + ' · ' + esc(days) : ''}${idle}${nxt}${edit}${ev}`;
+}
+let SCHED_LAB = null;
+function openSched(name) {
+  const l = (window.LABS || []).find(x => x.name === name); const s = (l.schedule || {}).schedule || { enabled: true, start: '', stop: '', days: DAYS.slice(0, 5), idle_hours: null };
+  SCHED_LAB = name; const $ = id => document.getElementById(id);
+  $('sd-title').textContent = `Schedule for ${name}`; $('sd-en').checked = s.enabled; $('sd-start').value = s.start || ''; $('sd-stop').value = s.stop || '';
+  $('sd-idle').value = s.idle_hours || ''; $('sd-days').innerHTML = DAYS.map(d => `<label><input type="checkbox" value="${d}" ${s.days.includes(d) ? 'checked' : ''}>${d}</label>`).join('');
+  $('sched').showModal();
+}
+document.getElementById('sd-save').onclick = async () => {
+  const $ = id => document.getElementById(id);
+  const body = { enabled: $('sd-en').checked, start: $('sd-start').value || null, stop: $('sd-stop').value || null,
+                 days: [...$('sd-days').querySelectorAll('input:checked')].map(i => i.value), idle_hours: $('sd-idle').value ? Number($('sd-idle').value) : null };
+  const r = await fetch(`/api/labs/${encodeURIComponent(SCHED_LAB)}/schedule`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); return alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
+  $('sched').close(); load();
+};
+document.getElementById('sd-del').onclick = async () => {
+  if (!confirm(`Remove the schedule of ${SCHED_LAB}?`)) return;
+  await fetch(`/api/labs/${encodeURIComponent(SCHED_LAB)}/schedule`, { method: 'DELETE' }); document.getElementById('sched').close(); load();
+};
+
 async function load() {
   const d = await (await fetch('/api/labs')).json();
   POWER = d.power_enabled !== false;
-  renderHost(d.host); window.SV = d.services; renderServices(d.services);
+  renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
   document.getElementById('labs').innerHTML = d.labs.map(l => {
     const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
     return `<div class="card"><h2><a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span></h2>
       <p class="desc">${esc(l.description || '')}</p>
       <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
       <dt>Last tests</dt><dd>${t ? (t.error ? esc(t.error) : `<span class="pill ${t.failed ? 'bad' : 'ok'}">${t.passed} passed, ${t.failed} failed</span> <span class="hint">${esc(t.when)} · ${t.suites.map(s => esc(s.name.replace(/^\\d+ /, '')) + (s.status === 'PASS' ? '' : ' ✗')).join(', ')}</span>`) : '<span class="hint">no results yet</span>'}</dd>
+      <dt>Needs</dt><dd>${l.total ? `${l.memory_gib} GiB of memory when fully up` : '<span class="pill warn">memory unknown: lab.sh status lists no VMs</span>'}${(l.depends_on || []).length ? ` · depends on ${l.depends_on.map(d => `<span title="${esc(d.why)}">${esc(depName(d))}${d.kind === 'soft' ? '' : ' (hard)'}</span>`).join(', ')}` : ''}</dd>
+      <dt>Schedule</dt><dd>${schedView(l)}</dd>
       <dt>CI</dt><dd>${ciView(l)}</dd>
       <dt>Directory</dt><dd><code>${esc(l.dir)}</code></dd></dl>
       <div class="vms">${Object.entries(l.vms).filter(([, v]) => typeof v === 'object' && v.state).map(([n, v]) => `<span class="vm ${v.state === 'running' ? 'running' : ''}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(v.state)}" title="${esc(v.role)} · ${esc(v.state)} — click to ${v.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div>
@@ -181,6 +270,8 @@ function schedule(labs) {
 }
 document.addEventListener('click', e => {
   const n = e.target.closest('button[data-nms]'); if (n) return nms(n.dataset.nms);
+  const sc = e.target.closest('button[data-sched]'); if (sc) return openSched(sc.dataset.sched);
+  const aw = e.target.closest('button[data-awake]'); if (aw) return fetch(`/api/labs/${encodeURIComponent(aw.dataset.awake)}/keepawake`, { method: 'POST' }).then(load);
   const c = e.target.closest('button[data-ci]'); if (c) return ciAction(c.dataset.lab, c.dataset.ci);
   const b = e.target.closest('button[data-action]');
   if (b) return power(b.dataset.lab, b.dataset.action, [],

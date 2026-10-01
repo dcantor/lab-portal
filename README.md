@@ -64,6 +64,25 @@ used for: Prometheus, VictoriaMetrics, VictoriaLogs, Grafana, Gitea and Nautobot
 The hub instead kills the step's shells, so nothing is committed back, and gives Robot one interrupt, so every teardown
 runs and the lab is left as the tests found it.
 
+**Safe power control.** Every power operation, from a button or the scheduler, is checked before it runs.
+- **Memory.** Starting VMs needs the sum of their libvirt memory sizes, and the host must have that available with 2 GiB to
+  spare (`LAB_HUB_RESERVE_GIB`). Otherwise the hub says how much is missing and asks before going ahead. If a lab's VMs
+  cannot be read, its need is reported as unknown rather than zero.
+- **Dependencies.** Every lab depends on the NMS (soft: monitoring, CI, backups, Nautobot), and on any lab whose VMs it
+  attaches. That second kind is read from its `lab.conf` `EXT_LAB` entries, so it follows whether srv6-core has the IPsec
+  headends attached.
+- Starting a lab offers to start what it depends on first. Shutting one down, or the NMS, names the running labs that
+  need it.
+- Each card shows the lab's total memory and its dependencies. `GET /api/labs/{name}/plan?action=up|down` returns the
+  same checks without changing anything.
+
+**Schedules and idle shutdown.** Per lab, from the card's Schedule line:
+- start and stop times on chosen days, and shut down after N idle hours;
+- idle means no start, portal run, CI run or "I'm using it" press for that long. A lab with a portal or CI run in
+  progress is never idle.
+- Scheduled actions go through the same checks. What the scheduler did, or why it skipped, is shown on the card.
+- Stored in `~/.config/lab-hub/schedules.json`; state is in `~/.local/state/lab-hub/state.json`.
+
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)
