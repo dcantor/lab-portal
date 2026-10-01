@@ -105,6 +105,21 @@ it with `labportal.secrets.get(name)`: the environment first, then the store.
 - `import-nms` copies Gitea's and Nautobot's credentials from the NMS.
 - The hub's CI view reads Gitea from the store.
 
+**Host history.** The CPU, memory and disk meters each carry a 24-hour sparkline (5-minute averages) with the day's peak.
+- Every power operation on a lab or the NMS is marked on the graphs: green for a start, red for a shutdown, with what
+  and why on hover. That shows what a power-up did to the host.
+- The hub samples once a minute itself, so the graphs work with the NMS off, and saves the samples to
+  `~/.local/state/lab-hub/host-history.json`.
+- On start it backfills the hours it has no samples for from VictoriaMetrics (node-exporter, `job="lab-host"`).
+- API: `GET /api/host/history?hours=24`.
+
+**Lab versions.** Each card's Version row shows:
+- the lab's `VERSION` (linked to its tag), with the date and headline items of the newest `CHANGELOG.md` entry; the
+  full entry is on hover;
+- a warning when the version has no matching tag, or the lab has no VERSION or CHANGELOG;
+- the branch and commit, commits since the last tag, uncommitted files, and how far it is ahead of or behind GitHub
+  as of the last `git fetch`.
+
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)

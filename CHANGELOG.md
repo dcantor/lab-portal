@@ -7,6 +7,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.7.0] — 2026-09-30
+
+### Added
+- **Lab Hub: host history.** A 24-hour sparkline under the CPU, memory and disk meters, with the day's peak and the 75% /
+  90% marks.
+  - Every power operation on a lab or the NMS (button, schedule or dependency start) is marked on the graphs: green
+    for a start, red for a shutdown, with details on hover.
+  - The hub samples once a minute itself, so the graphs work with the NMS off. Samples are saved to
+    `~/.local/state/lab-hub/host-history.json` and survive restarts.
+  - On start it backfills the missing hours from VictoriaMetrics (`job="lab-host"`).
+  - API: `GET /api/host/history`.
+- **Lab Hub: lab versions.** A Version row on each card:
+  - the `VERSION` (linked to its tag), with the date and headline items of the newest `CHANGELOG.md` entry, and the
+    full entry on hover;
+  - "not tagged", or "no VERSION / CHANGELOG" when missing;
+  - the branch and commit, commits since the last tag, uncommitted files, and how far it is ahead of or behind
+    GitHub as of the last fetch (the hub never fetches by itself).
+
 ## [0.6.0] — 2026-09-30
 
 ### Added

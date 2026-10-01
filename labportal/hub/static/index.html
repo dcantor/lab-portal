@@ -42,6 +42,9 @@
   dialog h3 { margin:0 0 10px; font-size:16px } dialog label { display:block; font-size:12px; color:var(--muted); margin:10px 0 3px }
   dialog input[type=time], dialog input[type=number] { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink) }
   .days { display:flex; gap:6px; flex-wrap:wrap } .days label { display:flex; gap:4px; align-items:center; margin:0; color:var(--ink); font-size:13px }
+  .spark { display:block; width:100%; height:38px; margin:4px 0 2px } .spark .area { fill:var(--link); opacity:.12 } .spark .line { fill:none; stroke:var(--link); stroke-width:1.4; vector-effect:non-scaling-stroke }
+  .spark .thr { stroke:var(--line); stroke-dasharray:3 3; vector-effect:non-scaling-stroke } .spark .ev-up { stroke:var(--ok); stroke-width:1.5; vector-effect:non-scaling-stroke } .spark .ev-down { stroke:var(--bad); stroke-width:1.5; vector-effect:non-scaling-stroke }
+  .vrow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .vrow .items { color:var(--muted); font-size:12px; width:100% }
   .ev { font-size:11px; color:var(--muted) } .ev.bad { color:var(--bad) } .cirow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .bar > i.bad { background:var(--bad) }
 </style></head><body>
 <header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a> · <span id="whoami"></span> <a href="/logout" title="sign out of the hub">sign out</a></span></header>
@@ -93,16 +96,51 @@ function renderHost(h) {
   const cpu = h.cpu || {}, mem = h.memory, disks = h.disks || [];
   const cards = [];
   cards.push(`<div class="stat"><div class="l">CPU</div><div class="v">${cpu.pct == null ? '–' : cpu.pct + '%'}</div>
-    ${bar(cpu.pct)}<div class="s">${cpu.cores} cores · load ${(cpu.load || []).join(' ')}</div></div>`);
+    ${bar(cpu.pct)}<div class="s">${cpu.cores} cores · load ${(cpu.load || []).join(' ')}</div>${spark(HISTORY, 0, 'cpu')}</div>`);
   if (mem) cards.push(`<div class="stat"><div class="l">Memory</div><div class="v">${mem.used_gib} / ${mem.total_gib} GiB</div>
-    ${bar(mem.pct)}<div class="s">${mem.available_gib} GiB available${mem.swap_total_gib ? ` · swap ${mem.swap_used_gib} / ${mem.swap_total_gib} GiB` : ''}</div></div>`);
+    ${bar(mem.pct)}<div class="s">${mem.available_gib} GiB available${mem.swap_total_gib ? ` · swap ${mem.swap_used_gib} / ${mem.swap_total_gib} GiB` : ''}</div>${spark(HISTORY, 1, 'memory')}</div>`);
   disks.forEach(dk => cards.push(`<div class="stat"><div class="l">Disk ${esc(dk.path)}</div><div class="v">${dk.used_gib} / ${dk.total_gib} GiB</div>
-    ${bar(dk.pct)}<div class="s">${dk.free_gib} GiB free</div></div>`));
+    ${bar(dk.pct)}<div class="s">${dk.free_gib} GiB free</div>${dk.path === '/' ? spark(HISTORY, 2, 'disk') : ''}</div>`));
   const running = [...document.querySelectorAll('.vm.running')].length;
   document.getElementById('hoststats').innerHTML = cards.join('');
   document.getElementById('host').textContent = `${cpu.cores} cores · ${mem ? mem.available_gib + ' GiB memory available' : ''} · load ${(cpu.load || [])[0]}`;
 }
 
+
+
+// ---- host history: 24 h sparklines with the power operations marked ----------------------------------------------------
+let HISTORY = null, historyAt = 0;
+async function loadHistory() {
+  if (HISTORY && Date.now() - historyAt < 120000) return HISTORY;
+  const r = await fetch('/api/host/history?hours=24'); if (r.ok) { HISTORY = await r.json(); historyAt = Date.now(); } return HISTORY;
+}
+function spark(h, i, label) {
+  if (!h || h.points.length < 2) return `<div class="s">${label}: collecting — the graph fills in over the next minutes</div>`;
+  const W = 288, H = 36, t0 = h.from, t1 = h.to, X = t => ((t - t0) / (t1 - t0) * W).toFixed(1), Y = v => (H - v / 100 * H).toFixed(1);
+  const pts = h.points.map(p => `${X(p[0])},${Y(p[i + 1])}`).join(' ');
+  const evs = h.events.map(e => `<line class="ev-${e.action === 'up' ? 'up' : 'down'}" x1="${X(e.t)}" x2="${X(e.t)}" y1="0" y2="${H}"><title>${esc(new Date(e.t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))} · ${esc(e.lab)} ${e.action === 'up' ? 'started' : 'shut down'}${e.why ? ' · ' + esc(e.why) : ''}</title></line>`).join('');
+  const pk = h.peak[label], first = h.points[0][0], partial = first - t0 > 3600;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="${label}, last 24 hours">
+      <line class="thr" x1="0" x2="${W}" y1="${Y(75)}" y2="${Y(75)}"/><line class="thr" x1="0" x2="${W}" y1="${Y(90)}" y2="${Y(90)}"/>
+      <polygon class="area" points="${X(h.points[0][0])},${H} ${pts} ${X(h.points[h.points.length - 1][0])},${H}"/><polyline class="line" points="${pts}"/>${evs}</svg>
+    <div class="s">${partial ? `since ${new Date(first * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '24 h'}${pk && pk[1] != null ? ` · peak ${pk[1]}% at ${new Date(pk[0] * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}${h.events.length ? ` · ${h.events.length} power operation${h.events.length > 1 ? 's' : ''} marked` : ''}</div>`;
+}
+
+// ---- version: VERSION, the newest changelog entry, and the git state ----------------------------------------------------
+function versionView(l) {
+  const v = l.version; if (!v) return '';
+  const cl = v.changelog, L = v.links || {};
+  const ver = v.version ? `<a href="${esc(L.tag || L.changelog || '#')}" target="_blank"><b>v${esc(v.version)}</b></a>${cl && cl.date ? ` <span class="hint">${esc(cl.date)}</span>` : ''}`
+                        : '<span class="pill warn" title="add a VERSION file and a CHANGELOG.md (Keep a Changelog) to this lab">no VERSION / CHANGELOG</span>';
+  const tagNote = v.version && v.tagged === false ? ` <span class="pill warn" title="the VERSION has no matching git tag">not tagged</span>` : '';
+  const since = v.since_tag ? ` <span class="pill" title="commits on top of ${esc(v.tag)}">+${v.since_tag} since ${esc(v.tag)}</span>` : '';
+  const commit = v.commit ? ` · <a href="${esc(L.commit || '#')}" target="_blank" title="${esc(v.commit_subject)}"><code>${esc(v.branch || '')}@${esc(v.commit)}</code></a>` : '';
+  const sync = v.ahead == null ? '' : (v.ahead || v.behind)
+    ? ` <span class="pill warn" title="against GitHub as of the last git fetch${v.fetched ? ' (' + new Date(v.fetched * 1000).toLocaleString() + ')' : ''}">${v.ahead ? v.ahead + ' to push' : ''}${v.ahead && v.behind ? ' · ' : ''}${v.behind ? v.behind + ' to pull' : ''}</span>` : '';
+  const dirty = v.uncommitted ? ` <span class="pill ${v.uncommitted > 20 ? 'warn' : ''}" title="files changed but not committed (git status)">${v.uncommitted} uncommitted</span>` : '';
+  const items = cl && cl.items.length ? `<div class="items" title="${esc(cl.text)}">${esc(cl.items.join(' · '))}${L.changelog ? ` · <a href="${esc(L.changelog)}" target="_blank">changelog</a>` : ''}</div>` : '';
+  return `<div class="vrow">${ver}${tagNote}${since}${commit}${sync}${dirty}</div>${items}`;
+}
 
 // ---- shared services: the NMS VM and what runs on it --------------------------------------------------------------
 const pillOf = st => ({ success: 'ok', ok: 'ok', running: 'warn', degraded: 'warn', failure: 'bad', down: 'bad' }[st] || '');
@@ -251,6 +289,7 @@ async function load() {
   if (res.status === 401) { location.href = '/login?next=' + encodeURIComponent(location.pathname); return; }   // the session expired
   const d = await res.json();
   POWER = d.power_enabled !== false;
+  await loadHistory().catch(() => null);
   renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
   document.getElementById('labs').innerHTML = d.labs.map(l => {
     const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
@@ -258,6 +297,7 @@ async function load() {
       <p class="desc">${esc(l.description || '')}</p>
       <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
       <dt>Last tests</dt><dd>${t ? (t.error ? esc(t.error) : `<span class="pill ${t.failed ? 'bad' : 'ok'}">${t.passed} passed, ${t.failed} failed</span> <span class="hint">${esc(t.when)} · ${t.suites.map(s => esc(s.name.replace(/^\\d+ /, '')) + (s.status === 'PASS' ? '' : ' ✗')).join(', ')}</span>`) : '<span class="hint">no results yet</span>'}</dd>
+      <dt>Version</dt><dd>${versionView(l)}</dd>
       <dt>Needs</dt><dd>${l.total ? `${l.memory_gib} GiB of memory when fully up` : '<span class="pill warn">memory unknown: lab.sh status lists no VMs</span>'}${(l.depends_on || []).length ? ` · depends on ${l.depends_on.map(d => `<span title="${esc(d.why)}">${esc(depName(d))}${d.kind === 'soft' ? '' : ' (hard)'}</span>`).join(', ')}` : ''}</dd>
       <dt>Schedule</dt><dd>${schedView(l)}</dd>
       <dt>CI</dt><dd>${ciView(l)}</dd>

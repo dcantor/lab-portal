@@ -25,7 +25,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 import requests
-from . import auth as AUTH, ci as CI, guard as GUARD, schedule as SCHED, shared as SHARED
+from . import auth as AUTH, ci as CI, guard as GUARD, history as HIST, schedule as SCHED, shared as SHARED, version as VERSION
 from .. import nmsbackup as NMSBACKUP
 
 CONFIG = Path(os.environ.get("LAB_HUB_CONFIG", Path.home() / ".config" / "lab-hub" / "labs.json"))
@@ -179,6 +179,10 @@ def logout():
     r = RedirectResponse("/login", status_code=303); r.delete_cookie(AUTH.COOKIE, path="/"); return r
 
 
+@app.get("/api/host/history", summary="The lab host's CPU, memory and disk over the last hours (5-minute averages) and the power operations in that time")
+def host_history(hours: float = 24): return HIST.series(min(max(hours, 1), 24))
+
+
 @app.get("/api/me", summary="Who is signed in")
 def me(request: Request): return {"user": getattr(request.state, "user", None), "auth": AUTH.ENABLED}
 
@@ -195,7 +199,8 @@ def api_labs():
         out.append({**lab, "vms": vms, "running": running, "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
                     "tests": last_tests(lab["dir"]), "nautobot": lab.get("nautobot", NAUTOBOT), "power": OPS.get(lab["name"]),
                     "ci_status": CI.status(lab["ci"]) if lab.get("ci") else None,
-                    "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"])})
+                    "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"]),
+                    "version": VERSION.lab_version(lab)})
         out[-1]["schedule"] = SCHED.view(lab["name"], running, out[-1]["portal_health"], out[-1]["ci_status"])
     return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER,
             "services": {**SHARED.status(), "power": SERVICE_OP.get("op"), "backup": NMSBACKUP.latest()}, "generated": time.time()}
@@ -283,6 +288,7 @@ def start_power(lab, req, why="from the hub"):
         op = OPS[name] = {"id": uuid.uuid4().hex[:8], "lab": name, "action": req.action, "nodes": list(req.nodes), "why": why,
                           "started": time.time(), "finished": None, "status": "running", "log": [], "returncode": None}
     threading.Thread(target=_run_power, args=(lab, op, deps), name=f"power-{name}", daemon=True).start()
+    HIST.event(name, req.action, why if not req.nodes else f"{why}: {', '.join(req.nodes)}")
     return op
 
 
@@ -345,6 +351,7 @@ def services_power(req: ConfirmedPower):
         op = SERVICE_OP["op"] = {"id": uuid.uuid4().hex[:8], "action": req.action, "nodes": [SHARED.config()["vm"]], "started": time.time(),
                                  "finished": None, "status": "running", "log": []}
     threading.Thread(target=SHARED.power, args=(op,), name="power-nms", daemon=True).start()
+    HIST.event("NMS", req.action, "from the hub")
     return op
 
 
@@ -424,6 +431,7 @@ def _scheduled_power(lab, action, why):
 def _start_sampler():
     if AUTH.ENABLED: AUTH._load()                 # create auth.json (admin / admin) on the very first start
     threading.Thread(target=_cpu_sample, name="cpu", daemon=True).start()
+    threading.Thread(target=HIST.loop, args=(lambda: _cpu["pct"],), name="history", daemon=True).start()
     threading.Thread(target=SCHED.loop, args=(labs, _lab_status, _scheduled_power), name="scheduler", daemon=True).start()
 
 
