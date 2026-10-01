@@ -91,6 +91,35 @@
   table.compact th, table.compact td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:middle; white-space:nowrap }
   table.compact th { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em } table.compact tr:last-child td { border-bottom:none }
   table.compact td.name a { font-weight:600; color:var(--ink); text-decoration:none } .tablewrap { overflow-x:auto } .ev.bad { color:var(--bad) } .cirow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .bar > i.bad { background:var(--bad) }
+  /* ---- design pass: a type scale, more air, one button language, matching meters, ellipsis for long text ---------- */
+  :root { --fs-xs:11px; --fs-s:12px; --fs-m:13px; --fs-l:15px; --fs-xl:20px; --line-soft:#edf1f5 }
+  html[data-theme="dark"] { --line-soft:#1d283b }
+  body { font-size:var(--fs-m); font-variant-numeric:tabular-nums }
+  .hint, .desc, .stat .s, .stat .l, .ev, .legend, .kv dt, .toolbar, .details .desc { font-size:var(--fs-s) }
+  .pill, .fact .k, .vm { font-size:var(--fs-xs) }
+  .card h2, .card.lab h2 { font-size:var(--fs-l) } .stat .v { font-size:var(--fs-xl) } .stat .v .of { font-size:var(--fs-m); font-weight:400; color:var(--muted) }
+  .kv, .details, .details .kv, .fact .v { font-size:var(--fs-m) }
+  .grid { gap:18px; align-items:stretch } .host { gap:16px; margin-bottom:18px }
+  .card, .stat, .fact { border-color:var(--line-soft) } .card { padding:18px 20px }
+  .card.lab { display:flex; flex-direction:column } .card.lab .details { flex:1; display:flex; flex-direction:column; border-top-color:var(--line-soft); padding-top:12px; margin-top:2px }
+  .card.lab .links { margin-top:auto; padding-top:12px } .kv { gap:7px 12px } .facts { gap:10px; margin:10px 0 14px }
+  .kv dd, .fact, .vrow, .cirow { min-width:0 } .vrow .items, .ev, .trunc { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100% }
+  .vrow a code { display:inline-block; max-width:18ch; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom }
+  .bar, .membar { height:8px; border-radius:4px; margin:6px 0 6px }
+  button { font-size:var(--fs-s); padding:6px 12px; border-radius:7px; font-weight:500 }
+  button.up, button.ci, button.primary { background:var(--link); border-color:var(--link); color:#fff }
+  html[data-theme="dark"] button.up, html[data-theme="dark"] button.ci, html[data-theme="dark"] button.primary { color:#0b1220 }
+  button.up:hover:not(:disabled), button.ci:hover:not(:disabled) { filter:brightness(1.1); border-color:var(--link) }
+  button.down, button.danger { background:transparent; border-color:var(--bad-edge); color:var(--bad) } button.down:hover:not(:disabled) { background:var(--bad-soft); border-color:var(--bad) }
+  button.mini { font-size:var(--fs-xs); padding:3px 9px }
+  .seg button, button.link, button.fold { font-weight:400 }
+  /* toolbar: finding on the left, the view on the right; a Filters button on narrow screens */
+  .toolbar .zone { display:flex; gap:8px; align-items:center; flex-wrap:wrap } .toolbar .zone.view { margin-left:auto } .toolbar .fgroup { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  .toolbar .ftoggle { display:none } .toolbar .count { margin-left:0 }
+  @media (max-width: 900px) {
+    .toolbar .ftoggle { display:inline-block } .toolbar .fgroup { display:none; width:100% } .toolbar.open .fgroup { display:flex }
+    .toolbar .zone.find { order:2; width:100% } .toolbar .zone.find:has(.fgroup) { width:auto } .toolbar.open .zone.find { width:100% }
+  }
   /* ---- phone: one column, bigger targets, the host meters as a strip ---------------------------------------------- */
   @media (max-width: 640px) {
     header { padding:10px 14px; gap:4px 12px } header .sub { display:none } header .right { margin-left:0; width:100% }
@@ -123,12 +152,14 @@
   <div class="sect"><h4>Power operations</h4><table class="evs" id="hist-events"></table></div>
   <div class="power" style="margin-top:12px"><button onclick="document.getElementById('hist').close()">Close</button></div></dialog>
 <main><div class="host" id="hoststats"></div><div class="card svc" id="services"></div>
-<div class="toolbar" id="toolbar"><span class="seg" role="group" aria-label="view"><button data-view="cards">Cards</button><button data-view="compact">Compact</button></span>
-  <input type="search" id="q" placeholder="find a lab or a VM…" aria-label="filter labs">
-  <span class="seg" role="group" aria-label="show"><button data-show="all">All</button><button data-show="running">Running</button><button data-show="stopped">Stopped</button><button data-show="problems" title="failed tests or CI, portal down, a failed power operation or a skipped schedule">Problems</button></span>
-  <label>sort <select id="sort"><option value="custom">your order (drag ⠿)</option><option value="name">name</option><option value="running">running first</option><option value="problems">problems first</option><option value="memory">memory, largest first</option></select></label>
-  <span id="foldall"><button data-foldall="1" title="fold every lab card to its summary line">Fold all</button> <button data-foldall="0">Unfold all</button></span>
-  <span class="count" id="count"></span></div>
+<div class="toolbar" id="toolbar">
+  <div class="zone find"><button class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fgroup">Filters ▾</button>
+    <div class="fgroup" id="fgroup"><input type="search" id="q" placeholder="find a lab or a VM…" aria-label="filter labs">
+      <span class="seg" role="group" aria-label="show"><button data-show="all">All</button><button data-show="running">Running</button><button data-show="stopped">Stopped</button><button data-show="problems" title="failed tests or CI, portal down, a failed power operation or a skipped schedule">Problems</button></span>
+      <label>sort <select id="sort"><option value="custom">your order (drag ⠿)</option><option value="name">name</option><option value="running">running first</option><option value="problems">problems first</option><option value="memory">memory, largest first</option></select></label></div></div>
+  <div class="zone view"><span class="seg" role="group" aria-label="view"><button data-view="cards">Cards</button><button data-view="compact">Compact</button></span>
+    <span id="foldall"><button data-foldall="1" title="fold every lab card to its header and facts">Fold all</button> <button data-foldall="0">Unfold all</button></span>
+    <span class="count" id="count"></span></div></div>
 <div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
 <script>
 // light / dark: a choice made here is remembered; until then the page follows the OS, live
@@ -168,11 +199,11 @@ function renderHost(h) {
   if (!h) return;
   const cpu = h.cpu || {}, mem = h.memory, disks = h.disks || [];
   const cards = [];
-  cards.push(`<div class="stat"><div class="l">CPU</div><div class="v">${cpu.pct == null ? '–' : cpu.pct + '%'}</div>
+  cards.push(`<div class="stat"><div class="l">CPU</div><div class="v">${cpu.pct == null ? '–' : Math.round(cpu.pct) + '%'} <span class="of">of ${cpu.cores} cores</span></div>
     ${bar(cpu.pct)}<div class="s">${cpu.cores} cores · load ${(cpu.load || []).join(' ')}</div>${spark(HISTORY, 0, 'cpu')}</div>`);
-  if (mem) cards.push(`<div class="stat"><div class="l">Memory</div><div class="v">${mem.used_gib} / ${mem.total_gib} GiB</div>
+  if (mem) cards.push(`<div class="stat"><div class="l">Memory</div><div class="v">${mem.used_gib} <span class="of">of ${mem.total_gib} GiB · ${Math.round(mem.pct)}%</span></div>
     ${memoryByLab(mem) || bar(mem.pct)}<div class="s">${mem.available_gib} GiB available${mem.swap_total_gib ? ` · swap ${mem.swap_used_gib} / ${mem.swap_total_gib} GiB` : ''}</div>${spark(HISTORY, 1, 'memory')}</div>`);
-  disks.forEach(dk => cards.push(`<div class="stat"><div class="l">Disk ${esc(dk.path)}</div><div class="v">${dk.used_gib} / ${dk.total_gib} GiB</div>
+  disks.forEach(dk => cards.push(`<div class="stat"><div class="l">Disk ${esc(dk.path)}</div><div class="v">${dk.used_gib} <span class="of">of ${dk.total_gib} GiB · ${Math.round(dk.pct)}%</span></div>
     ${bar(dk.pct)}<div class="s">${dk.free_gib} GiB free</div>${dk.path === '/' ? spark(HISTORY, 2, 'disk') : ''}</div>`));
   const running = [...document.querySelectorAll('.vm.running')].length;
   document.getElementById('hoststats').innerHTML = cards.join('');
@@ -549,6 +580,8 @@ function visibleLabs(labs) {
   return out.sort(by[SORT] || by.custom);
 }
 function syncToolbar(shown, total) {
+  const active = (SHOW !== 'all') + (Q.trim() !== '') + (SORT !== 'custom'), ft = document.getElementById('ftoggle');
+  ft.textContent = `Filters${active ? ` (${active})` : ''} ${document.getElementById('toolbar').classList.contains('open') ? '▴' : '▾'}`;
   document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', b.dataset.show === SHOW));
   document.getElementById('sort').value = SORT;
   const filtered = shown !== total;
@@ -583,6 +616,20 @@ document.getElementById('sort').addEventListener('change', e => { SORT = e.targe
 // the sticky toolbar sits under the header, whatever height the header wraps to
 const fitToolbar = () => document.documentElement.style.setProperty('--hdr-h', document.querySelector('header').offsetHeight + 'px');
 addEventListener('resize', fitToolbar); fitToolbar();
+if (window.ResizeObserver) new ResizeObserver(fitToolbar).observe(document.querySelector('header'));   // the header grows when its text fills in
+
+// ---- the browser tab tells you how things are: a coloured favicon, and a count in the title ----------------------------
+function tabStatus(d) {
+  const hs = d.labs.map(health), bad = hs.filter(h => h.lvl === 'bad').length, warn = hs.filter(h => h.lvl === 'warn').length;
+  const sv = d.services || {}, b = (sv.backup || {}).last, svBad = sv.state && sv.state !== 'ok', bkBad = b && !b.ok;
+  const n = bad + (svBad ? 1 : 0) + (bkBad ? 1 : 0), lvl = n ? 'bad' : warn ? 'warn' : d.labs.some(l => l.running) ? 'ok' : 'off';
+  document.title = `${n ? `⚠ (${n}) ` : warn ? `(${warn}) ` : ''}Lab hub`;
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
+  g.fillStyle = { bad: '#dc2626', warn: '#f59e0b', ok: '#16a34a', off: '#64748b' }[lvl]; g.beginPath(); g.arc(16, 16, 14, 0, 2 * Math.PI); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 17px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n ? '!' : 'L', 16, 17);
+  let link = document.querySelector('link[rel=icon]'); if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+  link.href = c.toDataURL('image/png');
+}
 
 let LAST = null;
 function renderLabs() {
@@ -602,7 +649,7 @@ async function load() {
   POWER = d.power_enabled !== false;
   await loadHistory().catch(() => null);
   LAST = d; renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
-  LAST = d; renderLabs();
+  LAST = d; renderLabs(); tabStatus(d);
   const m = d.monitoring || {}; document.getElementById('mon').innerHTML = m.grafana ? `monitoring: <a href="${m.grafana}" target="_blank">Grafana</a> · <a href="${m.prometheus}/targets" target="_blank">Prometheus targets</a> · <a href="${m.prometheus}/alerts" target="_blank">alerts</a> · <a href="${m.victoriametrics}/vmui" target="_blank">VictoriaMetrics</a>${m.victorialogs ? ` · <a href="${m.victorialogs}/select/vmui" target="_blank">VictoriaLogs</a>` : ''}` : '';
   schedule(d.labs);
   document.getElementById('gen').textContent = 'refreshed ' + new Date(d.generated * 1000).toLocaleTimeString()
@@ -646,6 +693,7 @@ function schedule(labs) {
 }
 document.addEventListener('click', e => {
   if (e.target.closest('svg.spark')) return openHistory();
+  if (e.target.closest('#ftoggle')) { const tb = document.getElementById('toolbar'); tb.classList.toggle('open'); e.target.closest('#ftoggle').setAttribute('aria-expanded', tb.classList.contains('open')); return renderLabs(); }
   const sv = e.target.closest('button[data-svc]'); if (sv) { SVC_OPEN = sv.dataset.svc === '1'; try { localStorage.setItem('hub-svc-open', JSON.stringify(SVC_OPEN)); } catch (x) { } return renderServices(window.SV); }
   const vw = e.target.closest('button[data-view]'); if (vw) return setView(vw.dataset.view);
   const sh = e.target.closest('button[data-show]'); if (sh) { SHOW = sh.dataset.show; store.set('hub-show', SHOW); return renderLabs(); }

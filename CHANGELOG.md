@@ -7,6 +7,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.12.0] — 2026-09-30
+
+### Changed
+- **Lab Hub: equal-height cards.** The cards in a row line up, and each card's links sit at its bottom.
+- **Lab Hub: one button language.** Solid primary for constructive actions (⏻ up, Run CI, Start, Save); a red outline
+  for risky ones (⏻ down, Stop CI, Remove); quiet for the rest. The same applies in every dialog.
+- **Lab Hub: a type scale.** Five sizes (11 / 12 / 13 / 15 / 20 px), and tabular figures, so numbers do not jitter on
+  refresh.
+- **Lab Hub: more breathing room.** Bigger gaps between cards and sections, more padding, and softer dividers.
+- **Lab Hub: long text truncates.** Commit names, changelog items and scheduler events end in an ellipsis, with the
+  full text on hover, instead of wrapping.
+- **Lab Hub: a two-zone toolbar.**
+  - Finding (search, show, sort) on the left; the view (cards / compact, fold, count) on the right.
+  - Below 900 px the finding controls fold behind a **Filters** button, which shows how many are active.
+  - The sticky toolbar re-measures the header whenever it changes height.
+- **Lab Hub: matching meters.** CPU, memory and disk bars have the same height and shape, and read inline: "12% of
+  12 cores", "11 of 57.7 GiB · 19%".
+
+### Added
+- **Lab Hub: the browser tab shows the state.**
+  - The favicon is green when labs are running and all is well, amber when something needs a look, red with "!" when
+    something is failing, and grey when everything is off.
+  - The tab title reads e.g. "⚠ (1) Lab hub". It counts the same red health dots, plus the shared services and the
+    NMS backup.
+
 ## [0.11.0] — 2026-09-30
 
 ### Changed
