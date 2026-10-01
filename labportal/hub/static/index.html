@@ -16,7 +16,7 @@
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px } .card h2 { font-size:17px; margin:0 0 4px } .card h2 a { color:inherit; text-decoration:none } .desc { color:var(--muted); font-size:13px; margin:0 0 10px }
   .pill { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--pill) } .pill.ok { background:var(--ok-bg); color:var(--ok) } .pill.warn { background:var(--warn-bg); color:var(--warn) } .pill.bad { background:var(--bad-bg); color:var(--bad) }
   .kv { display:grid; grid-template-columns:130px 1fr; gap:4px 10px; font-size:13px } .kv dt { color:var(--muted) } .kv dd { margin:0 }
-  .vms { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px } .vm { font:11px ui-monospace, monospace; padding:2px 6px; border-radius:4px; background:var(--bad-bg); color:var(--bad) } .vm.running { background:var(--ok-bg); color:var(--ok) }
+  .vms { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px } .vm { font:11px ui-monospace, monospace; padding:2px 6px; border-radius:4px; background:var(--pill); color:var(--muted) } .vm.bad { background:var(--bad-bg); color:var(--bad) } .vm.warn { background:var(--warn-bg); color:var(--warn) } .vm.running { background:var(--ok-bg); color:var(--ok) }
   .links a { margin-right:12px; font-size:13px } .links { margin-top:10px } .hint { color:var(--muted); font-size:12px }
   button { font:inherit; font-size:12px; padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); cursor:pointer }
   button:hover:not(:disabled) { border-color:var(--edge) } button:disabled { opacity:.5; cursor:not-allowed }
@@ -70,6 +70,17 @@
   .bigchart .s0 { stroke:#3b82f6 } .bigchart .s1 { stroke:#a855f7 } .bigchart .s2 { stroke:#14b8a6 } .bigchart polyline { fill:none; stroke-width:1.6; vector-effect:non-scaling-stroke }
   .bigchart .xh { stroke:var(--muted); stroke-dasharray:3 3 } .bigchart .evl { stroke-width:2; cursor:pointer } .bigchart .evl.up { stroke:var(--ok) } .bigchart .evl.down { stroke:var(--bad) } .bigchart .evl.sel { stroke-width:4 }
   .readout { font-size:12px; color:var(--muted); min-height:18px } table.evs { width:100%; border-collapse:collapse; font-size:12px } table.evs td { padding:4px 6px; border-bottom:1px solid var(--line) } table.evs tr { cursor:pointer } table.evs tr:hover td { background:var(--pill) }
+  /* two-tier lab card: header strip, key facts, lighter details */
+  .card.lab h2 { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px } .card.lab h2 .acts { margin-left:auto; display:flex; gap:6px }
+  .facts { display:grid; grid-template-columns:repeat(auto-fit, minmax(118px, 1fr)); gap:8px; margin:6px 0 10px }
+  .fact { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 9px; min-width:0 } .fact .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em }
+  .fact .v { font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums } .fact .v.small { font-size:12px; color:var(--muted) }
+  .fact .v .pill { font-size:11px }
+  .details { border-top:1px solid var(--line); padding-top:8px; font-size:12.5px } .details .kv { grid-template-columns:96px 1fr; font-size:12.5px } .details .desc { font-size:12.5px }
+  .card.lab .sum { display:none }
+  /* shared services, one line when everything is fine */
+  .svc.slim { padding:10px 16px } .svc.slim .line { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px }
+  .svc.slim .line b { font-size:15px } .svc .toggle { margin-left:auto }
   .empty { padding:24px; text-align:center; color:var(--muted); border:1px dashed var(--line); border-radius:10px }
   .seg { display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden } .seg button { border:none; border-radius:0; background:var(--card) } .seg button.on { background:var(--pill); color:var(--ink); font-weight:600 }
   button.fold { border:none; background:none; padding:0 4px 0 0; font-size:13px; color:var(--muted); width:18px } button.fold:hover { color:var(--ink) }
@@ -193,13 +204,13 @@ function versionView(l) {
   const v = l.version; if (!v) return '';
   const cl = v.changelog, L = v.links || {};
   const ver = v.version ? `<a href="${esc(L.tag || L.changelog || '#')}" target="_blank"><b>v${esc(v.version)}</b></a>${cl && cl.date ? ` <span class="hint">${esc(cl.date)}</span>` : ''}`
-                        : '<span class="pill warn" title="add a VERSION file and a CHANGELOG.md (Keep a Changelog) to this lab">no VERSION / CHANGELOG</span>';
+                        : '<span class="pill" title="add a VERSION file and a CHANGELOG.md (Keep a Changelog) to this lab">no VERSION / CHANGELOG</span>';
   const tagNote = v.version && v.tagged === false ? ` <span class="pill warn" title="the VERSION has no matching git tag">not tagged</span>` : '';
   const since = v.since_tag ? ` <span class="pill" title="commits on top of ${esc(v.tag)}">+${v.since_tag} since ${esc(v.tag)}</span>` : '';
   const commit = v.commit ? ` · <a href="${esc(L.commit || '#')}" target="_blank" title="${esc(v.commit_subject)}"><code>${esc(v.branch || '')}@${esc(v.commit)}</code></a>` : '';
   const sync = v.ahead == null ? '' : (v.ahead || v.behind)
-    ? ` <span class="pill warn" title="against GitHub as of the last git fetch${v.fetched ? ' (' + new Date(v.fetched * 1000).toLocaleString() + ')' : ''}">${v.ahead ? v.ahead + ' to push' : ''}${v.ahead && v.behind ? ' · ' : ''}${v.behind ? v.behind + ' to pull' : ''}</span>` : '';
-  const dirty = v.uncommitted ? ` <span class="pill ${v.uncommitted > 20 ? 'warn' : ''}" title="files changed but not committed (git status)">${v.uncommitted} uncommitted</span>` : '';
+    ? ` <span class="pill" title="against GitHub as of the last git fetch${v.fetched ? ' (' + new Date(v.fetched * 1000).toLocaleString() + ')' : ''}">${v.ahead ? v.ahead + ' to push' : ''}${v.ahead && v.behind ? ' · ' : ''}${v.behind ? v.behind + ' to pull' : ''}</span>` : '';
+  const dirty = v.uncommitted ? ` <span class="pill" title="files changed but not committed (git status)">${v.uncommitted} uncommitted</span>` : '';
   const items = cl && cl.items.length ? `<div class="items" title="${esc(cl.text)}">${esc(cl.items.join(' · '))}${L.changelog ? ` · <a href="${esc(L.changelog)}" target="_blank">changelog</a>` : ''}</div>` : '';
   return `<div class="vrow">${ver}${tagNote}${since}${commit}${sync}${dirty}</div>${items}`;
 }
@@ -207,11 +218,24 @@ function versionView(l) {
 // ---- shared services: the NMS VM and what runs on it --------------------------------------------------------------
 const pillOf = st => ({ success: 'ok', ok: 'ok', running: 'warn', degraded: 'warn', failure: 'bad', down: 'bad' }[st] || '');
 const ago = iso => { const s = (Date.now() - new Date(iso).getTime()) / 1000; return s < 90 ? `${Math.round(s)}s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
+let SVC_OPEN = store_get('hub-svc-open', false);
+function store_get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }
 function renderServices(sv) {
   if (!sv) return;
+  const b = (sv.backup || {}).last, backupOk = b && b.ok && (Date.now() / 1000 - b.taken) < 36 * 3600;
+  const fine = sv.state === 'ok' && backupOk && !(sv.power && sv.power.status === 'running');
+  const el = document.getElementById('services');
+  el.classList.toggle('slim', fine && !SVC_OPEN);
+  if (fine && !SVC_OPEN) {
+    const age = (Date.now() / 1000 - b.taken) / 3600;
+    el.innerHTML = `<div class="line"><span class="hdot ok"></span><b>Shared services</b><span>NMS running</span><span class="hint">·</span>
+      <span>${sv.up}/${sv.total} services up</span><span class="hint">·</span><span>backup ok ${age < 1 ? Math.round(age * 60) + ' min' : Math.round(age) + ' h'} ago</span>
+      ${sv.memory_used_gib ? `<span class="hint">· ${sv.memory_used_gib} GiB</span>` : ''}<button class="link toggle" data-svc="1">details ▾</button></div>`;
+    return;
+  }
   const on = sv.vm_state === 'running', busyNms = sv.power && sv.power.status === 'running';
   const label = { ok: 'all services up', degraded: `${sv.up}/${sv.total} services up`, down: on ? 'services down' : 'everything below is unavailable' }[sv.state];
-  document.getElementById('services').innerHTML = `<h2>Shared services <span class="pill ${on ? 'ok' : 'bad'}">${esc(sv.vm)} VM ${esc(sv.vm_state)}</span>
+  document.getElementById('services').innerHTML = `<h2>Shared services <span class="pill ${on ? 'ok' : 'bad'}">${esc(sv.vm)} VM ${esc(sv.vm_state)}</span>${fine ? ' <button class="link toggle" data-svc="0">less ▴</button>' : ''}
       <span class="pill ${pillOf(sv.state)}">${esc(label)}</span></h2>
     <p class="desc">Every lab depends on these: monitoring and alerts, CI, configuration backups, the source of truth.${on ? '' : ' <b>The NMS is not running</b> — nothing alerts, CI does not run, Nautobot is unreachable.'}</p>
     <div class="chips">${sv.services.map(x => `<a class="chip" href="${esc(x.link)}" target="_blank" title="${esc(x.check)}${x.up ? ` · ${x.ms} ms` : ` · ${x.error || 'HTTP ' + x.code}`}">
@@ -297,7 +321,7 @@ function schedView(l) {
   let idle = '';
   if (s.idle_hours) {
     const i = v.idle;
-    idle = !i ? ` · idle shutdown after ${s.idle_hours} h` : i.busy ? ` · idle shutdown after ${s.idle_hours} h <span class="pill warn">busy: never idle now</span>`
+    idle = !i ? ` · idle shutdown after ${s.idle_hours} h` : i.busy ? ` · idle shutdown after ${s.idle_hours} h <span class="pill">busy: never idle now</span>`
       : ` · idle ${i.since ? dur(Date.now() / 1000 - i.since) : '?'} of ${s.idle_hours} h <span class="hint">(${esc(i.why || 'no activity seen')})</span>`
         + (POWER ? ` <button class="link" data-awake="${esc(l.name)}" title="restart the idle clock">I'm using it</button>` : '');
   }
@@ -476,22 +500,33 @@ function setView(v) { VIEW = v; store.set('hub-view', v); renderLabs(); }
 function fold(name, on) { on ? FOLDED.add(name) : FOLDED.delete(name); store.set('hub-folded', [...FOLDED]); renderLabs(); }
 const ciPill = l => { const c = l.ci_status; if (!c) return ''; if (c.error) return '<span class="pill bad" title="CI unavailable">CI ?</span>';
   const r = c.latest; return r ? `<a class="pill ${pillOf(r.status)}" href="${esc(r.url)}" target="_blank" title="run ${r.number}${r.results ? ` · ${r.results.passed} passed, ${r.results.failed} failed` : ''}">CI ${esc(r.status)}</a>` : ''; };
+const vmPill = l => l.total === 0 ? '<span class="pill">no VMs read</span>'
+  : l.running === 0 ? `<span class="pill" title="every VM is shut down">off · ${l.total} VMs</span>`
+  : `<span class="pill ${l.running === l.total ? 'ok' : 'warn'}">${l.running}/${l.total} VMs running</span>`;
+const vmChipClass = st => st === 'running' ? 'running' : ['crashed', 'undefined'].includes(st) ? 'bad' : ['paused', 'in shutdown'].includes(st) ? 'warn' : '';
 const testPill = l => { const t = l.tests; return !t || t.error ? '' : `<span class="pill ${t.failed ? 'bad' : 'ok'}" title="last test run ${esc(t.when)}">tests ${t.passed}/${t.passed + t.failed}</span>`; };
 const verText = l => l.version && l.version.version ? `v${esc(l.version.version)}` : '<span title="no VERSION file">–</span>';
 const nextText = l => { const v = (l.schedule || {}); return v.next ? `next: ${v.next.action} ${when(v.next.at)}` : ''; };
 const powerBtns = (l, mini) => POWER ? `<button class="up ${mini ? 'mini' : ''}" data-lab="${esc(l.name)}" data-action="up" ${busy(l) ? 'disabled' : ''} title="bring up the whole lab">⏻ up</button>
   <button class="down ${mini ? 'mini' : ''}" data-lab="${esc(l.name)}" data-action="down" ${busy(l) ? 'disabled' : ''} title="shut down the whole lab">⏻ down</button>` : '';
+function testsShort(l) {
+  const t = l.tests; if (!t) return '<span class="hint">no results yet</span>'; if (t.error) return `<span class="hint" title="${esc(t.error)}">unreadable</span>`;
+  const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(t.when || ''), day = m ? new Date(+m[1], m[2] - 1, +m[3]).toLocaleDateString([], { day: 'numeric', month: 'short' }) : '';
+  const failed = t.suites.filter(s => s.status !== 'PASS').map(s => s.name.replace(/^\d+ /, ''));
+  const all = t.suites.map(s => `${s.status === 'PASS' ? '✓' : '✗'} ${s.name}`).join('\n');
+  return `<span title="${esc(`${t.when}\n${all}`)}"><span class="pill ${t.failed ? 'bad' : 'ok'}">${t.passed} passed · ${t.failed} failed</span> <span class="hint">${esc(day)}</span>${failed.length ? ` <span class="hint">✗ ${esc(failed.join(', '))}</span>` : ''}</span>`;
+}
 function labSummary(l) {
   const op = l.power && l.power.status === 'running' ? `<span class="pill warn">⏳ ${l.power.action === 'up' ? 'starting' : 'stopping'}</span>` : '';
   return [op, testPill(l), ciPill(l), `<span>${verText(l)}</span>`, l.total ? `<span>${l.memory_gib} GiB</span>` : '', nextText(l) && `<span>${nextText(l)}</span>`,
-          l.version && l.version.uncommitted ? `<span>${l.version.uncommitted} uncommitted</span>` : '', powerBtns(l, true)].filter(Boolean).join(' · ');
+          l.version && l.version.uncommitted ? `<span>${l.version.uncommitted} uncommitted</span>` : ''].filter(Boolean).join(' · ');
 }
 function compactTable(labs) {
   return `<div class="tablewrap"><table class="compact"><thead><tr><th>Lab</th><th>VMs</th><th>Portal</th><th>Tests</th><th>CI</th><th>Version</th><th>Memory</th><th>Schedule</th><th></th></tr></thead><tbody>
     ${labs.map(l => { const ph = l.portal_health, vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
       const op = l.power && l.power.status === 'running' ? ` <span class="pill warn">⏳</span>` : '';
       return `<tr data-name="${esc(l.name)}"><td class="name"><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span>${hdot(l)}<a href="#" data-open="${esc(l.name)}" title="open its card">${esc(l.name)}</a>${op}</td>
-        <td><span class="pill ${vmcls}">${l.running}/${l.total}</span></td><td><a class="pill ${ph.up ? 'ok' : 'bad'}" href="${l.portal}" target="_blank">${ph.up ? 'up' : 'down'}</a>${ph.active ? ' <span class="pill warn">run</span>' : ''}</td>
+        <td>${vmPill(l)}</td><td><a class="pill ${ph.up ? 'ok' : 'bad'}" href="${l.portal}" target="_blank">${ph.up ? 'up' : 'down'}</a>${ph.active ? ' <span class="pill warn">run</span>' : ''}</td>
         <td>${testPill(l)}</td><td>${ciPill(l) || '<span class="hint">–</span>'}</td><td>${verText(l)}${l.version && l.version.uncommitted ? ` <span class="hint">+${l.version.uncommitted}</span>` : ''}</td>
         <td>${l.total ? l.memory_gib + ' GiB' : '<span class="hint">?</span>'}</td><td class="hint">${nextText(l) || ((l.schedule || {}).schedule ? 'set' : '–')}</td><td>${powerBtns(l, true)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
@@ -575,26 +610,33 @@ async function load() {
              : ' · read-only: use a lab\'s portal or lab.sh to change anything');
 }
 function cardHtml(l) {
-    const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn'); const folded = FOLDED.has(l.name);
-    const issues = problems(l);
-    return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}" data-name="${esc(l.name)}"><h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold to one line'}">${folded ? '▸' : '▾'}</button>${hdot(l)}<a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''}</h2>
-      <div class="sum">${labSummary(l)}</div>
-      <div class="body"><p class="desc">${esc(l.description || '')}</p>
-      <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
-      <dt>Last tests</dt><dd>${t ? (t.error ? esc(t.error) : `<span class="pill ${t.failed ? 'bad' : 'ok'}">${t.passed} passed, ${t.failed} failed</span> <span class="hint">${esc(t.when)} · ${t.suites.map(s => esc(s.name.replace(/^\\d+ /, '')) + (s.status === 'PASS' ? '' : ' ✗')).join(', ')}</span>`) : '<span class="hint">no results yet</span>'}</dd>
+  const ph = l.portal_health, folded = FOLDED.has(l.name), issues = problems(l), v = l.version || {}, c = l.ci_status, sc = l.schedule || {};
+  const ciFact = !c ? '<span class="hint">not set up</span>' : c.error ? '<span class="pill bad" title="' + esc(c.error) + '">unavailable</span>'
+    : c.latest ? `${ciPill(l)} <a class="hint" href="${esc(c.latest.url)}" target="_blank">run ${c.latest.number}</a>` : '<span class="hint">no runs</span>';
+  const verFact = v.version ? `<a href="${esc((v.links || {}).tag || (v.links || {}).changelog || '#')}" target="_blank">v${esc(v.version)}</a>${v.uncommitted ? ` <span class="hint" title="uncommitted files">+${v.uncommitted}</span>` : ''}`
+    : `<span class="hint" title="no VERSION file">–</span>${v.uncommitted ? ` <span class="hint">+${v.uncommitted}</span>` : ''}`;
+  const memFact = !l.total ? '<span class="hint" title="lab.sh status lists no VMs">unknown</span>'
+    : l.running ? `${(l.memory_used_gib || 0).toFixed(1)} <span class="hint">of ${l.memory_gib} GiB</span>` : `${l.memory_gib} GiB <span class="hint">to run</span>`;
+  const nextFact = sc.next ? `${sc.next.action} ${when(sc.next.at)}` : (sc.schedule ? (sc.schedule.enabled ? 'idle-watch only' : 'off') : '<span class="hint">none</span>');
+  const fact = (k, val, title) => `<div class="fact"${title ? ` title="${esc(title)}"` : ''}><div class="k">${k}</div><div class="v">${val}</div></div>`;
+  return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}" data-name="${esc(l.name)}">
+    <h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold'}">${folded ? '▸' : '▾'}</button>${hdot(l)}<a href="${l.portal}" target="_blank" title="${esc(l.dir)}">${esc(l.name)}</a>
+      ${vmPill(l)} <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${ph.active ? ` <span class="pill warn">run: ${esc(ph.active.mode)}</span>` : ''}${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''}
+      <span class="acts">${powerBtns(l, true)}</span></h2>
+    <div class="facts">${fact('Tests', testsShort(l))}${fact('CI', ciFact)}${fact('Version', verFact)}${fact('Memory', memFact)}${fact('Next', nextFact)}</div>
+    <div class="body details">
+      <p class="desc">${esc(l.description || '')}</p>
+      <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
       <dt>Version</dt><dd>${versionView(l)}</dd>
-      <dt>Needs</dt><dd>${l.total ? `${l.memory_gib} GiB of memory when fully up` : '<span class="pill warn">memory unknown: lab.sh status lists no VMs</span>'}${(l.depends_on || []).length ? ` · depends on ${l.depends_on.map(d => `<span title="${esc(d.why)}">${esc(depName(d))}${d.kind === 'soft' ? '' : ' (hard)'}</span>`).join(', ')}` : ''}</dd>
-      <dt>Schedule</dt><dd>${schedView(l)}</dd>
       <dt>CI</dt><dd>${ciView(l)}</dd>
-      <dt>Directory</dt><dd><code>${esc(l.dir)}</code></dd></dl>
-      <div class="vms">${Object.entries(l.vms).filter(([, v]) => typeof v === 'object' && v.state).map(([n, v]) => `<span class="vm ${v.state === 'running' ? 'running' : ''}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(v.state)}" title="${esc(v.role)} · ${esc(v.state)} — click to ${v.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div>
-      ${POWER ? `<div class="power">
-        <button class="up" data-lab="${esc(l.name)}" data-action="up" ${busy(l) ? 'disabled' : ''} title="start every VM of this lab (lab.sh up)">⏻ Bring up the lab</button>
-        <button class="down" data-lab="${esc(l.name)}" data-action="down" ${busy(l) ? 'disabled' : ''} title="stop every VM of this lab — each router saves its configuration first (lab.sh down)">⏻ Shut down the lab</button>
-        <span class="hint">or click a VM above to start or stop it</span></div>` : ''}
+      <dt>Schedule</dt><dd>${schedView(l)}</dd>
+      <dt>Needs</dt><dd>${l.total ? `${l.memory_gib} GiB when fully up` : '<span class="pill warn">memory unknown: lab.sh status lists no VMs</span>'}${(l.depends_on || []).length ? ` · depends on ${l.depends_on.map(d => `<span title="${esc(d.why)}">${esc(depName(d))}${d.kind === 'soft' ? '' : ' (hard)'}</span>`).join(', ')}` : ''}</dd>
+      <dt>VMs</dt><dd><div class="vms" style="margin-top:0">${Object.entries(l.vms).filter(([, x]) => typeof x === 'object' && x.state).map(([n, x]) => `<span class="vm ${vmChipClass(x.state)}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(x.state)}" title="${esc(x.role)} · ${esc(x.state)} — click to ${x.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div></dd></dl>
       ${opView(l.power)}
-      <div class="links"><a href="${l.portal}" target="_blank">portal</a><a href="${l.portal}/docs" target="_blank">API</a><a href="${l.nautobot}" target="_blank">Nautobot</a>${l.gitea ? `<a href="${l.gitea}" target="_blank">Gitea configs</a>` : ''}${l.grafana ? `<a href="${l.grafana}" target="_blank">Grafana</a>` : ''}${l.looking_glass ? `<a href="${l.looking_glass}" target="_blank">Looking glass</a>` : ''}<a href="${l.repo}" target="_blank">GitHub</a></div></div></div>`;
+      <div class="links"><a href="${l.portal}" target="_blank">portal</a><a href="${l.portal}/docs" target="_blank">API</a><a href="${l.nautobot}" target="_blank">Nautobot</a>${l.gitea ? `<a href="${l.gitea}" target="_blank">Gitea configs</a>` : ''}${l.grafana ? `<a href="${l.grafana}" target="_blank">Grafana</a>` : ''}${l.looking_glass ? `<a href="${l.looking_glass}" target="_blank">Looking glass</a>` : ''}<a href="${l.repo}" target="_blank">GitHub</a></div>
+    </div></div>`;
 }
+
 // while a lab is powering up or down, follow it closely; otherwise the slow refresh is plenty
 function schedule(labs) {
   clearInterval(timer);
@@ -604,6 +646,7 @@ function schedule(labs) {
 }
 document.addEventListener('click', e => {
   if (e.target.closest('svg.spark')) return openHistory();
+  const sv = e.target.closest('button[data-svc]'); if (sv) { SVC_OPEN = sv.dataset.svc === '1'; try { localStorage.setItem('hub-svc-open', JSON.stringify(SVC_OPEN)); } catch (x) { } return renderServices(window.SV); }
   const vw = e.target.closest('button[data-view]'); if (vw) return setView(vw.dataset.view);
   const sh = e.target.closest('button[data-show]'); if (sh) { SHOW = sh.dataset.show; store.set('hub-show', SHOW); return renderLabs(); }
   const rs = e.target.closest('button[data-reset]'); if (rs) { SHOW = 'all'; store.set('hub-show', SHOW); Q = ''; document.getElementById('q').value = ''; return renderLabs(); }

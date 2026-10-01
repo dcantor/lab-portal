@@ -7,6 +7,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.11.0] — 2026-09-30
+
+### Changed
+- **Lab Hub: an off lab no longer looks broken.**
+  - A lab with every VM shut down shows a grey "off · N VMs" pill, not red; partly up is amber, fully up is green.
+  - Shut-off VM chips are neutral grey. Only crashed or undefined VMs are red, and paused or shutting-down ones amber.
+- **Lab Hub: one colour language.**
+  - Colour means state: green good, amber needs attention, red failing, grey off or neutral.
+  - Informational pills (uncommitted files, commits to pull, no VERSION / CHANGELOG, "busy") are neutral.
+- **Lab Hub: shared services on one line when all is well.** It reads "NMS running · 6/6 services up · backup ok 1 h
+  ago", with a details toggle (remembered).
+  - It opens to the full card by itself when the NMS or a service is down, the backup is old or failed, or a power
+    operation is running.
+- **Lab Hub: two-tier lab cards.**
+  - **Header strip:** health dot, name (the directory on hover), VM / portal / problem pills, and ⏻ up / ⏻ down on the
+    right.
+  - **Key facts:** Tests, CI, Version, Memory (in use, or what it takes to run) and Next (scheduled action).
+  - **Details**, in a lighter, smaller style: portal, version, CI, schedule, needs, VMs, links.
+  - A folded card keeps the header strip and the facts.
+- **Lab Hub: short test summaries.** "68 passed · 0 failed · 23 Sep", with failed suites named and the full suite list
+  on hover, in place of every suite name wrapped over several lines.
+
 ## [0.10.0] — 2026-09-30
 
 ### Added

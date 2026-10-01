@@ -127,6 +127,14 @@ which cards are folded.
 - **Compact:** one table row per lab, with VMs, portal, tests, CI, version, memory, schedule and the power buttons. A
   lab's name opens its card.
 
+**Reading a card.** Every lab card has three tiers:
+- a header strip with the health dot, status pills and the power buttons;
+- a row of key facts: tests, CI, version, memory, next scheduled action;
+- the details below, in a lighter style.
+
+Colour means state only: green good, amber needs attention, red failing, grey off. A lab that is simply off is grey,
+not red. When everything shared is fine, the shared-services card shrinks to one line.
+
 **Health, dialogs and toasts.**
 - **Health dot.** Every lab has one:
   - green: running, tests passing, nothing failing;
