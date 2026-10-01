@@ -88,15 +88,8 @@ def labs():
 
 
 def vm_states(lab_dir):
-    """Node -> libvirt state, from `lab.sh status` (first table) so only this lab's VMs are counted."""
-    try: out = subprocess.run([str(Path(lab_dir) / "lab.sh"), "status"], capture_output=True, text=True, timeout=60).stdout
-    except Exception as e:  # noqa: BLE001
-        return {"error": str(e)}
-    states = {}
-    for line in out.splitlines():
-        m = re.match(r"^(\S+)\s+(\S+)\s+(running|shut off|undefined|paused|crashed|in shutdown)\b", line)
-        if m and m[1] != "NODE": states[m[1]] = {"role": m[2], "state": m[3]}
-    return states
+    """Node -> {role, state, domain}: the nodes from the lab (cached), their states from one `virsh list --all`."""
+    return GUARD.vm_states(lab_dir)
 
 
 def last_tests(lab_dir):
@@ -196,7 +189,7 @@ def api_labs():
     out = []; rss = GUARD.qemu_rss()
     for lab in labs():
         vms = vm_states(lab["dir"]); running = sum(1 for v in vms.values() if isinstance(v, dict) and v.get("state") == "running")
-        out.append({**lab, "vms": vms, "running": running, "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
+        out.append({**lab, "vms": vms, "running": running, "vm_source": GUARD.lab_nodes(lab["dir"])[1], "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
                     "tests": last_tests(lab["dir"]), "nautobot": lab.get("nautobot", NAUTOBOT), "power": OPS.get(lab["name"]),
                     "ci_status": CI.status(lab["ci"]) if lab.get("ci") else None,
                     "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"]),
@@ -249,7 +242,7 @@ def _run_power(lab, op, deps=()):
         op["status"] = "failed"; op["log"] = [f"timed out after {POWER_TIMEOUT}s"]
     except Exception as e:                       # noqa: BLE001
         op["status"] = "failed"; op["log"] = [f"{e.__class__.__name__}: {e}"]
-    op["finished"] = time.time()
+    op["finished"] = time.time(); GUARD.invalidate(lab["dir"])
     if op["action"] == "up" and op["status"] == "done": SCHED.touch(lab["name"], "started")
 
 

@@ -38,26 +38,88 @@ def _domain_sizes():
     return _mem["sizes"]
 
 
-def lab_vms(lab_dir):
-    """[(node, domain, state)] from `lab.sh status`: the domain is the VM column when the lab has one (c8000v-dmvpn-lab
-    prefixes its domains), else the node name."""
+# ---- what VMs each lab has (static: from lab.sh status, cached) and what state they are in (live: one virsh call) -----
+NODES_TTL = 600
+_nodes = {}                                     # lab dir -> (time, [(node, role, domain)], source)
+_live = {"at": 0.0, "states": {}}
+
+
+def _nodes_from_status(lab_dir):
     try:
         out = subprocess.run([str(Path(lab_dir) / "lab.sh"), "status"], capture_output=True, text=True, timeout=60).stdout
     except Exception:                                          # noqa: BLE001
         return []
-    # (a lab whose `lab.sh status` fails part-way yields fewer rows, or none: memory_plan then says it cannot tell)
-    lines = out.splitlines(); vm_col = None; rows = []
-    for line in lines:
+    vm_col, rows = None, []
+    for line in out.splitlines():
         cols = line.split()
         if cols[:1] == ["NODE"]:
             vm_col = cols.index("VM") if "VM" in cols else None
             continue
-        m = re.match(r"^(\S+)\s+(\S+)\s+(running|shut off|undefined|paused|crashed|in shutdown)\b(.*)$", line)
+        m = re.match(r"^(\S+)\s+(\S+)\s+(running|shut off|undefined|paused|crashed|in shutdown)\b", line)
         if m:
             rest = line[m.end(3):].split()
             dom = rest[vm_col - 3] if vm_col is not None and len(rest) > vm_col - 3 else m[1]
-            rows.append((m[1], dom, m[3]))
+            rows.append((m[1], m[2], dom))
     return rows
+
+
+def _nodes_from_labconf(lab_dir):
+    """Fallback for a lab whose `lab.sh status` lists nothing: its ROLE table in lab.conf (node -> role); the domain is
+    taken to be the node's name, as in labs that do not prefix their domains."""
+    try:
+        conf = (Path(lab_dir) / "lab.conf").read_text()
+    except Exception:                                          # noqa: BLE001
+        return []
+    m = re.search(r"^\s*declare -A ROLE=\((.*?)\)", conf, re.S | re.M)
+    if not m: return []
+    body = "\n".join(l.split("#", 1)[0] for l in m[1].splitlines())
+    return [(n, r, n) for n, r in re.findall(r"\[([^\]]+)\]=(\S+)", body)]
+
+
+def lab_nodes(lab_dir, refresh=False):
+    """[(node, role, libvirt domain)] of a lab, and where it came from; cached NODES_TTL (they change only on a rebuild)."""
+    hit = _nodes.get(lab_dir)
+    if hit and not refresh and time.time() - hit[0] < NODES_TTL:
+        return hit[1], hit[2]
+    rows, source = _nodes_from_status(lab_dir), "lab.sh status"
+    if not rows:
+        rows, source = _nodes_from_labconf(lab_dir), "lab.conf (lab.sh status lists no VMs)"
+    _nodes[lab_dir] = (time.time(), rows, source)
+    return rows, source
+
+
+def live_states(max_age=2.0):
+    """domain -> libvirt state for every VM on the host, from one `virsh list --all` (about 40 ms)."""
+    if time.time() - _live["at"] < max_age:
+        return _live["states"]
+    try:
+        r = SHARED.virsh("list", "--all", timeout=20)
+        states = {}
+        for line in r.stdout.splitlines():
+            parts = line.split(None, 2)                       # " Id   Name   State" — the state can be two words
+            if len(parts) == 3: states[parts[1]] = parts[2].strip()
+        if r.returncode == 0: _live.update(at=time.time(), states=states)
+    except Exception:                                          # noqa: BLE001
+        pass
+    return _live["states"]
+
+
+def invalidate(lab_dir=None):
+    """After a power operation or a rebuild: read the states (and, for that lab, its nodes) afresh."""
+    _live["at"] = 0.0
+    if lab_dir: _nodes.pop(lab_dir, None); _domains.pop(lab_dir, None); _totals.pop(lab_dir, None)
+
+
+def vm_states(lab_dir):
+    """node -> {role, state, domain}, for the hub's cards — the same shape lab.sh status used to give."""
+    live = live_states(); rows, _ = lab_nodes(lab_dir)
+    return {n: {"role": r, "state": live.get(dom, "undefined"), "domain": dom} for n, r, dom in rows}
+
+
+def lab_vms(lab_dir):
+    """[(node, domain, state)]."""
+    live = live_states(); rows, _ = lab_nodes(lab_dir)
+    return [(n, dom, live.get(dom, "undefined")) for n, _r, dom in rows]
 
 
 def memory_plan(lab_dir, nodes=()):
@@ -72,7 +134,7 @@ def memory_plan(lab_dir, nodes=()):
         if line.startswith("MemAvailable:"):
             avail = int(line.split()[1]) / 1024 / 1024
     usable = max(0.0, avail - RESERVE_GIB)
-    unreadable = not vms                                       # `lab.sh status` listed no VMs: the need is unknown, not zero
+    unreadable = not vms                                       # neither lab.sh status nor lab.conf listed VMs: unknown, not zero
     return {"vms_to_start": len(to_start), "need_gib": round(need, 1), "available_gib": round(avail, 1),
             "reserve_gib": RESERVE_GIB, "fits": need <= usable and not unreadable, "unreadable": unreadable, "unknown_sizes": unknown,
             "largest": sorted(((v[0], round(sizes.get(v[1], 0) / 1024, 1)) for v in to_start), key=lambda x: -x[1])[:5]}
@@ -86,7 +148,7 @@ def lab_domains(lab_dir):
     """The libvirt domains of a lab (cached with its total)."""
     hit = _domains.get(lab_dir)
     if hit and time.time() - hit[0] < 600: return hit[1]
-    doms = [dom for _, dom, _ in lab_vms(lab_dir)]
+    doms = [dom for _, _r, dom in lab_nodes(lab_dir)[0]]
     _domains[lab_dir] = (time.time(), doms)
     return doms
 

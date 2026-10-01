@@ -7,6 +7,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.13.0] — 2026-09-30
+
+### Changed
+- **Lab Hub: VM states from one libvirt query.**
+  - Each lab's nodes (names, roles, libvirt domains) change only when a lab is rebuilt, so they are read from
+    `lab.sh status` once every 10 minutes, and again after a power operation.
+  - The live state of every VM comes from a single `virsh list --all` (about 40 ms), shared by the cards, the power
+    plans and the scheduler.
+  - Measured: `/api/labs` 4.06 s → 0.5 s; the plan behind a power dialog 4.72 s → 0.016 s.
+- **Lab Hub: a lab whose `lab.sh status` lists nothing** is read from the `ROLE` table in its `lab.conf` instead, so
+  vyos-dmvpn's 18 VMs (12 GiB) show again. The card says where the list came from (`vm_source`).
+
+### Added
+- **Lab Hub: skeletons.** The page shows grey placeholder shapes of the meters, the services line and the lab cards
+  until the first data arrives, instead of an empty grid. They shimmer gently, or stay still under
+  prefers-reduced-motion.
+
 ## [0.12.0] — 2026-09-30
 
 ### Changed

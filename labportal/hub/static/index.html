@@ -120,6 +120,12 @@
     .toolbar .ftoggle { display:inline-block } .toolbar .fgroup { display:none; width:100% } .toolbar.open .fgroup { display:flex }
     .toolbar .zone.find { order:2; width:100% } .toolbar .zone.find:has(.fgroup) { width:auto } .toolbar.open .zone.find { width:100% }
   }
+  /* ---- skeletons: the shape of the page while the first data loads -------------------------------------------------- */
+  .sk { display:block; border-radius:6px; background:linear-gradient(90deg, var(--pill) 25%, var(--line-soft) 50%, var(--pill) 75%); background-size:300% 100%; animation:sk 1.4s ease-in-out infinite }
+  @keyframes sk { from { background-position:100% 0 } to { background-position:0 0 } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation:none } }
+  .sk.t { height:12px; width:40% } .sk.v { height:22px; width:55%; margin:8px 0 10px } .sk.b { height:8px; width:100% } .sk.g { height:34px; width:100%; margin-top:10px }
+  .sk.h { height:18px; width:45% } .sk.f { height:44px } .sk.r { height:12px; margin:9px 0 } .skfacts { display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; margin:14px 0 }
   /* ---- phone: one column, bigger targets, the host meters as a strip ---------------------------------------------- */
   @media (max-width: 640px) {
     header { padding:10px 14px; gap:4px 12px } header .sub { display:none } header .right { margin-left:0; width:100% }
@@ -151,7 +157,7 @@
   <div class="readout" id="hist-readout">move over the chart for the values at a moment; click a power marker (or a row below) for what happened</div>
   <div class="sect"><h4>Power operations</h4><table class="evs" id="hist-events"></table></div>
   <div class="power" style="margin-top:12px"><button onclick="document.getElementById('hist').close()">Close</button></div></dialog>
-<main><div class="host" id="hoststats"></div><div class="card svc" id="services"></div>
+<main><div class="host" id="hoststats" aria-busy="true"><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div></div><div class="card svc slim" id="services"><span class="sk t" style="width:55%"></span></div>
 <div class="toolbar" id="toolbar">
   <div class="zone find"><button class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fgroup">Filters ▾</button>
     <div class="fgroup" id="fgroup"><input type="search" id="q" placeholder="find a lab or a VM…" aria-label="filter labs">
@@ -160,7 +166,7 @@
   <div class="zone view"><span class="seg" role="group" aria-label="view"><button data-view="cards">Cards</button><button data-view="compact">Compact</button></span>
     <span id="foldall"><button data-foldall="1" title="fold every lab card to its header and facts">Fold all</button> <button data-foldall="0">Unfold all</button></span>
     <span class="count" id="count"></span></div></div>
-<div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
+<div class="grid" id="labs" aria-busy="true" aria-label="loading the labs"><div class="card lab" aria-hidden="true"><span class="sk h"></span><div class="skfacts"><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span></div><span class="sk r" style="width:90%"></span><span class="sk r" style="width:70%"></span><span class="sk r" style="width:80%"></span><span class="sk r" style="width:60%"></span></div><div class="card lab" aria-hidden="true"><span class="sk h"></span><div class="skfacts"><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span></div><span class="sk r" style="width:90%"></span><span class="sk r" style="width:70%"></span><span class="sk r" style="width:80%"></span><span class="sk r" style="width:60%"></span></div><div class="card lab" aria-hidden="true"><span class="sk h"></span><div class="skfacts"><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span></div><span class="sk r" style="width:90%"></span><span class="sk r" style="width:70%"></span><span class="sk r" style="width:80%"></span><span class="sk r" style="width:60%"></span></div><div class="card lab" aria-hidden="true"><span class="sk h"></span><div class="skfacts"><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span><span class="sk f"></span></div><span class="sk r" style="width:90%"></span><span class="sk r" style="width:70%"></span><span class="sk r" style="width:80%"></span><span class="sk r" style="width:60%"></span></div></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
 <script>
 // light / dark: a choice made here is remembered; until then the page follows the OS, live
 function applyTheme() {
@@ -650,6 +656,7 @@ async function load() {
   await loadHistory().catch(() => null);
   LAST = d; renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
   LAST = d; renderLabs(); tabStatus(d);
+  document.querySelectorAll('[aria-busy]').forEach(x => x.removeAttribute('aria-busy'));
   const m = d.monitoring || {}; document.getElementById('mon').innerHTML = m.grafana ? `monitoring: <a href="${m.grafana}" target="_blank">Grafana</a> · <a href="${m.prometheus}/targets" target="_blank">Prometheus targets</a> · <a href="${m.prometheus}/alerts" target="_blank">alerts</a> · <a href="${m.victoriametrics}/vmui" target="_blank">VictoriaMetrics</a>${m.victorialogs ? ` · <a href="${m.victorialogs}/select/vmui" target="_blank">VictoriaLogs</a>` : ''}` : '';
   schedule(d.labs);
   document.getElementById('gen').textContent = 'refreshed ' + new Date(d.generated * 1000).toLocaleTimeString()
