@@ -93,6 +93,18 @@ runs and the lab is left as the tests found it.
 - Five failed attempts from one address lock it out for five minutes.
 - `LAB_HUB_AUTH=off` turns sign-in off, for a trusted single-user machine only.
 
+**NMS backup.** `lab-nms-backup` copies the NMS to `~/backups/nms`: Nautobot's database and volumes, a `gitea dump`,
+Grafana's database, and the deployment with its `.env`.
+- Every backup is checked by restoring it into scratch copies.
+- It runs nightly from a systemd user timer, and the hub's Shared services card shows the last result.
+- See [nms/README.md](nms/README.md) for the contents and the restore procedures.
+
+**Credentials.** `~/.config/lab/secrets.env` (mode 0600) is the lab host's one store for service credentials. Tools read
+it with `labportal.secrets.get(name)`: the environment first, then the store.
+- `lab-secrets list | set NAME | unset NAME | import-nms | check` manage it. Values are never printed.
+- `import-nms` copies Gitea's and Nautobot's credentials from the NMS.
+- The hub's CI view reads Gitea from the store.
+
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)

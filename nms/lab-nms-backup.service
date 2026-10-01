@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up the NMS (Nautobot, Gitea, Grafana) to the lab host, restore-checked
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/lab-portal/.venv/bin/lab-nms-backup
+Nice=10

@@ -116,9 +116,21 @@ function renderServices(sv) {
     <p class="desc">Every lab depends on these: monitoring and alerts, CI, configuration backups, the source of truth.${on ? '' : ' <b>The NMS is not running</b> — nothing alerts, CI does not run, Nautobot is unreachable.'}</p>
     <div class="chips">${sv.services.map(x => `<a class="chip" href="${esc(x.link)}" target="_blank" title="${esc(x.check)}${x.up ? ` · ${x.ms} ms` : ` · ${x.error || 'HTTP ' + x.code}`}">
       <b><span class="dot ${x.up ? 'ok' : (on ? '' : 'off')}"></span>${esc(x.name)}</b><small>${esc(x.used_for || '')}</small></a>`).join('')}</div>
+    ${backupView(sv.backup)}
     ${POWER ? `<div class="power">${on ? `<button class="down" data-nms="down" ${busyNms ? 'disabled' : ''} title="ACPI shutdown of the NMS VM">⏻ Shut down the NMS</button>`
                                         : `<button class="up" data-nms="up" ${busyNms ? 'disabled' : ''} title="virsh start; waits until every service answers">⏻ Start the NMS</button>`}</div>` : ''}
     ${opView(sv.power)}`;
+}
+function backupView(b) {
+  if (!b) return '';
+  const l = b.last;
+  if (!l) return `<p class="hint">Backup: <span class="pill bad">never taken</span> — run <code>lab-nms-backup</code>, or enable the nightly timer</p>`;
+  const age = (Date.now() / 1000 - l.taken) / 3600, stale = age > 36;
+  const c = l.checks || {};
+  const what = l.ok ? `restore-checked: Nautobot ${c.nautobot.devices} devices / ${c.nautobot.ip_addresses} IPs, Gitea ${c.gitea.repositories} repositories, Grafana ${c.grafana.annotations} annotations`
+                    : esc(l.error || 'a restore check failed');
+  return `<p class="hint">Backup: <span class="pill ${!l.ok ? 'bad' : stale ? 'warn' : 'ok'}">${l.ok ? (stale ? 'out of date' : 'ok') : 'failed'}</span>
+    ${age < 1 ? Math.round(age * 60) + ' min' : age < 48 ? Math.round(age) + ' h' : Math.round(age / 24) + ' days'} ago · ${l.bytes ? (l.bytes / 2 ** 20).toFixed(0) + ' MiB · ' : ''}${what} · ${b.kept} kept in <code>${esc(b.dir)}</code></p>`;
 }
 async function nms(action) {
   let users = '';

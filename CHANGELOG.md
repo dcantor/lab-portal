@@ -7,6 +7,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.6.0] — 2026-09-30
+
+### Added
+- **NMS backup** (`lab-nms-backup`). It pulls Nautobot's database (`pg_dump -Fc`) and volumes, a `gitea dump`, an online
+  copy of Grafana's database, and `/opt/nautobot` + `/opt/monitoring` (including the `.env`) to `~/backups/nms`.
+  - Backups are private (0700 / 0600), and the last 14 are kept.
+  - **Every backup is restore-checked**:
+    - the dump is restored into a scratch database, counted, then dropped;
+    - the Gitea dump must contain its database and repositories;
+    - Grafana's copy must pass SQLite's integrity check.
+  - Each backup has a manifest with checksums and image versions.
+  - Nothing is left on the NMS, even when a step fails.
+  - A nightly systemd user timer runs it (`nms/lab-nms-backup.{service,timer}`, 02:30, catching up after a missed
+    run).
+  - The restore procedures are in `nms/README.md`.
+- **Lab Hub:** the Shared services card shows the last NMS backup, its age (amber after 36 h, red on failure) and what
+  its restore check found.
+- **One credential store** (`labportal/secrets.py`, `lab-secrets`): `~/.config/lab/secrets.env`, mode 0600.
+  - Tools read the environment first, then the store; values are never printed.
+  - `lab-secrets import-nms` copies the Gitea and Nautobot credentials from the NMS.
+
+### Changed
+- The Lab Hub's CI view reads the Gitea credentials from the store, and reads the NMS's `.env` over SSH only when they
+  are not stored.
+
 ## [0.5.0] — 2026-09-30
 
 ### Added

@@ -4,7 +4,8 @@ not tested yet, and can start or stop a run.
 
 A lab opts in with a "ci" entry in labs.json:
   "ci": {"gitea": "http://10.0.0.10:3000", "repo": "lab/srv6-core", "workflow": "lab-ci.yml", "link": "http://192.168.50.231:3000/lab/srv6-core"}
-Gitea credentials: GITEA_USER / GITEA_PASSWORD, or the password the NMS keeps (as the labs' own tools/ci.py reads it).
+Gitea credentials: GITEA_USER / GITEA_PASSWORD from the environment or the lab's credential store (lab-secrets), else the
+password the NMS keeps (as the labs' own tools/ci.py reads it).
 
 Stopping: Gitea's cancel kills a job outright, so Robot's teardowns never run — a test that had withdrawn a LAN or added a
 steering policy would leave it so. The hub instead stops the job on this host the careful way: the step's shells are
@@ -21,8 +22,9 @@ ACTIVE = ("running", "waiting", "blocked", "queued")
 def _auth(refresh=False):
     if _cred["auth"] and not refresh:
         return _cred["auth"]
-    user, pw = os.environ.get("GITEA_USER", "lab"), os.environ.get("GITEA_PASSWORD")
-    if not pw:
+    from .. import secrets as SECRETS                        # the environment, then ~/.config/lab/secrets.env
+    user, pw = SECRETS.get("GITEA_USER", "lab"), SECRETS.get("GITEA_PASSWORD")
+    if not pw:                                                 # not stored yet: read it from the NMS, as before
         try:
             pw = subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-o", "LogLevel=ERROR",
                                  "-o", "ConnectTimeout=5", "lab@10.0.0.10", "grep ^GITEA_PASSWORD /opt/nautobot/.env | cut -d= -f2"],

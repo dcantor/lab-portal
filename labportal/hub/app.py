@@ -26,6 +26,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from pydantic import BaseModel
 import requests
 from . import auth as AUTH, ci as CI, guard as GUARD, schedule as SCHED, shared as SHARED
+from .. import nmsbackup as NMSBACKUP
 
 CONFIG = Path(os.environ.get("LAB_HUB_CONFIG", Path.home() / ".config" / "lab-hub" / "labs.json"))
 MONITORING = json.loads(os.environ["LAB_HUB_MONITORING"]) if os.environ.get("LAB_HUB_MONITORING") else \
@@ -197,7 +198,7 @@ def api_labs():
                     "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"])})
         out[-1]["schedule"] = SCHED.view(lab["name"], running, out[-1]["portal_health"], out[-1]["ci_status"])
     return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER,
-            "services": {**SHARED.status(), "power": SERVICE_OP.get("op")}, "generated": time.time()}
+            "services": {**SHARED.status(), "power": SERVICE_OP.get("op"), "backup": NMSBACKUP.latest()}, "generated": time.time()}
 
 
 # ---- powering a lab: one operation at a time per lab, run in the background ------------------------------------------
@@ -327,7 +328,7 @@ def services_plan(): return GUARD.nms_plan(labs(), _running())
 
 
 @app.get("/api/services", summary="The shared services every lab depends on: the NMS VM and each service on it")
-def services(): return {**SHARED.status(), "power": SERVICE_OP.get("op")}
+def services(): return {**SHARED.status(), "power": SERVICE_OP.get("op"), "backup": NMSBACKUP.latest()}
 
 
 @app.post("/api/services/power", summary="Start the NMS VM, or shut it down cleanly (monitoring, CI, Gitea and Nautobot go with it)")
