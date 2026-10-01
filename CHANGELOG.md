@@ -7,6 +7,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.10.0] — 2026-09-30
+
+### Added
+- **Lab Hub: health dot per lab**, on cards and compact rows, with the reasons on hover:
+  - green: running, tests passing, nothing failing;
+  - amber: partly up, a power operation running, tests over a week old, or a skipped schedule;
+  - red: failed tests or CI, portal down, a failed power operation;
+  - grey: off.
+- **Lab Hub: one dialog per power action**, replacing the chains of `confirm()` pop-ups.
+  - Starting a lab shows its memory need as a bar against the host's use and reserve, offers to start its dependencies
+    first, and recomputes as that choice changes.
+  - Shutting down lists the running labs that need it.
+  - Risky choices need a ticked box before the button enables: memory override, dependents, or a portal or CI run in
+    progress.
+  - The NMS dialog lists the labs that lose it. CI run / stop and removing a schedule use the same dialog.
+- **Lab Hub: toasts.** Results and errors appear in a corner (errors stay longer and use `role="alert"`). No
+  `alert()` is left.
+- **Lab Hub: large host chart.** Clicking a sparkline opens the last 24 hours:
+  - CPU, memory and disk, each switchable;
+  - a hover readout of the values at any moment;
+  - power markers and a list of power operations, either of which jumps to that moment.
+- **Lab Hub: memory by lab.** The memory meter is a stacked bar: the resident memory of each running lab's VMs (summed
+  from their QEMU processes, not their maximum), the NMS, and the host itself. The API adds `memory_used_gib` per lab
+  and for the NMS.
+
 ## [0.9.0] — 2026-09-30
 
 ### Added

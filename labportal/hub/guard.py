@@ -79,6 +79,31 @@ def memory_plan(lab_dir, nodes=()):
 
 
 _totals = {}
+_domains = {}                                   # lab dir -> (time, [domain names])
+
+
+def lab_domains(lab_dir):
+    """The libvirt domains of a lab (cached with its total)."""
+    hit = _domains.get(lab_dir)
+    if hit and time.time() - hit[0] < 600: return hit[1]
+    doms = [dom for _, dom, _ in lab_vms(lab_dir)]
+    _domains[lab_dir] = (time.time(), doms)
+    return doms
+
+
+def qemu_rss():
+    """libvirt domain -> resident memory of its QEMU process (MiB): what a running VM really holds, not its maximum."""
+    out = {}
+    for p in Path("/proc").iterdir():
+        if not p.name.isdigit(): continue
+        try:
+            if not (p / "comm").read_text().startswith("qemu"): continue
+            m = re.search(rb"-name\0guest=([^,\0]+)", (p / "cmdline").read_bytes())
+            rss = re.search(r"VmRSS:\s+(\d+) kB", (p / "status").read_text())
+            if m and rss: out[m[1].decode()] = int(rss[1]) // 1024
+        except Exception:                                      # noqa: BLE001 — processes come and go
+            pass
+    return out
 
 
 def lab_total_gib(lab_dir):
@@ -87,7 +112,8 @@ def lab_total_gib(lab_dir):
     if hit and time.time() - hit[0] < 600:
         return hit[1]
     sizes = _domain_sizes()
-    total = round(sum(sizes.get(dom, 0) for _, dom, _ in lab_vms(lab_dir)) / 1024, 1)
+    doms = lab_domains(lab_dir)
+    total = round(sum(sizes.get(dom, 0) for dom in doms) / 1024, 1)
     _totals[lab_dir] = (time.time(), total)
     return total
 

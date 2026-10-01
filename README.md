@@ -127,6 +127,29 @@ which cards are folded.
 - **Compact:** one table row per lab, with VMs, portal, tests, CI, version, memory, schedule and the power buttons. A
   lab's name opens its card.
 
+**Health, dialogs and toasts.**
+- **Health dot.** Every lab has one:
+  - green: running, tests passing, nothing failing;
+  - amber: partly up, a power operation in progress, tests over a week old, or a skipped schedule;
+  - red: failed tests or CI, portal down, a failed power operation;
+  - grey: off.
+
+  The reasons show on hover.
+- **One dialog per power action.** Every power action opens a single dialog in place of a chain of pop-ups.
+  - Starting shows a memory bar (in use, needed, the reserve line) and offers to start dependencies first.
+  - Anything risky needs a ticked box before the button works: overriding memory, dependents, or a run in progress.
+  - Shutting down the NMS lists the labs that lose it.
+  - CI run / stop and removing a schedule use the same dialog.
+- **Toasts.** Results and errors appear as toasts in the corner instead of blocking alerts.
+
+**Memory by lab.** The memory meter is split into the resident memory of each running lab's VMs (summed from their QEMU
+processes), the NMS, and the host itself.
+
+**The host history, large.** Clicking any sparkline opens a 24-hour chart:
+- CPU, memory and disk, each of which can be switched on or off;
+- hover shows the values at any moment;
+- power markers and a table of power operations can be clicked to jump to that moment.
+
 **Finding and arranging labs.** The header and the toolbar stay pinned while you scroll; on a phone, only the header.
 - **Search** matches a lab's name, description or VM names.
 - **Show:** All, Running, Stopped, or Problems (failed tests or CI, portal down, a failed power operation or a skipped

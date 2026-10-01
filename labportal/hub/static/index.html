@@ -55,6 +55,21 @@
   .handle { cursor:grab; color:var(--muted); padding:0 4px; user-select:none; font-size:14px } .handle:active { cursor:grabbing }
   .card.lab.dragging, tr.dragging { opacity:.45 } .card.lab.drop-before { box-shadow:inset 0 3px 0 var(--link) } .card.lab.drop-after { box-shadow:inset 0 -3px 0 var(--link) }
   tr.drop-before td { box-shadow:inset 0 2px 0 var(--link) } tr.drop-after td { box-shadow:inset 0 -2px 0 var(--link) }
+  .hdot { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 6px 0 0; vertical-align:middle; background:var(--edge) }
+  .hdot.ok { background:var(--ok) } .hdot.warn { background:var(--amber) } .hdot.bad { background:var(--bad) } .hdot.off { background:transparent; border:2px solid var(--edge); width:9px; height:9px }
+  #toasts { position:fixed; right:16px; bottom:16px; z-index:50; display:flex; flex-direction:column; gap:8px; max-width:min(420px, calc(100vw - 32px)) }
+  .toast { background:var(--card); color:var(--ink); border:1px solid var(--line); border-left:4px solid var(--link); border-radius:8px; padding:9px 34px 9px 12px; font-size:13px;
+           box-shadow:0 6px 24px rgba(0,0,0,.18); position:relative; animation:tin .18s ease-out } .toast.ok { border-left-color:var(--ok) } .toast.bad { border-left-color:var(--bad) } .toast.warn { border-left-color:var(--amber) }
+  .toast button { position:absolute; right:6px; top:5px; border:none; background:none; color:var(--muted); font-size:16px; padding:0 4px; min-height:0 } @keyframes tin { from { transform:translateY(8px); opacity:0 } }
+  dialog.wide { width:min(900px, 96vw) } dialog .sect { border-top:1px solid var(--line); padding:10px 0 4px; margin-top:10px } dialog .sect h4 { margin:0 0 6px; font-size:13px }
+  dialog .warnbox { background:var(--warn-bg); color:var(--warn); border-radius:8px; padding:8px 10px; font-size:13px; margin:8px 0 } dialog .badbox { background:var(--bad-bg); color:var(--bad); border-radius:8px; padding:8px 10px; font-size:13px; margin:8px 0 }
+  dialog .check { display:flex; gap:8px; align-items:flex-start; color:var(--ink); font-size:13px; margin:8px 0 0 } dialog .check input { margin-top:3px } dialog ul { margin:4px 0 0; padding-left:18px; font-size:13px }
+  .membar { position:relative; height:12px; border-radius:6px; background:var(--pill); overflow:hidden; display:flex; margin:6px 0 4px } .membar i { display:block; height:100% }
+  .membar .reserve { position:absolute; top:0; bottom:0; border-left:2px dashed var(--bad) } .legend { display:flex; flex-wrap:wrap; gap:4px 10px; font-size:11px; color:var(--muted) } .legend b { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align:-1px }
+  .spark { cursor:zoom-in } .bigchart { width:100%; height:300px; display:block } .bigchart text { font-size:11px; fill:var(--muted) } .bigchart .grid line { stroke:var(--line) }
+  .bigchart .s0 { stroke:#3b82f6 } .bigchart .s1 { stroke:#a855f7 } .bigchart .s2 { stroke:#14b8a6 } .bigchart polyline { fill:none; stroke-width:1.6; vector-effect:non-scaling-stroke }
+  .bigchart .xh { stroke:var(--muted); stroke-dasharray:3 3 } .bigchart .evl { stroke-width:2; cursor:pointer } .bigchart .evl.up { stroke:var(--ok) } .bigchart .evl.down { stroke:var(--bad) } .bigchart .evl.sel { stroke-width:4 }
+  .readout { font-size:12px; color:var(--muted); min-height:18px } table.evs { width:100%; border-collapse:collapse; font-size:12px } table.evs td { padding:4px 6px; border-bottom:1px solid var(--line) } table.evs tr { cursor:pointer } table.evs tr:hover td { background:var(--pill) }
   .empty { padding:24px; text-align:center; color:var(--muted); border:1px dashed var(--line); border-radius:10px }
   .seg { display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden } .seg button { border:none; border-radius:0; background:var(--card) } .seg button.on { background:var(--pill); color:var(--ink); font-weight:600 }
   button.fold { border:none; background:none; padding:0 4px 0 0; font-size:13px; color:var(--muted); width:18px } button.fold:hover { color:var(--ink) }
@@ -88,6 +103,14 @@
   <label>Shut it down when idle for (hours; empty = never)</label><input type="number" id="sd-idle" min="0.25" max="168" step="0.25" placeholder="e.g. 4">
   <p class="hint">Idle = no start, portal run, CI run or "I'm using it" for that long; a lab with a portal or CI run in progress is never idle. Every scheduled action goes through the same checks as the buttons: memory, dependencies, runs in progress. Host local time.</p>
   <div class="power"><button class="up" id="sd-save">Save</button><button id="sd-del">Remove schedule</button><button onclick="document.getElementById('sched').close()">Cancel</button></div></dialog>
+<div id="toasts" aria-live="polite"></div>
+<dialog id="ask"><h3 id="ask-title"></h3><div id="ask-body"></div>
+  <div class="power" style="margin-top:14px"><button id="ask-ok" class="up">OK</button><button id="ask-cancel">Cancel</button><span class="hint" id="ask-why"></span></div></dialog>
+<dialog id="hist" class="wide"><h3>Lab host — last 24 hours</h3>
+  <div class="legend" id="hist-legend"></div><svg class="bigchart" id="hist-svg" viewBox="0 0 860 300" preserveAspectRatio="none"></svg>
+  <div class="readout" id="hist-readout">move over the chart for the values at a moment; click a power marker (or a row below) for what happened</div>
+  <div class="sect"><h4>Power operations</h4><table class="evs" id="hist-events"></table></div>
+  <div class="power" style="margin-top:12px"><button onclick="document.getElementById('hist').close()">Close</button></div></dialog>
 <main><div class="host" id="hoststats"></div><div class="card svc" id="services"></div>
 <div class="toolbar" id="toolbar"><span class="seg" role="group" aria-label="view"><button data-view="cards">Cards</button><button data-view="compact">Compact</button></span>
   <input type="search" id="q" placeholder="find a lab or a VM…" aria-label="filter labs">
@@ -126,7 +149,7 @@ function opView(op) {
 }
 
 // every power button goes through the guarded flow above: plan first, then only the questions that apply
-async function power(lab, action, nodes, question) { return guardedPower(lab, action, nodes, question); }
+async function power(lab, action, nodes) { return guardedPower(lab, action, nodes); }
 // the host itself: what CPU, memory and disk are left for the labs
 function bar(pct) { const c = pct >= 90 ? 'bad' : pct >= 75 ? 'warn' : ''; return `<div class="bar"><i class="${c}" style="width:${Math.min(100, pct || 0)}%"></i></div>`; }
 
@@ -137,7 +160,7 @@ function renderHost(h) {
   cards.push(`<div class="stat"><div class="l">CPU</div><div class="v">${cpu.pct == null ? '–' : cpu.pct + '%'}</div>
     ${bar(cpu.pct)}<div class="s">${cpu.cores} cores · load ${(cpu.load || []).join(' ')}</div>${spark(HISTORY, 0, 'cpu')}</div>`);
   if (mem) cards.push(`<div class="stat"><div class="l">Memory</div><div class="v">${mem.used_gib} / ${mem.total_gib} GiB</div>
-    ${bar(mem.pct)}<div class="s">${mem.available_gib} GiB available${mem.swap_total_gib ? ` · swap ${mem.swap_used_gib} / ${mem.swap_total_gib} GiB` : ''}</div>${spark(HISTORY, 1, 'memory')}</div>`);
+    ${memoryByLab(mem) || bar(mem.pct)}<div class="s">${mem.available_gib} GiB available${mem.swap_total_gib ? ` · swap ${mem.swap_used_gib} / ${mem.swap_total_gib} GiB` : ''}</div>${spark(HISTORY, 1, 'memory')}</div>`);
   disks.forEach(dk => cards.push(`<div class="stat"><div class="l">Disk ${esc(dk.path)}</div><div class="v">${dk.used_gib} / ${dk.total_gib} GiB</div>
     ${bar(dk.pct)}<div class="s">${dk.free_gib} GiB free</div>${dk.path === '/' ? spark(HISTORY, 2, 'disk') : ''}</div>`));
   const running = [...document.querySelectorAll('.vm.running')].length;
@@ -210,13 +233,21 @@ function backupView(b) {
     ${age < 1 ? Math.round(age * 60) + ' min' : age < 48 ? Math.round(age) + ' h' : Math.round(age / 24) + ' days'} ago · ${l.bytes ? (l.bytes / 2 ** 20).toFixed(0) + ' MiB · ' : ''}${what} · ${b.kept} kept in <code>${esc(b.dir)}</code></p>`;
 }
 async function nms(action) {
-  let users = '';
-  if (action === 'down') { const p = await (await fetch('/api/services/plan')).json(); const names = [...new Set(p.dependents_up.map(d => d.lab))];
-    users = names.length ? `\n\nRunning labs that use it: ${names.join(', ')}.` : '\n\nNo lab is running.'; }
-  if (!confirm(action === 'up' ? 'Start the NMS VM?\n\nThe services take a minute or two to answer.'
-                               : 'Shut down the NMS VM?\n\nMonitoring, alerting, CI, Gitea and Nautobot stop for every lab until it is started again.' + users)) return;
-  const r = await fetch('/api/services/power', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, confirm: true }) });
-  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
+  let body, force = false;
+  if (action === 'up') body = '<p>Start the NMS VM (<code>virsh start</code>). The hub waits until every service answers — a minute or two.</p>';
+  else {
+    const p = await (await fetch('/api/services/plan')).json(), names = [...new Set(p.dependents_up.map(d => d.lab))];
+    const runs = (LAST ? LAST.labs : []).filter(l => (l.portal_health || {}).active);
+    body = `<p>Shut down the NMS VM cleanly (ACPI). Monitoring, alerting, CI, Gitea and Nautobot stop <b>for every lab</b> until it is started again.</p>
+      <div class="sect"><h4>Running labs that use it</h4>${names.length ? `<ul>${names.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="hint">none</p>'}</div>`
+      + (runs.length ? `<div class="sect"><div class="badbox">Portal runs in progress need Nautobot and Gitea: ${runs.map(l => esc(l.name) + ' (' + esc(l.portal_health.active.mode) + ')').join(', ')}. They will fail.</div>
+        <label class="check"><input type="checkbox" name="force" data-required> Shut down anyway</label></div>` : '')
+      + `<label class="check"><input type="checkbox" name="sure" data-required> I understand every lab loses these services</label>`;
+  }
+  const v = await ask(action === 'up' ? 'Start the NMS' : 'Shut down the NMS', body, action === 'up' ? 'Start' : 'Shut down', { danger: action === 'down' });
+  if (!v) return;
+  const r = await fetch('/api/services/power', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, confirm: true, force: !!v.force }) });
+  if (!r.ok) toast(`NMS: ${errText(await r.json().catch(() => ({})))}`, 'bad'); else toast(action === 'up' ? 'Starting the NMS' : 'Shutting down the NMS', 'ok');
   load();
 }
 
@@ -240,44 +271,15 @@ function ciView(l) {
     <div class="cirow" style="margin-top:4px">${strip} ${un} <span class="hint">mirror synced ${c.mirror_updated ? ago(c.mirror_updated) : '?'}</span> ${btn}</div>${opl}`;
 }
 async function ciAction(lab, action) {
-  if (action === 'run' && !confirm(`Start CI for ${lab}?\n\nThe full test job runs against the live lab (about an hour) and commits its results to GitHub.`)) return;
-  if (action === 'stop' && !confirm(`Stop the CI run of ${lab}?\n\nNothing is committed back. Robot finishes the current test's teardown and every suite teardown, so the lab is left as the tests found it.`)) return;
+  const v = action === 'run'
+    ? await ask(`Run CI for ${lab}`, '<p>The mirror syncs from GitHub (or the workflow is dispatched on <code>main</code>). The test job runs against the live lab — about an hour — and commits its results to GitHub.</p>', 'Run CI')
+    : await ask(`Stop the CI run of ${lab}`, '<p>Nothing is committed back. Robot finishes the current test\'s teardown and every suite teardown, so the lab is left as the tests found it.</p>', 'Stop CI', { danger: true });
+  if (!v) return;
   const r = await fetch(`/api/labs/${encodeURIComponent(lab)}/ci/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: true }) });
-  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
+  if (!r.ok) toast(`${lab} CI: ${errText(await r.json().catch(() => ({})))}`, 'bad'); else toast(action === 'run' ? `${lab}: CI requested` : `${lab}: stopping CI — Robot is running its teardowns`, 'ok');
   load();
 }
 
-
-// ---- guarded power: ask the plan first, then only the questions that apply -------------------------------------------
-const depName = d => d.on === 'nms' ? 'the NMS' : d.on;
-async function guardedPower(lab, action, nodes, question) {
-  const p = await (await fetch(`/api/labs/${encodeURIComponent(lab)}/plan?action=${action}&nodes=${encodeURIComponent(nodes.join(','))}`)).json();
-  const body = { action, nodes, confirm: true };
-  if (action === 'up') {
-    const m = p.memory;
-    let q = question + (m.unreadable ? `\n\nMemory: unknown — ${lab}'s lab.sh status lists no VMs. ${m.available_gib} GiB available.`
-                                     : `\n\nMemory: ${m.need_gib} GiB for ${m.vms_to_start} VM(s); ${m.available_gib} GiB available (${m.reserve_gib} GiB kept in reserve).`);
-    if (!confirm(q)) return;
-    if (p.deps_down.length) {
-      body.start_deps = confirm(`${lab} depends on ${p.deps_down.map(d => `${depName(d)} (${d.why})`).join(', ')} — not running.\n\nOK = start ${p.deps_down.length > 1 ? 'them' : 'it'} first, then ${lab} (+${m.deps_need_gib} GiB)\nCancel = start ${lab} only`);
-    }
-    const fits = body.start_deps ? m.fits_with_deps : m.fits;
-    if (!fits) {
-      if (m.unreadable ? !confirm(`${lab}'s VMs could not be read, so the hub cannot check that the host has the memory for them.\n\nStart anyway?`) :
-          !confirm(`Not enough memory: ${lab} needs ${(m.need_gib + (body.start_deps ? m.deps_need_gib : 0)).toFixed(1)} GiB, the host has ${m.available_gib} GiB available and keeps ${m.reserve_gib} GiB in reserve.\nLargest VMs: ${m.largest.map(x => x[0] + ' ' + x[1] + ' GiB').join(', ')}\n\nStarting it anyway can make the host swap or kill VMs. Start anyway?`)) return;
-      body.override_memory = true;
-    }
-  } else {
-    if (!confirm(question)) return;
-    if (p.dependents_up.length) {
-      if (!confirm(`Running labs depend on ${lab}:\n${p.dependents_up.map(d => `• ${d.lab}: ${d.why}`).join('\n')}\n\nShut it down anyway?`)) return;
-      body.override_dependents = true;
-    }
-  }
-  const r = await fetch(`/api/labs/${encodeURIComponent(lab)}/power`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-  if (!r.ok) { const e = await r.json().catch(() => ({})); const d = e.detail; alert(typeof d === 'string' ? d : (d && d.message) || JSON.stringify(d)); }
-  load();
-}
 
 // ---- schedule row and editor ------------------------------------------------------------------------------------------
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -315,13 +317,156 @@ document.getElementById('sd-save').onclick = async () => {
   const body = { enabled: $('sd-en').checked, start: $('sd-start').value || null, stop: $('sd-stop').value || null,
                  days: [...$('sd-days').querySelectorAll('input:checked')].map(i => i.value), idle_hours: $('sd-idle').value ? Number($('sd-idle').value) : null };
   const r = await fetch(`/api/labs/${encodeURIComponent(SCHED_LAB)}/schedule`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-  if (!r.ok) { const e = await r.json().catch(() => ({})); return alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
-  $('sched').close(); load();
+  if (!r.ok) return toast(`Schedule: ${errText(await r.json().catch(() => ({})))}`, 'bad');
+  $('sched').close(); toast(`Schedule for ${SCHED_LAB} saved`, 'ok'); load();
 };
 document.getElementById('sd-del').onclick = async () => {
-  if (!confirm(`Remove the schedule of ${SCHED_LAB}?`)) return;
-  await fetch(`/api/labs/${encodeURIComponent(SCHED_LAB)}/schedule`, { method: 'DELETE' }); document.getElementById('sched').close(); load();
+  document.getElementById('sched').close();
+  if (!await ask(`Remove the schedule of ${SCHED_LAB}`, '<p>The lab will no longer start, stop or idle-shut-down on its own.</p>', 'Remove', { danger: true })) return;
+  toast(`Schedule for ${SCHED_LAB} removed`, 'ok');
+  await fetch(`/api/labs/${encodeURIComponent(SCHED_LAB)}/schedule`, { method: 'DELETE' }); load();
 };
+
+// ---- toasts: results and errors, without blocking the page --------------------------------------------------------
+function toast(msg, kind = 'info', ms) {
+  const el = document.createElement('div'); el.className = `toast ${kind}`; el.setAttribute('role', kind === 'bad' ? 'alert' : 'status');
+  el.innerHTML = `${esc(msg)}<button aria-label="dismiss">×</button>`; el.querySelector('button').onclick = () => el.remove();
+  document.getElementById('toasts').appendChild(el); setTimeout(() => el.remove(), ms || (kind === 'bad' ? 12000 : 6000));
+}
+const errText = e => { const d = e && e.detail; return typeof d === 'string' ? d : (d && d.message) || JSON.stringify(d); };
+
+// ---- one dialog for every confirmation: body HTML, required checkboxes, a primary button ----------------------------
+function ask(title, body, okText, { danger = false, onChange } = {}) {
+  return new Promise(res => {
+    const $ = id => document.getElementById(id), dlg = $('ask');
+    $('ask-title').textContent = title; $('ask-body').innerHTML = body; const ok = $('ask-ok');
+    ok.textContent = okText; ok.className = danger ? 'down' : 'up';
+    const sync = () => { onChange && onChange(dlg);                // the body may add or remove required boxes first
+      const need = [...dlg.querySelectorAll('input[data-required]')].filter(x => !x.checked);
+      ok.disabled = need.length > 0; $('ask-why').textContent = need.length ? 'tick the box above to go ahead' : ''; };
+    dlg.onchange = sync; sync();                                  // delegated: boxes added later count too
+    const done = v => { dlg.close(); res(v); };
+    ok.onclick = () => done(Object.fromEntries([...dlg.querySelectorAll('input[name]')].map(i => [i.name, i.checked])));
+    $('ask-cancel').onclick = () => done(null); dlg.oncancel = () => res(null);
+    dlg.showModal();
+  });
+}
+
+// ---- power: the plan, shown once, with the choices it calls for --------------------------------------------------
+const gib = x => `${(+x).toFixed(1)} GiB`;
+const depName = d => d.on === 'nms' ? 'the NMS' : d.on;
+function memPlanHtml(m, mem, withDeps) {
+  if (m.unreadable) return `<div class="warnbox">The VMs of this lab could not be read (its <code>lab.sh status</code> lists none), so the memory it needs is unknown. ${gib(m.available_gib)} available.</div>`;
+  const total = mem ? mem.total_gib : m.available_gib, used = mem ? mem.used_gib : total - m.available_gib, need = m.need_gib + (withDeps ? m.deps_need_gib : 0);
+  const pct = x => `${Math.max(0, Math.min(100, x / total * 100)).toFixed(1)}%`, over = used + need > total - m.reserve_gib;
+  return `<div class="membar" title="in use · needed · free"><i style="width:${pct(used)};background:var(--edge)"></i><i style="width:${pct(need)};background:${over ? 'var(--bad)' : 'var(--ok)'}"></i>
+      <span class="reserve" style="left:${pct(total - m.reserve_gib)}" title="${m.reserve_gib} GiB reserve"></span></div>
+    <div class="legend"><span><b style="background:var(--edge)"></b>in use ${gib(used)}</span><span><b style="background:${over ? 'var(--bad)' : 'var(--ok)'}"></b>needed ${gib(need)} for ${m.vms_to_start} VM(s)${withDeps && m.deps_need_gib ? ` + dependencies` : ''}</span><span>reserve ${gib(m.reserve_gib)} (dashed)</span><span>available ${gib(m.available_gib)}</span></div>`;
+}
+async function guardedPower(lab, action, nodes) {
+  const p = await (await fetch(`/api/labs/${encodeURIComponent(lab)}/plan?action=${action}&nodes=${encodeURIComponent(nodes.join(','))}`)).json();
+  const L = (LAST && LAST.labs.find(x => x.name === lab)) || {}, mem = LAST && LAST.host && LAST.host.memory;
+  const what = nodes.length ? `${nodes.join(', ')} in ${lab}` : `every VM of ${lab}`;
+  let body = `<p>${action === 'up' ? `Start ${esc(what)} (<code>lab.sh up</code>). Routers take a few minutes to boot.`
+                                   : `Shut down ${esc(what)} (<code>lab.sh down</code>). Each router saves its configuration first; ${nodes.length ? 'anything using it loses it' : 'the lab is unusable'} until it is started again.`}</p>`;
+  if (action === 'up') {
+    const m = p.memory, deps = p.deps_down || [];
+    body += `<div class="sect"><h4>Memory</h4><div id="pw-mem">${memPlanHtml(m, mem, deps.length > 0)}</div><div id="pw-memover"></div></div>`;
+    if (deps.length) body += `<div class="sect"><h4>Not running yet</h4><ul>${deps.map(d => `<li><b>${esc(depName(d))}</b> — ${esc(d.why)}${d.kind === 'hard' ? ' (needed)' : ''}</li>`).join('')}</ul>
+      <label class="check"><input type="checkbox" name="start_deps" checked> Start ${deps.length > 1 ? 'them' : 'it'} first, then ${esc(lab)}</label></div>`;
+    const v = await ask(`Bring up ${nodes.length ? nodes.join(', ') : lab}`, body, 'Bring up', { onChange: dlg => {
+      const withDeps = !!(dlg.querySelector('input[name=start_deps]') || {}).checked, fits = m.unreadable ? false : (withDeps ? m.fits_with_deps : m.fits);
+      dlg.querySelector('#pw-mem').innerHTML = memPlanHtml(m, mem, withDeps);
+      const box = dlg.querySelector('#pw-memover'), had = dlg.querySelector('input[name=override_memory]'), keep = had && had.checked;
+      if (fits) { if (had) box.innerHTML = ''; }
+      else if (!had) { box.innerHTML = `<div class="badbox">${m.unreadable ? 'The hub cannot check the memory for this lab.' : `Not enough memory: the host would go below its ${m.reserve_gib} GiB reserve. Largest VMs: ${m.largest.map(x => esc(x[0]) + ' ' + x[1] + ' GiB').join(', ')}.`}</div>
+        <label class="check"><input type="checkbox" name="override_memory" data-required ${keep ? 'checked' : ''}> Start anyway — the host may swap or kill VMs</label>`; } } });
+    if (!v) return;
+    return powerPost(lab, { action, nodes, confirm: true, start_deps: !!v.start_deps, override_memory: !!v.override_memory });
+  }
+  const dependents = p.dependents_up || [], active = (L.portal_health || {}).active, ci = L.ci_status && L.ci_status.running;
+  if (dependents.length) body += `<div class="sect"><h4>Running labs that need ${esc(lab)}</h4><ul>${dependents.map(d => `<li><b>${esc(d.lab)}</b> — ${esc(d.why)}</li>`).join('')}</ul>
+    <label class="check"><input type="checkbox" name="override_dependents" data-required> Shut it down anyway</label></div>`;
+  if (active || ci) body += `<div class="sect"><div class="badbox">${active ? `A portal run is in progress (${esc(active.mode)}). Shutting down now makes it fail part-way.` : 'A CI run is testing this lab. Shutting down now fails it.'}</div>
+    <label class="check"><input type="checkbox" name="force" data-required> Shut down anyway</label></div>`;
+  const v = await ask(`Shut down ${nodes.length ? nodes.join(', ') : lab}`, body, 'Shut down', { danger: true });
+  if (!v) return;
+  return powerPost(lab, { action, nodes, confirm: true, override_dependents: !!v.override_dependents, force: !!v.force });
+}
+async function powerPost(lab, body) {
+  const r = await fetch(`/api/labs/${encodeURIComponent(lab)}/power`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) toast(`${lab}: ${errText(await r.json().catch(() => ({})))}`, 'bad');
+  else toast(`${lab}: ${body.action === 'up' ? 'starting' : 'shutting down'} ${body.nodes.length ? body.nodes.join(', ') : 'the whole lab'}${body.start_deps ? ' (dependencies first)' : ''} — follow it on the card`, 'ok');
+  load();
+}
+
+// ---- health: one dot per lab, the reasons on hover ---------------------------------------------------------------------
+function health(l) {
+  const pr = problems(l);
+  if (l.running === 0) return l.power && l.power.status === 'failed' ? { lvl: 'bad', why: ['the last power operation failed'] } : { lvl: 'off', why: ['shut down'].concat(pr) };
+  const serious = pr.filter(x => x !== 'schedule skipped');
+  if (serious.length) return { lvl: 'bad', why: serious };
+  const w = [];
+  if (l.running < l.total) w.push(`${l.running} of ${l.total} VMs running`);
+  if (l.power && l.power.status === 'running') w.push('a power operation is in progress');
+  const t = l.tests;
+  if (!t || t.error) w.push('no test results');
+  else { const m = /^(\d{4})-(\d\d)-(\d\d)_(\d\d)-(\d\d)/.exec(t.when || ''); if (m) { const age = (Date.now() - new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5]).getTime()) / 864e5; if (age > 7) w.push(`last tests ${Math.round(age)} days old`); } }
+  if (pr.includes('schedule skipped')) w.push('the scheduler skipped an action');
+  return w.length ? { lvl: 'warn', why: w } : { lvl: 'ok', why: ['running, tests passing, nothing failing'] };
+}
+const hdot = l => { const h = health(l); return `<span class="hdot ${h.lvl}" title="${esc({ ok: 'healthy', warn: 'needs a look', bad: 'something is failing', off: 'off' }[h.lvl] + ': ' + h.why.join(' · '))}" aria-label="${h.lvl}"></span>`; };
+
+// ---- memory per lab: who holds the host's memory ------------------------------------------------------------------
+const LABCOL = ['#3b82f6', '#a855f7', '#14b8a6', '#f59e0b', '#ec4899', '#22c55e', '#ef4444', '#06b6d4'];
+function memoryByLab(mem) {
+  if (!mem || !LAST) return '';
+  const segs = LAST.labs.map((l, i) => ({ name: l.name, gib: l.memory_used_gib || 0, col: LABCOL[i % LABCOL.length] })).filter(x => x.gib > 0);
+  const nms = (LAST.services || {}).memory_used_gib || 0; if (nms) segs.push({ name: 'NMS', gib: nms, col: '#64748b' });
+  const vms = segs.reduce((a, x) => a + x.gib, 0), other = Math.max(0, mem.used_gib - vms);
+  const pct = x => `${(x / mem.total_gib * 100).toFixed(2)}%`;
+  return `<div class="membar" title="what holds the host's memory (resident, not maximum)">${segs.map(x => `<i style="width:${pct(x.gib)};background:${x.col}" title="${esc(x.name)} ${gib(x.gib)}"></i>`).join('')}<i style="width:${pct(other)};background:var(--edge)" title="the host itself and its caches ${gib(other)}"></i></div>
+    <div class="legend">${segs.map(x => `<span><b style="background:${x.col}"></b>${esc(x.name)} ${gib(x.gib)}</span>`).join('') || '<span>no lab VM running</span>'}<span><b style="background:var(--edge)"></b>host ${gib(other)}</span></div>`;
+}
+
+// ---- the big host chart: hover readouts, clickable power events ---------------------------------------------------
+const SERIES = [['cpu', 'CPU'], ['memory', 'Memory'], ['disk', 'Disk /']];
+let HSHOW = null;                                  // which series the big chart shows; read when it first opens
+function openHistory() {
+  HSHOW = HSHOW || new Set(store.get('hub-hist-series', [0, 1, 2]));
+  const h = HISTORY; if (!h || h.points.length < 2) return toast('The host history is still collecting.', 'info');
+  const $ = id => document.getElementById(id);
+  $('hist-legend').innerHTML = SERIES.map(([k, n], i) => `<label class="check" style="margin:0"><input type="checkbox" data-series="${i}" ${HSHOW.has(i) ? 'checked' : ''}><b style="background:${['#3b82f6', '#a855f7', '#14b8a6'][i]}"></b>${n} · peak ${h.peak[k][1] ?? '–'}%</label>`).join('');
+  $('hist-legend').querySelectorAll('input').forEach(c => c.onchange = () => { c.checked ? HSHOW.add(+c.dataset.series) : HSHOW.delete(+c.dataset.series); store.set('hub-hist-series', [...HSHOW]); drawHistory(); });
+  $('hist-events').innerHTML = h.events.length ? h.events.slice().reverse().map((e, i) => `<tr data-evt="${h.events.length - 1 - i}"><td>${new Date(e.t * 1000).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</td><td><b>${esc(e.lab)}</b></td><td><span class="pill ${e.action === 'up' ? 'ok' : 'bad'}">${e.action === 'up' ? 'started' : 'shut down'}</span></td><td class="hint">${esc(e.why || '')}</td></tr>`).join('')
+    : '<tr><td class="hint">No power operations in the last 24 hours (they are recorded from the moment the hub started keeping them).</td></tr>';
+  $('hist-events').querySelectorAll('tr[data-evt]').forEach(tr => tr.onclick = () => showMoment(h.events[+tr.dataset.evt].t, +tr.dataset.evt));
+  drawHistory(); $('hist').showModal();
+}
+function drawHistory(selEvt) {
+  const h = HISTORY, svg = document.getElementById('hist-svg'), W = 860, H = 300, L = 34, R = 10, T = 10, B = 24;
+  const X = t => L + (t - h.from) / (h.to - h.from) * (W - L - R), Y = v => T + (1 - v / 100) * (H - T - B);
+  let g = '<g class="grid">' + [0, 25, 50, 75, 100].map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 4}" y="${Y(v) + 4}" text-anchor="end">${v}%</text>`).join('');
+  for (let t = Math.ceil(h.from / 10800) * 10800; t < h.to; t += 10800) g += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle">${new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</text>`;
+  g += '</g>';
+  [0, 1, 2].filter(i => HSHOW.has(i)).forEach(i => g += `<polyline class="s${i}" points="${h.points.map(p => `${X(p[0]).toFixed(1)},${Y(p[i + 1]).toFixed(1)}`).join(' ')}"/>`);
+  g += h.events.map((e, i) => `<line class="evl ${e.action === 'up' ? 'up' : 'down'} ${selEvt === i ? 'sel' : ''}" data-evt="${i}" x1="${X(e.t)}" x2="${X(e.t)}" y1="${T}" y2="${H - B}"><title>${esc(e.lab)} ${e.action === 'up' ? 'started' : 'shut down'}</title></line>`).join('');
+  g += `<line class="xh" id="hist-xh" x1="-10" x2="-10" y1="${T}" y2="${H - B}"/>`;
+  svg.innerHTML = g;
+  svg.onmousemove = ev => { const r = svg.getBoundingClientRect(), t = h.from + ((ev.clientX - r.left) / r.width * W - L) / (W - L - R) * (h.to - h.from); showMoment(t); };
+  svg.querySelectorAll('.evl').forEach(l => l.onclick = ev => { ev.stopPropagation(); showMoment(h.events[+l.dataset.evt].t, +l.dataset.evt); });
+}
+function showMoment(t, evtIndex) {
+  const h = HISTORY; if (t < h.from || t > h.to) return;
+  const p = h.points.reduce((a, b) => Math.abs(b[0] - t) < Math.abs(a[0] - t) ? b : a);
+  const W = 860, L = 34, R = 10, x = L + (p[0] - h.from) / (h.to - h.from) * (W - L - R), xh = document.getElementById('hist-xh');
+  if (evtIndex !== undefined) drawHistory(evtIndex);
+  const xl = document.getElementById('hist-xh'); xl.setAttribute('x1', x); xl.setAttribute('x2', x);
+  const near = h.events.filter(e => Math.abs(e.t - t) < 450);
+  document.getElementById('hist-readout').innerHTML = `<b>${new Date(p[0] * 1000).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</b> · `
+    + SERIES.map(([, n], i) => `${n} ${p[i + 1]}%`).join(' · ')
+    + (near.length ? ' · ' + near.map(e => `<b>${esc(e.lab)}</b> ${e.action === 'up' ? 'started' : 'shut down'}${e.why ? ' (' + esc(e.why) + ')' : ''}`).join(', ') : '');
+}
 
 // ---- folding and the compact view: per-browser choices ------------------------------------------------------------
 const store = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } },
@@ -345,7 +490,7 @@ function compactTable(labs) {
   return `<div class="tablewrap"><table class="compact"><thead><tr><th>Lab</th><th>VMs</th><th>Portal</th><th>Tests</th><th>CI</th><th>Version</th><th>Memory</th><th>Schedule</th><th></th></tr></thead><tbody>
     ${labs.map(l => { const ph = l.portal_health, vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
       const op = l.power && l.power.status === 'running' ? ` <span class="pill warn">⏳</span>` : '';
-      return `<tr data-name="${esc(l.name)}"><td class="name"><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><a href="#" data-open="${esc(l.name)}" title="open its card">${esc(l.name)}</a>${op}</td>
+      return `<tr data-name="${esc(l.name)}"><td class="name"><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span>${hdot(l)}<a href="#" data-open="${esc(l.name)}" title="open its card">${esc(l.name)}</a>${op}</td>
         <td><span class="pill ${vmcls}">${l.running}/${l.total}</span></td><td><a class="pill ${ph.up ? 'ok' : 'bad'}" href="${l.portal}" target="_blank">${ph.up ? 'up' : 'down'}</a>${ph.active ? ' <span class="pill warn">run</span>' : ''}</td>
         <td>${testPill(l)}</td><td>${ciPill(l) || '<span class="hint">–</span>'}</td><td>${verText(l)}${l.version && l.version.uncommitted ? ` <span class="hint">+${l.version.uncommitted}</span>` : ''}</td>
         <td>${l.total ? l.memory_gib + ' GiB' : '<span class="hint">?</span>'}</td><td class="hint">${nextText(l) || ((l.schedule || {}).schedule ? 'set' : '–')}</td><td>${powerBtns(l, true)}</td></tr>`; }).join('')}
@@ -421,7 +566,7 @@ async function load() {
   const d = await res.json();
   POWER = d.power_enabled !== false;
   await loadHistory().catch(() => null);
-  renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
+  LAST = d; renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
   LAST = d; renderLabs();
   const m = d.monitoring || {}; document.getElementById('mon').innerHTML = m.grafana ? `monitoring: <a href="${m.grafana}" target="_blank">Grafana</a> · <a href="${m.prometheus}/targets" target="_blank">Prometheus targets</a> · <a href="${m.prometheus}/alerts" target="_blank">alerts</a> · <a href="${m.victoriametrics}/vmui" target="_blank">VictoriaMetrics</a>${m.victorialogs ? ` · <a href="${m.victorialogs}/select/vmui" target="_blank">VictoriaLogs</a>` : ''}` : '';
   schedule(d.labs);
@@ -432,7 +577,7 @@ async function load() {
 function cardHtml(l) {
     const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn'); const folded = FOLDED.has(l.name);
     const issues = problems(l);
-    return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}" data-name="${esc(l.name)}"><h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold to one line'}">${folded ? '▸' : '▾'}</button><a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''}</h2>
+    return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}" data-name="${esc(l.name)}"><h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold to one line'}">${folded ? '▸' : '▾'}</button>${hdot(l)}<a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''}</h2>
       <div class="sum">${labSummary(l)}</div>
       <div class="body"><p class="desc">${esc(l.description || '')}</p>
       <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
@@ -458,6 +603,7 @@ function schedule(labs) {
   timer = setInterval(load, following ? 4000 : 30000);
 }
 document.addEventListener('click', e => {
+  if (e.target.closest('svg.spark')) return openHistory();
   const vw = e.target.closest('button[data-view]'); if (vw) return setView(vw.dataset.view);
   const sh = e.target.closest('button[data-show]'); if (sh) { SHOW = sh.dataset.show; store.set('hub-show', SHOW); return renderLabs(); }
   const rs = e.target.closest('button[data-reset]'); if (rs) { SHOW = 'all'; store.set('hub-show', SHOW); Q = ''; document.getElementById('q').value = ''; return renderLabs(); }

@@ -193,17 +193,19 @@ def index(): return FileResponse(str(Path(__file__).resolve().parent / "static" 
 
 @app.get("/api/labs", summary="Every lab with VM states, portal health and the last test run")
 def api_labs():
-    out = []
+    out = []; rss = GUARD.qemu_rss()
     for lab in labs():
         vms = vm_states(lab["dir"]); running = sum(1 for v in vms.values() if isinstance(v, dict) and v.get("state") == "running")
         out.append({**lab, "vms": vms, "running": running, "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
                     "tests": last_tests(lab["dir"]), "nautobot": lab.get("nautobot", NAUTOBOT), "power": OPS.get(lab["name"]),
                     "ci_status": CI.status(lab["ci"]) if lab.get("ci") else None,
                     "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"]),
+                    "memory_used_gib": round(sum(rss.get(d, 0) for d in GUARD.lab_domains(lab["dir"])) / 1024, 1),
                     "version": VERSION.lab_version(lab)})
         out[-1]["schedule"] = SCHED.view(lab["name"], running, out[-1]["portal_health"], out[-1]["ci_status"])
     return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER,
-            "services": {**SHARED.status(), "power": SERVICE_OP.get("op"), "backup": NMSBACKUP.latest()}, "generated": time.time()}
+            "services": {**SHARED.status(), "power": SERVICE_OP.get("op"), "backup": NMSBACKUP.latest(),
+                         "memory_used_gib": round(rss.get(SHARED.config()["vm"], 0) / 1024, 1)}, "generated": time.time()}
 
 
 # ---- powering a lab: one operation at a time per lab, run in the background ------------------------------------------
