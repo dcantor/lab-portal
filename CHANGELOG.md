@@ -7,6 +7,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.14.0] — 2026-09-30
+
+### Added
+- **Lab Hub: a brand and a banner.**
+  - The top bar has a hexagonal hub logo mark and a gradient "Lab **Hub**" wordmark.
+  - Above the meters, a "network console" banner (dark in both themes, with a faint grid and glow) has:
+    - the title "Lab Hub" in a gradient, a tagline, and a pulsing "network lab control plane" eyebrow;
+    - live chips: labs running, VMs up, the NMS's services, failing count, memory in use.
+- **Lab Hub: a live hub-and-spoke map** in the banner, drawn from the current state.
+  - The hub sits at the centre, the NMS above it, and each lab on an arc below, with its VM count.
+  - Each lab node is coloured like its health dot; a running lab glows and pulses.
+  - Links to running labs (and to a running NMS) carry animated packets; links to labs that are off are dim and
+    dashed.
+  - Circuit traces sit in the background.
+  - Hovering a lab shows its health reasons. Animation stops under prefers-reduced-motion, and on a phone the banner
+    stacks.
+
 ## [0.13.0] — 2026-09-30
 
 ### Changed

@@ -11,7 +11,7 @@
           --edge:#5b6f8c; --amber:#ffb454; --code:#1a2438; --header:#070d1a; --header-ink:#e6edf7; --header-muted:#8fa3bf; --header-link:#7dd3fc; color-scheme:dark }
   a { color:var(--link) } code { background:var(--code); padding:0 4px; border-radius:4px }
   * { box-sizing:border-box } body { margin:0; font:14px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg) }
-  header { background:var(--header); color:var(--header-ink); padding:14px 26px; display:flex; align-items:baseline; gap:18px; flex-wrap:wrap } header h1 { font-size:19px; margin:0 } header .sub { color:var(--header-muted); font-size:12px } header .right { margin-left:auto; color:var(--header-muted); font-size:12px } header .right a { color:var(--header-link); text-decoration:none }
+  header { background:var(--header); color:var(--header-ink); padding:14px 26px; display:flex; align-items:center; gap:18px; flex-wrap:wrap } header h1 { font-size:19px; margin:0 } header .sub { color:var(--header-muted); font-size:12px } header .right { margin-left:auto; color:var(--header-muted); font-size:12px } header .right a { color:var(--header-link); text-decoration:none }
   main { max-width:1300px; margin:0 auto; padding:18px 26px } .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:16px }
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px } .card h2 { font-size:17px; margin:0 0 4px } .card h2 a { color:inherit; text-decoration:none } .desc { color:var(--muted); font-size:13px; margin:0 0 10px }
   .pill { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--pill) } .pill.ok { background:var(--ok-bg); color:var(--ok) } .pill.warn { background:var(--warn-bg); color:var(--warn) } .pill.bad { background:var(--bad-bg); color:var(--bad) }
@@ -120,6 +120,34 @@
     .toolbar .ftoggle { display:inline-block } .toolbar .fgroup { display:none; width:100% } .toolbar.open .fgroup { display:flex }
     .toolbar .zone.find { order:2; width:100% } .toolbar .zone.find:has(.fgroup) { width:auto } .toolbar.open .zone.find { width:100% }
   }
+  /* ---- the brand: a logo mark in the bar, and a "network console" banner with a live hub-and-spoke map ------------- */
+  header .brand { display:flex; align-items:center; gap:8px; color:var(--header-ink); text-decoration:none; font-size:18px; letter-spacing:.01em }
+  header .brand b { background:linear-gradient(90deg, #38bdf8, #a78bfa); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:800 }
+  header .brand .mark { width:26px; height:26px } header .brand:hover .mark { filter:drop-shadow(0 0 6px rgba(56,189,248,.6)) }
+  .hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(260px, 1fr) minmax(300px, 560px); gap:10px; align-items:center;
+          margin:0 0 18px; padding:22px 26px; border-radius:14px; color:#e2e8f0;
+          background: radial-gradient(1200px 300px at 85% -20%, rgba(56,189,248,.18), transparent 60%), radial-gradient(800px 300px at -10% 120%, rgba(167,139,250,.16), transparent 60%),
+                      linear-gradient(135deg, #070d1a 0%, #0d1830 55%, #111a33 100%);
+          border:1px solid #1e2a44 }
+  .hero::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.35;
+          background-image:linear-gradient(rgba(148,163,184,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.08) 1px, transparent 1px); background-size:22px 22px;
+          mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); -webkit-mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent) }
+  .hero > * { position:relative }
+  .eyebrow { font:600 11px/1 ui-monospace, Menlo, monospace; letter-spacing:.14em; text-transform:uppercase; color:#7dd3fc; display:flex; align-items:center; gap:8px }
+  .blink { width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e; animation:blink 2.4s ease-in-out infinite }
+  @keyframes blink { 50% { opacity:.35 } }
+  .hero-title { margin:10px 0 6px; font-size:44px; line-height:1.02; font-weight:800; letter-spacing:-.02em; color:#f8fafc }
+  .hero-title span { background:linear-gradient(90deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%); -webkit-background-clip:text; background-clip:text; color:transparent }
+  .hero-sub { margin:0 0 14px; color:#94a3b8; font-size:14px; max-width:46ch }
+  .hero-chips { display:flex; flex-wrap:wrap; gap:8px } .hchip { font:12px/1 ui-monospace, Menlo, monospace; padding:6px 9px; border-radius:7px; background:rgba(148,163,184,.1); border:1px solid rgba(148,163,184,.18); color:#cbd5e1 }
+  .hchip b { color:#f8fafc } .hchip.ok b { color:#4ade80 } .hchip.bad { border-color:rgba(248,113,113,.4) } .hchip.bad b { color:#f87171 } .hchip.warn b { color:#fbbf24 }
+  .hero-graphic { width:100%; height:auto; max-height:240px; display:block }
+  .hero-graphic text { font:11px ui-monospace, Menlo, monospace; fill:#94a3b8 } .hero-graphic .nm { fill:#e2e8f0; font-weight:600 }
+  .hero-graphic .link { fill:none; stroke:#334155; stroke-width:1.4 } .hero-graphic .link.live { stroke:url(#lg-link); stroke-width:1.8 } .hero-graphic .link.off { stroke-dasharray:3 5 }
+  .hero-graphic .ring { fill:none; stroke:#38bdf8; stroke-opacity:.35; animation:ring 3s ease-out infinite; transform-origin:center; transform-box:fill-box }
+  @keyframes ring { from { transform:scale(.6); opacity:1 } to { transform:scale(1.9); opacity:0 } }
+  @media (prefers-reduced-motion: reduce) { .blink, .hero-graphic .ring { animation:none } }
+  @media (max-width: 760px) { .hero { grid-template-columns:1fr; padding:18px } .hero-title { font-size:34px } .hero-graphic { max-height:180px } }
   /* ---- skeletons: the shape of the page while the first data loads -------------------------------------------------- */
   .sk { display:block; border-radius:6px; background:linear-gradient(90deg, var(--pill) 25%, var(--line-soft) 50%, var(--pill) 75%); background-size:300% 100%; animation:sk 1.4s ease-in-out infinite }
   @keyframes sk { from { background-position:100% 0 } to { background-position:0 0 } }
@@ -140,7 +168,10 @@
     .links a { display:inline-block; padding:4px 0 } .power .hint { width:100% }
   }
 </style></head><body>
-<header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a> · <span id="whoami"></span> <a href="/logout" title="sign out of the hub">sign out</a></span></header>
+<header><a class="brand" href="/" title="Lab Hub"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg-mark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+<path d="M16 2.5 28 9.5v13L16 29.5 4 22.5v-13z" fill="none" stroke="url(#lg-mark)" stroke-width="2"/>
+<g stroke="url(#lg-mark)" stroke-width="1.6"><line x1="16" y1="16" x2="16" y2="7"/><line x1="16" y1="16" x2="23.8" y2="20.5"/><line x1="16" y1="16" x2="8.2" y2="20.5"/></g>
+<circle cx="16" cy="16" r="3.4" fill="#38bdf8"/><circle cx="16" cy="7" r="2" fill="#a78bfa"/><circle cx="23.8" cy="20.5" r="2" fill="#a78bfa"/><circle cx="8.2" cy="20.5" r="2" fill="#a78bfa"/></svg><span>Lab <b>Hub</b></span></a><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a> · <span id="whoami"></span> <a href="/logout" title="sign out of the hub">sign out</a></span></header>
 <dialog id="sched"><h3 id="sd-title">Schedule</h3>
   <label><input type="checkbox" id="sd-en"> enabled</label>
   <label>Start the lab at</label><input type="time" id="sd-start"> <button class="link" onclick="document.getElementById('sd-start').value=''">clear</button>
@@ -157,7 +188,17 @@
   <div class="readout" id="hist-readout">move over the chart for the values at a moment; click a power marker (or a row below) for what happened</div>
   <div class="sect"><h4>Power operations</h4><table class="evs" id="hist-events"></table></div>
   <div class="power" style="margin-top:12px"><button onclick="document.getElementById('hist').close()">Close</button></div></dialog>
-<main><div class="host" id="hoststats" aria-busy="true"><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div></div><div class="card svc slim" id="services"><span class="sk t" style="width:55%"></span></div>
+<main>
+<section class="hero" id="hero" aria-label="Lab Hub">
+  <div class="hero-text">
+    <div class="eyebrow"><span class="blink"></span> network lab control plane</div>
+    <h1 class="hero-title">Lab <span>Hub</span></h1>
+    <p class="hero-sub">Every lab on this host — power, health, tests, CI and schedules — in one place.</p>
+    <div class="hero-chips" id="hero-chips"><span class="hchip">connecting…</span></div>
+  </div>
+  <svg class="hero-graphic" id="hero-graphic" viewBox="0 0 560 240" role="img" aria-label="the hub and its labs"></svg>
+</section>
+<div class="host" id="hoststats" aria-busy="true"><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div></div><div class="card svc slim" id="services"><span class="sk t" style="width:55%"></span></div>
 <div class="toolbar" id="toolbar">
   <div class="zone find"><button class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fgroup">Filters ▾</button>
     <div class="fgroup" id="fgroup"><input type="search" id="q" placeholder="find a lab or a VM…" aria-label="filter labs">
@@ -637,6 +678,58 @@ function tabStatus(d) {
   link.href = c.toDataURL('image/png');
 }
 
+// ---- the banner: live summary chips, and the hub-and-spoke map (labs around the hub, the NMS above) -------------------
+const HEALTHCOL = { ok: '#22c55e', warn: '#f59e0b', bad: '#ef4444', off: '#475569' };
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function renderHero(d) {
+  const labs = d.labs, sv = d.services || {}, running = labs.filter(l => l.running).length;
+  const vmsUp = labs.reduce((a, l) => a + (l.running || 0), 0), vmsAll = labs.reduce((a, l) => a + (l.total || 0), 0);
+  const failing = labs.map(health).filter(h => h.lvl === 'bad').length;
+  document.getElementById('hero-chips').innerHTML = [
+    `<span class="hchip ${running ? 'ok' : ''}"><b>${running}</b>/${labs.length} labs running</span>`,
+    `<span class="hchip ${vmsUp ? 'ok' : ''}"><b>${vmsUp}</b>/${vmsAll} VMs up</span>`,
+    `<span class="hchip ${sv.state === 'ok' ? 'ok' : 'bad'}">NMS <b>${sv.vm_state === 'running' ? `${sv.up}/${sv.total}` : 'off'}</b></span>`,
+    failing ? `<span class="hchip bad"><b>${failing}</b> failing</span>` : `<span class="hchip ok"><b>✓</b> nothing failing</span>`,
+    `<span class="hchip">mem <b>${d.host && d.host.memory ? Math.round(d.host.memory.pct) : '–'}%</b></span>`].join('');
+  // the map
+  const W = 560, H = 240, cx = 290, cy = 104, rx = 200, ry = 72, n = labs.length, anim = !reduceMotion();
+  // the labs along the lower arc, left to right (165° … 15°), so their labels stay inside the picture
+  const pos = labs.map((l, i) => { const t = (n === 1 ? 90 : 165 - 150 * i / (n - 1)) * Math.PI / 180; return [cx + rx * Math.cos(t), cy + ry * Math.sin(t) + 10]; });
+  const nms = [cx, 28], nmsOn = sv.vm_state === 'running';
+  const curve = (a, b) => { const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 18; return `M${a[0]},${a[1]} Q${mx},${my} ${b[0]},${b[1]}`; };
+  let g = `<defs><linearGradient id="lg-link" x1="0" x2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+    <radialGradient id="rg-hub"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#1e3a8a"/></radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  // circuit traces in the background
+  for (let i = 0; i < 6; i++) { const y = 20 + i * 40; g += `<path d="M0,${y} H${60 + i * 9} l14,14 H${150 + i * 7}" fill="none" stroke="#1e293b" stroke-width="1"/><circle cx="${150 + i * 7}" cy="${y + 14}" r="2" fill="#1e293b"/>`; }
+  for (let i = 0; i < 5; i++) { const y = 30 + i * 46; g += `<path d="M${W},${y} H${W - 50 - i * 8} l-12,12 H${W - 120 - i * 6}" fill="none" stroke="#1e293b" stroke-width="1"/><circle cx="${W - 120 - i * 6}" cy="${y + 12}" r="2" fill="#1e293b"/>`; }
+  // links: NMS to hub, hub to every lab
+  const links = [[nms, [cx, cy], nmsOn, 'nms']].concat(labs.map((l, i) => [[cx, cy], pos[i], l.running > 0, l.name]));
+  links.forEach(([a, b, live], i) => {
+    const id = `hl${i}`, dpath = curve(a, b);
+    g += `<path id="${id}" class="link ${live ? 'live' : 'off'}" d="${dpath}"/>`;
+    if (live && anim) for (let k = 0; k < 3; k++) g += `<circle r="2.6" fill="#7dd3fc" filter="url(#glow)"><animateMotion dur="${2.4 + (i % 3) * 0.5}s" begin="${k * 0.8}s" repeatCount="indefinite" ${k % 2 ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}><mpath href="#${id}"/></animateMotion></circle>`;
+  });
+  // the NMS
+  g += `<g><rect x="${nms[0] - 34}" y="${nms[1] - 13}" width="68" height="26" rx="6" fill="#0f172a" stroke="${nmsOn ? '#38bdf8' : '#334155'}"/>
+    <text x="${nms[0]}" y="${nms[1] + 4}" text-anchor="middle" class="nm">NMS</text><circle cx="${nms[0] + 26}" cy="${nms[1] - 6}" r="3" fill="${nmsOn ? HEALTHCOL.ok : HEALTHCOL.off}"/></g>`;
+  // the labs
+  labs.forEach((l, i) => {
+    const [x, y] = pos[i], h = health(l), col = HEALTHCOL[h.lvl];
+    g += `<g><title>${esc(l.name)} — ${esc(h.why.join(', '))}</title>
+      ${l.running && anim ? `<circle class="ring" cx="${x}" cy="${y}" r="15" style="stroke:${col}"/>` : ''}
+      <circle cx="${x}" cy="${y}" r="13" fill="#0b1324" stroke="${col}" stroke-width="2.2" ${l.running ? 'filter="url(#glow)"' : ''}/>
+      <circle cx="${x}" cy="${y}" r="4.5" fill="${col}"/>
+      <text x="${x}" y="${y + 29}" text-anchor="middle" class="nm">${esc(l.name)}</text>
+      <text x="${x}" y="${y + 42}" text-anchor="middle">${l.total ? `${l.running}/${l.total} VMs` : 'no VMs'}</text></g>`;
+  });
+  // the hub itself
+  g += `${anim ? `<circle class="ring" cx="${cx}" cy="${cy}" r="20"/>` : ''}<circle cx="${cx}" cy="${cy}" r="19" fill="url(#rg-hub)" filter="url(#glow)"/>
+    <path d="M${cx},${cy - 11} l9.5,5.5 v11 l-9.5,5.5 l-9.5,-5.5 v-11 z" fill="none" stroke="#e0f2fe" stroke-width="1.6"/><circle cx="${cx}" cy="${cy}" r="3" fill="#e0f2fe"/>
+    <text x="${cx}" y="${cy + 36}" text-anchor="middle" class="nm">hub</text>`;
+  document.getElementById('hero-graphic').innerHTML = g;
+}
+
 let LAST = null;
 function renderLabs() {
   if (!LAST) return;
@@ -655,7 +748,7 @@ async function load() {
   POWER = d.power_enabled !== false;
   await loadHistory().catch(() => null);
   LAST = d; renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
-  LAST = d; renderLabs(); tabStatus(d);
+  LAST = d; renderLabs(); tabStatus(d); renderHero(d);
   document.querySelectorAll('[aria-busy]').forEach(x => x.removeAttribute('aria-busy'));
   const m = d.monitoring || {}; document.getElementById('mon').innerHTML = m.grafana ? `monitoring: <a href="${m.grafana}" target="_blank">Grafana</a> · <a href="${m.prometheus}/targets" target="_blank">Prometheus targets</a> · <a href="${m.prometheus}/alerts" target="_blank">alerts</a> · <a href="${m.victoriametrics}/vmui" target="_blank">VictoriaMetrics</a>${m.victorialogs ? ` · <a href="${m.victorialogs}/select/vmui" target="_blank">VictoriaLogs</a>` : ''}` : '';
   schedule(d.labs);
