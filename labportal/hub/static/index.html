@@ -46,7 +46,16 @@
   .spark .thr { stroke:var(--line); stroke-dasharray:3 3; vector-effect:non-scaling-stroke } .spark .ev-up { stroke:var(--ok); stroke-width:1.5; vector-effect:non-scaling-stroke } .spark .ev-down { stroke:var(--bad); stroke-width:1.5; vector-effect:non-scaling-stroke }
   .vrow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .vrow .items { color:var(--muted); font-size:12px; width:100% }
   .ev { font-size:11px; color:var(--muted) }
-  .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 10px; font-size:12px; color:var(--muted) }
+  header { position:sticky; top:0; z-index:20 }
+  .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 -26px 10px; padding:8px 26px; font-size:12px; color:var(--muted);
+             position:sticky; top:var(--hdr-h, 52px); z-index:15; background:var(--bg); border-bottom:1px solid var(--line) }
+  .toolbar input[type=search] { font:inherit; padding:5px 9px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--ink); min-width:190px }
+  .toolbar select { font:inherit; padding:4px 6px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--ink) }
+  .toolbar .count { margin-left:auto } .toolbar .spacer { flex:1 }
+  .handle { cursor:grab; color:var(--muted); padding:0 4px; user-select:none; font-size:14px } .handle:active { cursor:grabbing }
+  .card.lab.dragging, tr.dragging { opacity:.45 } .card.lab.drop-before { box-shadow:inset 0 3px 0 var(--link) } .card.lab.drop-after { box-shadow:inset 0 -3px 0 var(--link) }
+  tr.drop-before td { box-shadow:inset 0 2px 0 var(--link) } tr.drop-after td { box-shadow:inset 0 -2px 0 var(--link) }
+  .empty { padding:24px; text-align:center; color:var(--muted); border:1px dashed var(--line); border-radius:10px }
   .seg { display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden } .seg button { border:none; border-radius:0; background:var(--card) } .seg button.on { background:var(--pill); color:var(--ink); font-weight:600 }
   button.fold { border:none; background:none; padding:0 4px 0 0; font-size:13px; color:var(--muted); width:18px } button.fold:hover { color:var(--ink) }
   .card.lab .sum { display:none; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px; color:var(--muted); margin-top:6px }
@@ -56,6 +65,19 @@
   table.compact th, table.compact td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:middle; white-space:nowrap }
   table.compact th { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em } table.compact tr:last-child td { border-bottom:none }
   table.compact td.name a { font-weight:600; color:var(--ink); text-decoration:none } .tablewrap { overflow-x:auto } .ev.bad { color:var(--bad) } .cirow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .bar > i.bad { background:var(--bad) }
+  /* ---- phone: one column, bigger targets, the host meters as a strip ---------------------------------------------- */
+  @media (max-width: 640px) {
+    header { padding:10px 14px; gap:4px 12px } header .sub { display:none } header .right { margin-left:0; width:100% }
+    main { padding:12px 12px 40px } .toolbar { margin:0 -12px 10px; padding:8px 12px; position:static }   /* only the header stays pinned on a phone */
+    .stat .v { font-size:14px } .toolbar input[type=search] { min-width:0; flex:1 1 100% }
+    .toolbar .count { margin-left:0 }
+    .grid { grid-template-columns:1fr; gap:12px } .card { padding:14px } .card h2 { font-size:16px }
+    .host { grid-template-columns:repeat(3, 1fr); gap:8px } .stat { padding:8px 10px } .stat .v { font-size:15px } .stat .s { display:none } .stat .spark { height:26px }
+    .kv { grid-template-columns:1fr; gap:0 } .kv dt { margin-top:8px } .kv dd { margin-bottom:2px }
+    button { min-height:36px; padding:7px 12px; font-size:13px } button.mini { min-height:32px } button.fold, button.link { min-height:0 }
+    .vm { padding:5px 8px; font-size:12px } .chips .chip { min-width:0; flex:1 1 45% } .handle { display:none }
+    .links a { display:inline-block; padding:4px 0 } .power .hint { width:100% }
+  }
 </style></head><body>
 <header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a> · <span id="whoami"></span> <a href="/logout" title="sign out of the hub">sign out</a></span></header>
 <dialog id="sched"><h3 id="sd-title">Schedule</h3>
@@ -67,9 +89,12 @@
   <p class="hint">Idle = no start, portal run, CI run or "I'm using it" for that long; a lab with a portal or CI run in progress is never idle. Every scheduled action goes through the same checks as the buttons: memory, dependencies, runs in progress. Host local time.</p>
   <div class="power"><button class="up" id="sd-save">Save</button><button id="sd-del">Remove schedule</button><button onclick="document.getElementById('sched').close()">Cancel</button></div></dialog>
 <main><div class="host" id="hoststats"></div><div class="card svc" id="services"></div>
-<div class="toolbar"><span class="seg" role="group" aria-label="view"><button data-view="cards">Cards</button><button data-view="compact">Compact</button></span>
+<div class="toolbar" id="toolbar"><span class="seg" role="group" aria-label="view"><button data-view="cards">Cards</button><button data-view="compact">Compact</button></span>
+  <input type="search" id="q" placeholder="find a lab or a VM…" aria-label="filter labs">
+  <span class="seg" role="group" aria-label="show"><button data-show="all">All</button><button data-show="running">Running</button><button data-show="stopped">Stopped</button><button data-show="problems" title="failed tests or CI, portal down, a failed power operation or a skipped schedule">Problems</button></span>
+  <label>sort <select id="sort"><option value="custom">your order (drag ⠿)</option><option value="name">name</option><option value="running">running first</option><option value="problems">problems first</option><option value="memory">memory, largest first</option></select></label>
   <span id="foldall"><button data-foldall="1" title="fold every lab card to its summary line">Fold all</button> <button data-foldall="0">Unfold all</button></span>
-  <span>· your choice is remembered in this browser</span></div>
+  <span class="count" id="count"></span></div>
 <div class="grid" id="labs"></div><p class="hint" id="mon"></p><p class="hint" id="gen"></p></main>
 <script>
 // light / dark: a choice made here is remembered; until then the page follows the OS, live
@@ -320,20 +345,75 @@ function compactTable(labs) {
   return `<div class="tablewrap"><table class="compact"><thead><tr><th>Lab</th><th>VMs</th><th>Portal</th><th>Tests</th><th>CI</th><th>Version</th><th>Memory</th><th>Schedule</th><th></th></tr></thead><tbody>
     ${labs.map(l => { const ph = l.portal_health, vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
       const op = l.power && l.power.status === 'running' ? ` <span class="pill warn">⏳</span>` : '';
-      return `<tr><td class="name"><a href="#" data-open="${esc(l.name)}" title="open its card">${esc(l.name)}</a>${op}</td>
+      return `<tr data-name="${esc(l.name)}"><td class="name"><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><a href="#" data-open="${esc(l.name)}" title="open its card">${esc(l.name)}</a>${op}</td>
         <td><span class="pill ${vmcls}">${l.running}/${l.total}</span></td><td><a class="pill ${ph.up ? 'ok' : 'bad'}" href="${l.portal}" target="_blank">${ph.up ? 'up' : 'down'}</a>${ph.active ? ' <span class="pill warn">run</span>' : ''}</td>
         <td>${testPill(l)}</td><td>${ciPill(l) || '<span class="hint">–</span>'}</td><td>${verText(l)}${l.version && l.version.uncommitted ? ` <span class="hint">+${l.version.uncommitted}</span>` : ''}</td>
         <td>${l.total ? l.memory_gib + ' GiB' : '<span class="hint">?</span>'}</td><td class="hint">${nextText(l) || ((l.schedule || {}).schedule ? 'set' : '–')}</td><td>${powerBtns(l, true)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
 }
 
+// ---- filter, sort and your own order: remembered per browser -----------------------------------------------------
+let SHOW = store.get('hub-show', 'all'), SORT = store.get('hub-sort', 'custom'), ORDER = store.get('hub-order', []), Q = '', DRAG = null, PENDING = false;
+const problems = l => [l.tests && l.tests.failed && 'tests failing', l.ci_status && l.ci_status.latest && l.ci_status.latest.status === 'failure' && 'CI failed',
+                      l.portal_health && !l.portal_health.up && 'portal down', l.power && l.power.status === 'failed' && 'power operation failed',
+                      ((l.schedule || {}).events || [])[0] && !(l.schedule.events[0].ok) && 'schedule skipped'].filter(Boolean);
+function visibleLabs(labs) {
+  const q = Q.trim().toLowerCase();
+  let out = labs.filter(l => SHOW === 'all' || (SHOW === 'running' && l.running > 0) || (SHOW === 'stopped' && l.running === 0) || (SHOW === 'problems' && problems(l).length));
+  if (q) out = out.filter(l => [l.name, l.description, ...Object.keys(l.vms || {})].some(x => String(x || '').toLowerCase().includes(q)));
+  const pos = n => { const i = ORDER.indexOf(n); return i < 0 ? 1e6 + labs.findIndex(l => l.name === n) : i; };
+  const by = { custom: (a, b) => pos(a.name) - pos(b.name), name: (a, b) => a.name.localeCompare(b.name),
+               running: (a, b) => (b.running > 0) - (a.running > 0) || pos(a.name) - pos(b.name),
+               problems: (a, b) => problems(b).length - problems(a).length || pos(a.name) - pos(b.name),
+               memory: (a, b) => (b.memory_gib || 0) - (a.memory_gib || 0) };
+  return out.sort(by[SORT] || by.custom);
+}
+function syncToolbar(shown, total) {
+  document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', b.dataset.show === SHOW));
+  document.getElementById('sort').value = SORT;
+  const filtered = shown !== total;
+  document.getElementById('count').innerHTML = filtered ? `showing ${shown} of ${total} · <button class="link" data-reset="1">show all</button>` : `${total} labs`;
+}
+function moveLab(name, target, after) {
+  const names = visibleLabs(LAST.labs).map(l => l.name), all = LAST.labs.map(l => l.name);
+  let order = [...ORDER.filter(n => all.includes(n)), ...all.filter(n => !ORDER.includes(n))];
+  order = order.filter(n => n !== name);
+  const i = order.indexOf(target); order.splice(after ? i + 1 : i, 0, name);
+  ORDER = order; store.set('hub-order', ORDER); SORT = 'custom'; store.set('hub-sort', SORT); renderLabs();
+}
+// drag to reorder: the ⠿ handle on a card or a table row
+document.addEventListener('dragstart', e => {
+  const h = e.target.closest && e.target.closest('[data-drag]'); if (!h) return;
+  DRAG = h.dataset.drag; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', DRAG);
+  const item = h.closest('.card.lab, tr'); item && item.classList.add('dragging');
+  if (item && item.classList.contains('card')) e.dataTransfer.setDragImage(item, 20, 20);
+});
+const dropTarget = e => { const t = e.target.closest && e.target.closest('.card.lab[data-name], tr[data-name]'); return t && t.dataset.name !== DRAG ? t : null; };
+const isAfter = (t, e) => { const r = t.getBoundingClientRect(); return t.tagName === 'TR' || window.innerWidth <= 640 || document.getElementById('labs').classList.contains('compact')
+  ? e.clientY > r.top + r.height / 2 : (e.clientY > r.top + r.height / 2); };
+document.addEventListener('dragover', e => {
+  if (!DRAG) return; const t = dropTarget(e); document.querySelectorAll('.drop-before, .drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after'));
+  if (!t) return; e.preventDefault(); t.classList.add(isAfter(t, e) ? 'drop-after' : 'drop-before');
+});
+document.addEventListener('drop', e => { if (!DRAG) return; const t = dropTarget(e); if (t) { e.preventDefault(); const name = DRAG; DRAG = null; moveLab(name, t.dataset.name, isAfter(t, e)); } });
+document.addEventListener('dragend', () => { DRAG = null; document.querySelectorAll('.dragging, .drop-before, .drop-after').forEach(x => x.classList.remove('dragging', 'drop-before', 'drop-after'));
+  if (PENDING) { PENDING = false; renderLabs(); } });
+document.getElementById('q').addEventListener('input', e => { Q = e.target.value; renderLabs(); });
+document.getElementById('sort').addEventListener('change', e => { SORT = e.target.value; store.set('hub-sort', SORT); renderLabs(); });
+// the sticky toolbar sits under the header, whatever height the header wraps to
+const fitToolbar = () => document.documentElement.style.setProperty('--hdr-h', document.querySelector('header').offsetHeight + 'px');
+addEventListener('resize', fitToolbar); fitToolbar();
+
 let LAST = null;
 function renderLabs() {
   if (!LAST) return;
+  if (DRAG) { PENDING = true; return; }            // never redraw under a drag: the refresh waits for the drop
   document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.view === VIEW));
   document.getElementById('foldall').style.display = VIEW === 'cards' ? '' : 'none';
   const el = document.getElementById('labs'); el.classList.toggle('compact', VIEW === 'compact');
-  el.innerHTML = VIEW === 'compact' ? compactTable(LAST.labs) : LAST.labs.map(cardHtml).join('');
+  const shown = visibleLabs(LAST.labs); syncToolbar(shown.length, LAST.labs.length);
+  el.innerHTML = !shown.length ? `<div class="empty">No lab matches${Q ? ` “${esc(Q)}”` : ''}${SHOW !== 'all' ? ` in “${SHOW}”` : ''}. <button class="link" data-reset="1">Show all</button></div>`
+    : VIEW === 'compact' ? compactTable(shown) : shown.map(cardHtml).join('');
 }
 async function load() {
   const res = await fetch('/api/labs');
@@ -351,7 +431,8 @@ async function load() {
 }
 function cardHtml(l) {
     const ph = l.portal_health, t = l.tests; const vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn'); const folded = FOLDED.has(l.name);
-    return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}"><h2><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold to one line'}">${folded ? '▸' : '▾'}</button><a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span></h2>
+    const issues = problems(l);
+    return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}" data-name="${esc(l.name)}"><h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold to one line'}">${folded ? '▸' : '▾'}</button><a href="${l.portal}" target="_blank">${esc(l.name)}</a> <span class="pill ${vmcls}">${l.running}/${l.total} VMs running</span> <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''}</h2>
       <div class="sum">${labSummary(l)}</div>
       <div class="body"><p class="desc">${esc(l.description || '')}</p>
       <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.active ? ` · <span class="pill warn">run in progress: ${esc(ph.active.mode)}</span>` : ''}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
@@ -378,6 +459,8 @@ function schedule(labs) {
 }
 document.addEventListener('click', e => {
   const vw = e.target.closest('button[data-view]'); if (vw) return setView(vw.dataset.view);
+  const sh = e.target.closest('button[data-show]'); if (sh) { SHOW = sh.dataset.show; store.set('hub-show', SHOW); return renderLabs(); }
+  const rs = e.target.closest('button[data-reset]'); if (rs) { SHOW = 'all'; store.set('hub-show', SHOW); Q = ''; document.getElementById('q').value = ''; return renderLabs(); }
   const fd = e.target.closest('button[data-fold]'); if (fd) return fold(fd.dataset.fold, !FOLDED.has(fd.dataset.fold));
   const fa = e.target.closest('button[data-foldall]'); if (fa) { FOLDED = new Set(fa.dataset.foldall === '1' ? (LAST ? LAST.labs.map(l => l.name) : []) : []); store.set('hub-folded', [...FOLDED]); return renderLabs(); }
   const op = e.target.closest('a[data-open]'); if (op) { e.preventDefault(); FOLDED.delete(op.dataset.open); store.set('hub-folded', [...FOLDED]); setView('cards');

@@ -127,6 +127,16 @@ which cards are folded.
 - **Compact:** one table row per lab, with VMs, portal, tests, CI, version, memory, schedule and the power buttons. A
   lab's name opens its card.
 
+**Finding and arranging labs.** The header and the toolbar stay pinned while you scroll; on a phone, only the header.
+- **Search** matches a lab's name, description or VM names.
+- **Show:** All, Running, Stopped, or Problems (failed tests or CI, portal down, a failed power operation or a skipped
+  schedule). Each card also shows its problems as a ⚠ count.
+- **Sort:** your order, name, running first, problems first, or memory.
+- **Drag** the ⠿ handle on a card or table row to set your own order.
+- The filter, sort and order are remembered per browser.
+- **On a phone:** one column, label-above-value rows, bigger buttons and VM chips, and the host meters as a compact
+  strip.
+
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)

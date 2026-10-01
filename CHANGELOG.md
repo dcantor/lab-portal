@@ -7,6 +7,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.9.0] — 2026-09-30
+
+### Added
+- **Lab Hub: sticky header and toolbar.** The sign-out, theme, view, filter and sort controls stay in reach while you
+  scroll. The toolbar follows the header's height as it wraps.
+- **Lab Hub: sort and filter.**
+  - A search box matches lab names, descriptions and VM names.
+  - Show All / Running / Stopped / **Problems** (failed tests or CI, portal down, a failed power operation, a skipped
+    schedule); each card shows a ⚠ count of its problems.
+  - Sort by your order, name, running first, problems first, or memory.
+  - "Showing N of M" with a one-click reset.
+- **Lab Hub: drag to reorder.** A ⠿ handle on each card and compact-table row; dropping saves the order (and switches
+  to "your order"). A refresh never redraws under a drag.
+- **Lab Hub: phone layout.**
+  - Below 640 px: one column, label-above-value rows, and bigger tap targets for buttons and VM chips.
+  - The host meters become a compact three-up strip, and only the header stays pinned.
+  - No sideways scrolling at 375 px.
+
 ## [0.8.0] — 2026-09-30
 
 ### Added
