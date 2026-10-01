@@ -44,7 +44,7 @@
   .days { display:flex; gap:6px; flex-wrap:wrap } .days label { display:flex; gap:4px; align-items:center; margin:0; color:var(--ink); font-size:13px }
   .ev { font-size:11px; color:var(--muted) } .ev.bad { color:var(--bad) } .cirow { display:flex; flex-wrap:wrap; gap:6px; align-items:center } .bar > i.bad { background:var(--bad) }
 </style></head><body>
-<header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a></span></header>
+<header><h1>Lab hub</h1><span class="sub">every lab on this host: VMs, portal, last tests, links</span><span class="right"><span id="host"></span> · <a href="#" id="theme-toggle" title="dark / light (follows the OS setting until chosen)">☾ dark</a> · <span id="whoami"></span> <a href="/logout" title="sign out of the hub">sign out</a></span></header>
 <dialog id="sched"><h3 id="sd-title">Schedule</h3>
   <label><input type="checkbox" id="sd-en"> enabled</label>
   <label>Start the lab at</label><input type="time" id="sd-start"> <button class="link" onclick="document.getElementById('sd-start').value=''">clear</button>
@@ -235,7 +235,9 @@ document.getElementById('sd-del').onclick = async () => {
 };
 
 async function load() {
-  const d = await (await fetch('/api/labs')).json();
+  const res = await fetch('/api/labs');
+  if (res.status === 401) { location.href = '/login?next=' + encodeURIComponent(location.pathname); return; }   // the session expired
+  const d = await res.json();
   POWER = d.power_enabled !== false;
   renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
   document.getElementById('labs').innerHTML = d.labs.map(l => {
@@ -285,5 +287,6 @@ document.addEventListener('click', e => {
                   : `Start ${node} in ${vm.dataset.lab}?\n\nIt is shut off; a router can take a few minutes to boot.`);
   }
 });
+fetch('/api/me').then(r => r.json()).then(m => { if (m.user) document.getElementById('whoami').textContent = m.user; });
 load();                                   // schedule() keeps it fresh: every 30 s, every 4 s while something is in progress
 </script></body></html>

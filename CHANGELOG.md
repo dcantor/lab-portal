@@ -7,6 +7,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.5.0] — 2026-09-30
+
+### Added
+- **Lab Hub: sign-in.** Every page and API now requires one: the hub can power labs, the NMS and CI, and it listens on
+  the LAN.
+  - Users are kept in `~/.config/lab-hub/auth.json` (mode 0600) as salted PBKDF2-SHA256 hashes. The file is created on
+    the first start with **admin / admin**.
+  - `lab-hub-passwd [user]` changes a password or adds a user.
+  - Sessions are signed cookies, HttpOnly and SameSite=Strict, for 12 hours (`LAB_HUB_SESSION_HOURS`). Removing a user
+    ends their sessions at once.
+  - Without a session, pages redirect to `/login` and API calls get 401.
+  - `next` only accepts a path on the hub, so the sign-in cannot redirect elsewhere.
+  - Five failed attempts in five minutes lock out that address.
+  - The header shows who is signed in, with a sign-out link; an expired session goes back to the sign-in page.
+  - `GET /api/me` says who is signed in. `LAB_HUB_AUTH=off` turns sign-in off.
+
 ## [0.4.0] — 2026-09-30
 
 ### Added

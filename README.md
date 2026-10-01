@@ -83,6 +83,16 @@ runs and the lab is left as the tests found it.
 - Scheduled actions go through the same checks. What the scheduler did, or why it skipped, is shown on the card.
 - Stored in `~/.config/lab-hub/schedules.json`; state is in `~/.local/state/lab-hub/state.json`.
 
+**Sign-in.** Every page and API of the hub needs a sign-in, because it can power labs, the NMS and CI.
+- Users are stored in `~/.config/lab-hub/auth.json` (mode 0600) as salted PBKDF2-SHA256 hashes, never the passwords
+  themselves.
+- On the first start the file is created with the user **admin / admin**. Change it with `lab-hub-passwd`; the same
+  command adds users (`lab-hub-passwd <user>`).
+- A sign-in sets a signed session cookie for 12 hours (`LAB_HUB_SESSION_HOURS`). It is HttpOnly and SameSite=Strict.
+- Pages without a session go to `/login`; API calls get 401.
+- Five failed attempts from one address lock it out for five minutes.
+- `LAB_HUB_AUTH=off` turns sign-in off, for a trusted single-user machine only.
+
 Labs are declared in `~/.config/lab-hub/labs.json` (see `labs.example.json`); `lab-hub.service` is the systemd user unit.
 
 ![hub](docs/hub.png)

@@ -14,14 +14,18 @@ on the local Gitea, the tests they committed back, the commits not tested yet â€
 
 Power is guarded (guard.py): a start is checked against the host's available memory and offers to start what the lab
 depends on first (the NMS, or a lab whose VMs it attaches); a shutdown warns about running labs that need it. Labs can
-be started and stopped on a **schedule**, and shut down when idle (schedule.py)."""
-import json, os, re, shutil, subprocess, threading, time, uuid, xml.etree.ElementTree as ET
+be started and stopped on a **schedule**, and shut down when idle (schedule.py).
+
+Everything needs a **sign-in** (auth.py): /login sets a signed session cookie; pages without one are sent to /login,
+API calls get 401."""
+import asyncio, html, json, os, re, shutil, subprocess, threading, time, uuid, xml.etree.ElementTree as ET
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from urllib.parse import parse_qs, quote
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 import requests
-from . import ci as CI, guard as GUARD, schedule as SCHED, shared as SHARED
+from . import auth as AUTH, ci as CI, guard as GUARD, schedule as SCHED, shared as SHARED
 
 CONFIG = Path(os.environ.get("LAB_HUB_CONFIG", Path.home() / ".config" / "lab-hub" / "labs.json"))
 MONITORING = json.loads(os.environ["LAB_HUB_MONITORING"]) if os.environ.get("LAB_HUB_MONITORING") else \
@@ -115,6 +119,67 @@ def portal_health(url):
                 "last": runs[0] and {"mode": runs[0]["mode"], "status": runs[0]["status"], "started": runs[0]["started"], "finished": runs[0].get("finished")} if runs else None}
     except Exception as e:  # noqa: BLE001
         return {"up": False, "error": e.__class__.__name__}
+
+
+# ---- sign-in ------------------------------------------------------------------------------------------------------------
+OPEN = {"/login", "/logout", "/favicon.ico"}
+LOGIN_PAGE = (Path(__file__).resolve().parent / "static" / "login.html")
+
+
+@app.middleware("http")
+async def require_session(request: Request, call_next):
+    """Every page and API needs a valid session cookie; pages go to /login, API calls get 401."""
+    if not AUTH.ENABLED or request.url.path in OPEN:
+        return await call_next(request)
+    user = AUTH.verify(request.cookies.get(AUTH.COOKIE, ""))
+    if not user:
+        if request.url.path.startswith("/api/") or request.url.path == "/openapi.json":
+            return JSONResponse({"detail": "sign in first (/login)"}, status_code=401)
+        nxt = request.url.path + (f"?{request.url.query}" if request.url.query else "")
+        return RedirectResponse(f"/login?next={quote(nxt)}", status_code=303)
+    request.state.user = user
+    return await call_next(request)
+
+
+def _login_page(error="", nxt="/", status=200):
+    page = LOGIN_PAGE.read_text().replace("{{error}}", html.escape(error)).replace("{{next}}", html.escape(nxt, quote=True))
+    return HTMLResponse(page, status_code=status)
+
+
+def _safe_next(nxt):
+    """Only a path on this hub: never an absolute URL or //host (no open redirect)."""
+    return nxt if nxt.startswith("/") and not nxt.startswith("//") and "\\" not in nxt else "/"
+
+
+@app.get("/login", include_in_schema=False)
+def login_form(request: Request, next: str = "/"):
+    if AUTH.verify(request.cookies.get(AUTH.COOKIE, "")):
+        return RedirectResponse(_safe_next(next), status_code=303)
+    return _login_page(nxt=_safe_next(next))
+
+
+@app.post("/login", include_in_schema=False)
+async def login(request: Request):
+    form = {k: v[0] for k, v in parse_qs((await request.body()).decode(errors="replace")).items()}
+    user, pw, nxt = form.get("username", "").strip(), form.get("password", ""), _safe_next(form.get("next", "/"))
+    client = request.client.host if request.client else "?"
+    if AUTH.throttled(client):
+        return _login_page("Too many failed attempts â€” wait a few minutes and try again.", nxt, 429)
+    if not AUTH.check(user, pw):
+        AUTH.failed(client); await asyncio.sleep(1)       # slows guessing without blocking the hub
+        return _login_page("Wrong user name or password.", nxt, 401)
+    r = RedirectResponse(nxt, status_code=303)
+    r.set_cookie(AUTH.COOKIE, AUTH.issue(user), max_age=int(AUTH.SESSION_HOURS * 3600), httponly=True, samesite="strict", path="/")
+    return r
+
+
+@app.get("/logout", include_in_schema=False)
+def logout():
+    r = RedirectResponse("/login", status_code=303); r.delete_cookie(AUTH.COOKIE, path="/"); return r
+
+
+@app.get("/api/me", summary="Who is signed in")
+def me(request: Request): return {"user": getattr(request.state, "user", None), "auth": AUTH.ENABLED}
 
 
 @app.get("/", include_in_schema=False)
@@ -356,6 +421,7 @@ def _scheduled_power(lab, action, why):
 
 @app.on_event("startup")
 def _start_sampler():
+    if AUTH.ENABLED: AUTH._load()                 # create auth.json (admin / admin) on the very first start
     threading.Thread(target=_cpu_sample, name="cpu", daemon=True).start()
     threading.Thread(target=SCHED.loop, args=(labs, _lab_status, _scheduled_power), name="scheduler", daemon=True).start()
 

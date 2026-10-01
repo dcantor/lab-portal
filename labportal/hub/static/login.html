@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sign in · Lab hub</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try { const t = localStorage.getItem('hub-theme'); document.documentElement.dataset.theme = t ? t : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch (e) { }</script>
+<style>
+  :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#fff; --bad:#b91c1c; --bad-bg:#fee2e2; --accent:#1d4ed8; --input:#fff; --header:#0b1020 }
+  html[data-theme="dark"] { --ink:#e6edf7; --muted:#8fa3bf; --line:#263449; --bg:#0b1220; --card:#131c2e; --bad:#ff6b6b; --bad-bg:#3d1a1a; --accent:#3b82f6; --input:#0f172a; --header:#070d1a; color-scheme:dark }
+  * { box-sizing:border-box } body { margin:0; min-height:100vh; display:flex; flex-direction:column; font:14px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg) }
+  header { background:var(--header); color:#e2e8f0; padding:14px 26px } header b { font-size:19px }
+  main { flex:1; display:flex; align-items:center; justify-content:center; padding:24px 16px }
+  form { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:26px 28px; width:min(360px, 100%) }
+  h1 { font-size:20px; margin:0 0 4px } p.sub { color:var(--muted); font-size:13px; margin:0 0 18px }
+  label { display:block; font-size:12px; color:var(--muted); margin:12px 0 4px }
+  input { width:100%; font:inherit; padding:9px 11px; border:1px solid var(--line); border-radius:8px; background:var(--input); color:var(--ink) }
+  input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,130,246,.25) }
+  button { width:100%; margin-top:20px; font:inherit; font-weight:600; padding:10px; border:none; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer }
+  .err { background:var(--bad-bg); color:var(--bad); border-radius:8px; padding:8px 10px; font-size:13px; margin-bottom:6px } .err:empty { display:none }
+</style></head><body>
+<header><b>Lab hub</b></header>
+<main><form method="post" action="/login" autocomplete="on">
+  <h1>Sign in</h1><p class="sub">The hub can power labs, the NMS and CI, so it needs a sign-in.</p>
+  <div class="err" role="alert">{{error}}</div>
+  <input type="hidden" name="next" value="{{next}}">
+  <label for="u">User name</label><input id="u" name="username" autocomplete="username" required autofocus>
+  <label for="p">Password</label><input id="p" name="password" type="password" autocomplete="current-password" required>
+  <button type="submit">Sign in</button>
+</form></main>
+</body></html>
