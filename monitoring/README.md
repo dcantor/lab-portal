@@ -37,8 +37,8 @@ The **Ubuntu lab host itself** is scraped too (job `lab-host`, labels `lab="lab-
 Every overview dashboard ends with a "Ubuntu lab host (KVM): CPU and memory" row — busy %, memory, load vs cores, swap, per
 mode and the busiest cores — so a lab's behaviour can be read against what the hypervisor has left.
 
-**evpn-fabric** (job `evpn-fabric`, SD `http://10.6.0.1:8095/api/sd`): the NMS reaches the fabric on its own NIC on
-`evpn-oob` (eth6, 10.6.0.10 — `~/cat9000v/lab.sh`, `/etc/netplan/63-evpn-oob.yaml`); the SD labels carry `rack` where the
+**evpn-fabric** (job `evpn-fabric`, SD `http://10.106.0.1:8095/api/sd`): the NMS reaches the fabric on its own NIC on
+`evpn-oob` (eth6, 10.106.0.10 — `~/cat9000v/lab.sh`, `/etc/netplan/63-evpn-oob.yaml`); the SD labels carry `rack` where the
 other labs have `dc`. Its alert group (`evpn-fabric`) covers fabric sessions, VTEPs missing on a VNI, a segment without
 exactly one DF, a default route through fewer than both borders, fw-ext's edge sessions, a dual-homed server down to one
 LACP leg and node health. Its log rules (`evpn-fabric-events`) carry `lab: evpn-fabric`; the generic `routing-events` and

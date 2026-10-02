@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.15.1] — 2026-10-01
+
+### Changed
+- evpn-fabric's management network moved from 10.6.0.0/24 to 10.106.0.0/24 (the old range clashed with another
+  network): Prometheus discovers the fabric at `http://10.106.0.1:8095/api/sd`; the NMS's eth6 is 10.106.0.10.
+
 ## [0.15.0] — 2026-10-01
 
 ### Added

@@ -37,7 +37,7 @@ scrape_configs:
       - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
 
   - job_name: evpn-fabric                                          # EVPN/VXLAN leaf-spine on VyOS: every node-exporter / frr-exporter, the
-    http_sd_configs: [{url: http://10.6.0.1:8095/api/sd, refresh_interval: 60s}]   # servers' node-exporters and the portal (the NMS's eth6 on evpn-oob)
+    http_sd_configs: [{url: http://10.106.0.1:8095/api/sd, refresh_interval: 60s}]   # servers' node-exporters and the portal (the NMS's eth6 on evpn-oob)
     honor_labels: true
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
