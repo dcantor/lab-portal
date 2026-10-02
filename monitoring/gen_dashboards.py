@@ -316,6 +316,46 @@ p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{n
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "evpn-fabric-overview.json").write_text(json.dumps(dashboard("evpn-fabric-overview", "EVPN fabric: overview", p, ["evpn-fabric", "lab"], lab="evpn-fabric"), indent=1))
 
+# ---------------------------------------------------------------- evpn-fabric: Kubernetes on the fabric (k3s + Cilium on the k8s-* nodes: every
+# node peers BGP with its leaves; the portal measures nodes / sessions / services, Cilium's agents and Hubble are scraped on every node)
+_id[0] = 0
+K = 'lab="evpn-fabric"'
+KN = 'lab="evpn-fabric",role="k8s"'
+UP1 = [{"type": "value", "options": {"0": {"text": "down", "color": "red"}, "1": {"text": "up", "color": "green"}}}]
+READY = [{"type": "value", "options": {"0": {"text": "NotReady", "color": "red"}, "1": {"text": "Ready", "color": "green"}}}]
+GREEN = {"steps": [{"color": "green", "value": None}]}
+p = []
+p.append(row("The cluster", 0))
+p.append(panel("Nodes Ready", "stat", [(f"count(lab_k8s_node_ready{{{K}}} == 1) or vector(0)", "Ready"), (f"count(lab_k8s_node_ready{{{K}}})", "nodes")], 0, 1, 5, 4, colorMode="value", thresholds=GREEN))
+p.append(panel("BGP sessions to the leaves", "stat", [(f"sum(cilium_bgp_control_plane_session_state{{{KN}}})", "up"), (f"count(cilium_bgp_control_plane_session_state{{{KN}}})", "configured")], 5, 1, 5, 4, colorMode="value", thresholds=GREEN))
+p.append(panel("Running pods", "stat", [(f"sum(lab_k8s_node_pods{{{K}}})", "pods")], 10, 1, 4, 4, colorMode="value", thresholds=GREEN))
+p.append(panel("LoadBalancer services announced", "stat", [(f"count(lab_k8s_lb_service_announcers{{{K}}} > 0) or vector(0)", "announced"), (f"count(lab_k8s_lb_service_announcers{{{K}}})", "services")], 14, 1, 5, 4, colorMode="value", thresholds=GREEN))
+p.append(panel("Kubernetes alerts firing", "stat", [(f'count(ALERTS{{{K},alertname=~"EvpnK8s.*",alertstate="firing"}}) or vector(0)', "firing")], 19, 1, 5, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Node Ready", "state-timeline", [(f"lab_k8s_node_ready{{{K}}}", "{{node}}")], 0, 5, 12, 7, mappings=READY, thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 1}]}))
+p.append(panel("Running pods per node", "timeseries", [(f"lab_k8s_node_pods{{{K}}}", "{{node}}")], 12, 5, 12, 7, min=0, decimals=0))
+
+p.append(row("BGP: the nodes and their leaves", 12))
+p.append(panel("Sessions per node and leaf (IPv4 and IPv6)", "state-timeline", [(f"cilium_bgp_control_plane_session_state{{{KN}}}", "{{node}} → {{neighbor}} (AS {{neighbor_asn}})")], 0, 13, 12, 12, mappings=UP1, thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 1}]}))
+p.append(panel("Routes each node announces (pod CIDR + LoadBalancer addresses)", "timeseries", [(f"max by (node, afi) (cilium_bgp_control_plane_advertised_routes{{{KN}}})", "{{node}} {{afi}}")], 12, 13, 12, 6, min=0, decimals=0))
+p.append(panel("Nodes announcing each LoadBalancer service", "timeseries", [(f"lab_k8s_lb_service_announcers{{{K}}}", "{{service}} {{address}}")], 12, 19, 12, 6, min=0, decimals=0))
+
+p.append(row("Flows (Hubble)", 25))
+p.append(panel("Flows / s by verdict", "timeseries", [(f"sum by (verdict) (rate(hubble_flows_processed_total{{{KN}}}[2m]))", "{{verdict}}")], 0, 26, 8, 8, unit="ops", min=0))
+p.append(panel("Drops / s by reason", "timeseries", [(f"sum by (reason) (rate(hubble_drop_total{{{KN}}}[5m]))", "{{reason}}")], 8, 26, 8, 8, unit="ops", min=0))
+p.append(panel("Policy verdicts / s", "timeseries", [(f"sum by (direction, action) (rate(hubble_policy_verdicts_total{{{KN}}}[5m]))", "{{direction}} {{action}}")], 16, 26, 8, 8, unit="ops", min=0))
+p.append(panel("Flows / s by node", "timeseries", [(f"sum by (node) (rate(hubble_flows_processed_total{{{KN}}}[2m]))", "{{node}}")], 0, 34, 8, 8, unit="ops", min=0))
+p.append(panel("TCP: SYN and RST / s", "timeseries", [(f'sum by (flag) (rate(hubble_tcp_flags_total{{{KN},flag=~"SYN|RST"}}[2m]))', "{{flag}}")], 8, 34, 8, 8, unit="ops", min=0))
+p.append(panel("Busiest destination ports (flows / s)", "bargauge", [(f'topk(8, sum by (protocol, port) (rate(hubble_port_distribution_total{{{KN}}}[10m])))', "{{protocol}} {{port}}")], 16, 34, 8, 8, unit="ops", min=0))
+
+p.append(row("Cilium's datapath and agents", 42))
+p.append(panel("Forwarded bit/s per node", "timeseries", [(f"8 * sum by (node) (rate(cilium_forward_bytes_total{{{KN}}}[2m]))", "{{node}}")], 0, 43, 8, 8, unit="bps", min=0))
+p.append(panel("Dropped packets / s per node and reason", "timeseries", [(f"sum by (node, reason) (rate(cilium_drop_count_total{{{KN}}}[5m]))", "{{node}} {{reason}}")], 8, 43, 8, 8, unit="pps", min=0))
+p.append(panel("Endpoints ready per node", "timeseries", [(f'cilium_endpoint_state{{{KN},endpoint_state="ready"}}', "{{node}}")], 16, 43, 4, 8, min=0, decimals=0))
+p.append(panel("Failing controllers / agent warnings", "timeseries", [(f"cilium_controllers_failing{{{KN}}}", "{{node}} failing"), (f"sum by (node) (rate(cilium_errors_warnings_total{{{KN}}}[5m]))", "{{node}} warn/s")], 20, 43, 4, 8, min=0))
+p.append(panel("Node CPU busy", "timeseries", [(f'1 - avg by (node) (rate(node_cpu_seconds_total{{{KN},mode="idle"}}[2m]))', "{{node}}")], 0, 51, 12, 7, unit="percentunit", min=0, max=1))
+p.append(panel("Node memory used", "timeseries", [(f"1 - node_memory_MemAvailable_bytes{{{KN}}} / node_memory_MemTotal_bytes{{{KN}}}", "{{node}}")], 12, 51, 12, 7, unit="percentunit", min=0, max=1))
+(OUT / "evpn-fabric-k8s.json").write_text(json.dumps(dashboard("evpn-fabric-k8s", "EVPN fabric: Kubernetes", p, ["evpn-fabric", "lab", "kubernetes"], lab="evpn-fabric"), indent=1))
+
 # ---------------------------------------------------------------- node detail (any lab, any node)
 _id[0] = 0
 NV = [{"name": "lab", "type": "query", "datasource": VM, "query": "label_values(node_uname_info, lab)", "refresh": 2, "includeAll": False, "current": {"text": "srv6-core", "value": "srv6-core"}},

@@ -7,6 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.17.0] — 2026-10-02
+
+### Added
+- **One sign-in for the labs' web services** (`labportal/gate.py`): a portal or proxy installs it and accepts the Lab
+  Hub's session cookie (a browser sends it to every port of the host); requests from the host itself pass, chosen paths
+  may be open to chosen networks (the NMS scraping `/metrics`), everyone else is sent to the hub's login — which now
+  brings the browser back to a page of another service **on the same host** (never another host: no open redirect).
+- **Grafana: "EVPN fabric: Kubernetes"** — the cluster (nodes Ready, BGP sessions, pods, announced services, alerts),
+  each node's sessions to its leaves and the routes it announces, Hubble's flows (verdicts, drops by reason, policy
+  verdicts, TCP flags, ports), Cilium's datapath (forwarded / dropped, endpoints, failing controllers), the nodes' CPU
+  and memory.
+
 ## [0.16.0] — 2026-10-02
 
 ### Added

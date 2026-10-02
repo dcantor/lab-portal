@@ -140,22 +140,27 @@ def _login_page(error="", nxt="/", status=200):
     return HTMLResponse(page, status_code=status)
 
 
-def _safe_next(nxt):
-    """Only a path on this hub: never an absolute URL or //host (no open redirect)."""
-    return nxt if nxt.startswith("/") and not nxt.startswith("//") and "\\" not in nxt else "/"
+def _safe_next(nxt, host=None):
+    """A path on this hub, or a page of another service on this same host (the labs' portals sign in here: gate.py) —
+    never a URL to another host, //host or the like (no open redirect)."""
+    if nxt.startswith("/") and not nxt.startswith("//") and "\\" not in nxt: return nxt
+    from urllib.parse import urlsplit
+    try: u = urlsplit(nxt)
+    except ValueError: return "/"
+    return nxt if host and u.scheme in ("http", "https") and u.hostname == host and "\\" not in nxt and "@" not in u.netloc else "/"
 
 
 @app.get("/login", include_in_schema=False)
 def login_form(request: Request, next: str = "/"):
     if AUTH.verify(request.cookies.get(AUTH.COOKIE, "")):
-        return RedirectResponse(_safe_next(next), status_code=303)
-    return _login_page(nxt=_safe_next(next))
+        return RedirectResponse(_safe_next(next, request.url.hostname), status_code=303)
+    return _login_page(nxt=_safe_next(next, request.url.hostname))
 
 
 @app.post("/login", include_in_schema=False)
 async def login(request: Request):
     form = {k: v[0] for k, v in parse_qs((await request.body()).decode(errors="replace")).items()}
-    user, pw, nxt = form.get("username", "").strip(), form.get("password", ""), _safe_next(form.get("next", "/"))
+    user, pw, nxt = form.get("username", "").strip(), form.get("password", ""), _safe_next(form.get("next", "/"), request.url.hostname)
     client = request.client.host if request.client else "?"
     if AUTH.throttled(client):
         return _login_page("Too many failed attempts — wait a few minutes and try again.", nxt, 429)
