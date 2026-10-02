@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.16.0] — 2026-10-02
+
+### Added
+- Alerts for the Kubernetes cluster on evpn-fabric (k3s + Cilium on its `k8s-*` nodes): a node not Ready, a node short
+  of its two BGP sessions to its leaves, a LoadBalancer service no node announces. The fabric's portal now lists Cilium's
+  agent (:9962) and Hubble's flow metrics (:9965) in its service discovery as jobs `cilium` and `hubble`.
+
 ## [0.15.1] — 2026-10-01
 
 ### Changed

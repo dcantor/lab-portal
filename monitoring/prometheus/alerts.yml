@@ -184,6 +184,22 @@ groups:
         for: 5m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.node }} ({{ $labels.role }}) is degraded or unreachable in the portal's view"}
+      # Kubernetes on the fabric (k3s + Cilium on the k8s-* nodes): only while their VMs run
+      - alert: EvpnK8sNodeNotReady
+        expr: (lab_k8s_node_ready{lab="evpn-fabric"} == 0) and on (lab, node) (lab_vm_running{lab="evpn-fabric"} == 1)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "Kubernetes node {{ $labels.node }} is not Ready"}
+      - alert: EvpnK8sBgpSessionDown       # a node announces its pods and services to its two leaves
+        expr: (lab_k8s_bgp_sessions_up{lab="evpn-fabric"} < 2) and on (lab, node) (lab_vm_running{lab="evpn-fabric"} == 1)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Kubernetes node {{ $labels.node }} has {{ $value }} of 2 BGP sessions to its leaves"}
+      - alert: EvpnK8sServiceUnannounced   # a LoadBalancer service no node announces: unreachable from the fabric
+        expr: (lab_k8s_lb_service_announcers{lab="evpn-fabric"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-fabric"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "LoadBalancer service {{ $labels.service }} ({{ $labels.address }}) is announced by no node"}
 
   - name: cat8000v-ipsec
     rules:
