@@ -1,0 +1,11 @@
+[Unit]
+Description=Relay prometheus (lab NMS 10.0.0.10:9090) to the LAN on port 9091, behind the Lab Hub's sign-in (labportal/proxy.py)
+After=network-online.target
+
+[Service]
+ExecStart=/home/dcantor/lab-portal/.venv/bin/lab-proxy --bind 192.168.50.231 --port 9091 --upstream http://10.0.0.10:9090
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

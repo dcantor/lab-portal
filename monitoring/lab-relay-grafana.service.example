@@ -1,9 +1,9 @@
 [Unit]
-Description=Relay grafana (lab NMS 10.0.0.10:3001) to the LAN on port 3001
+Description=Relay grafana (lab NMS 10.0.0.10:3001) to the LAN on port 3001, behind the Lab Hub's sign-in (labportal/proxy.py)
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/socat TCP-LISTEN:3001,fork,reuseaddr,bind=192.168.50.231 TCP:10.0.0.10:3001
+ExecStart=/home/dcantor/lab-portal/.venv/bin/lab-proxy --bind 192.168.50.231 --port 3001 --upstream http://10.0.0.10:3001
 Restart=always
 RestartSec=5
 

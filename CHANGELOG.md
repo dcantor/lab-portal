@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.18.0] — 2026-10-02
+
+### Changed
+- **Grafana, Prometheus, VictoriaMetrics and VictoriaLogs are behind the Lab Hub's sign-in on the LAN.** Their relays
+  (:3001, :9091, :8428, :9428) are `lab-proxy` (labportal/proxy.py: a streaming reverse proxy with gate.py) instead of
+  open socat relays; this host's own requests pass. Nautobot and Gitea keep their own logins. The package needs `httpx`.
+
 ## [0.17.0] — 2026-10-02
 
 ### Added
