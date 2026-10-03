@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.24.0] — 2026-10-03
+
+### Added
+- **evpn-clab**: alert `EvpnClabNodeRestarted` (a container Docker restarted on its own has lost its links) and the
+  dashboard row "Throughput" (Mbit/s per kind of path, the dual-homed hosts' leg shares, the stall when a leg is cut).
+
 ## [0.23.0] — 2026-10-03
 
 ### Added

@@ -364,7 +364,13 @@ p.append(row("The wan's firewall (zone pairs: tenants, internet, the wan itself)
 p.append(panel("Dropped packets/s per zone pair", "timeseries", [(f'sum by (from, to) (rate(lab_firewall_packets_total{{{L},action="drop"}}[2m]))', "{{from}} → {{to}}")], 0, 76, 12, 8, unit="pps", min=0))
 p.append(panel("Allowed new connections/s per rule (replies excluded)", "timeseries", [(f'sum by (from, to, rule) (rate(lab_firewall_packets_total{{{L},action="accept",rule!="1"}}[2m]))', "{{from}} → {{to}} rule {{rule}}")], 12, 76, 12, 8, unit="pps", min=0))
 
-y = host_row(p, 84)
+p.append(row("Throughput (the last throughput tests, iperf3 TCP)", 84))
+p.append(panel("Mbit/s per kind of path", "bargauge", [(f"lab_throughput_mbps{{{L}}}", "{{path}}")], 0, 85, 10, 7, unit="Mbits", min=0, orientation="horizontal"))
+p.append(panel("Dual-homed hosts: share of each leg (16 streams)", "bargauge", [(f"lab_throughput_leg_share{{{L}}}", "{{host}} {{direction}} {{leg}}")], 10, 85, 9, 7, unit="percentunit", min=0, max=1, orientation="horizontal"))
+p.append(panel("Stall when a leg is cut under load", "stat", [(f"lab_throughput_failover_stall_seconds{{{L}}}", "stalled")], 19, 85, 5, 7, unit="s", colorMode="value",
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 0.5}, {"color": "red", "value": 1.5}]}))
+
+y = host_row(p, 92)
 p.append(row("Lab and runs", y))
 p.append(panel("Containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
