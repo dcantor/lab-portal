@@ -7,6 +7,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.20.0] — 2026-10-03
+
+### Added
+- **Monitoring for evpn-clab** (VyOS on containerlab): Prometheus job `evpn-clab` from its portal's `/api/sd` (the NMS
+  reaches the Docker management network through the host); alert group `evpn-clab` (OSPF, BFD, EVPN / edge sessions,
+  VTEPs per VNI, default-route paths, links, stopped nodes, verify); log rules `evpn-clab-events`; dashboard
+  **EVPN clab: overview**.
+- **A second VictoriaLogs syslog listener**, UDP 5515, that stamps `lab=evpn-clab`: that lab's hostnames are evpn-fabric's.
+
+### Changed
+- The generic log rules, evpn-fabric's log rules and evpn-fabric's dashboard exclude `lab:evpn-clab`, so the two labs'
+  identically named nodes are never mixed.
+
 ## [0.19.0] — 2026-10-03
 
 ### Added

@@ -278,7 +278,7 @@ p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_r
 # fabric — sessions, VNIs, segments, default routes — every node is scraped and pushes Telegraf, every node's syslog is in VictoriaLogs)
 _id[0] = 0
 L = 'lab="evpn-fabric"'
-EVH = 'hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" '
+EVH = '-lab:evpn-clab hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" '   # evpn-clab has the same hostnames: its syslog carries lab=evpn-clab
 HEALTH3 = [{"type": "value", "options": {"0": {"text": "down", "color": "red"}, "0.5": {"text": "degraded", "color": "orange"}, "1": {"text": "ok", "color": "green"}}}]
 p = []
 p.append(row("The fabric", 0))
@@ -315,6 +315,50 @@ p.append(row("Lab and runs", y))
 p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "evpn-fabric-overview.json").write_text(json.dumps(dashboard("evpn-fabric-overview", "EVPN fabric: overview", p, ["evpn-fabric", "lab"], lab="evpn-fabric"), indent=1))
+
+# ---------------------------------------------------------------- evpn-clab overview (EVPN/VXLAN leaf-spine on VyOS containers, containerlab:
+# OSPF underlay, iBGP EVPN to the spines; the portal :8096 measures it, every node is scraped and pushes Telegraf, its syslog
+# carries lab=evpn-clab — the hostnames are evpn-fabric's, so every log query filters on that field)
+_id[0] = 0
+L = 'lab="evpn-clab"'
+ECH = 'lab:evpn-clab '
+p = []
+p.append(row("The fabric", 0))
+p.append(panel("Nodes healthy", "stat", [(f"count(lab_node_health{{{L}}} == 1) or vector(0)", "ok"), (f"count(lab_node_health{{{L}}})", "nodes")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("OSPF adjacencies Full", "stat", [(f"sum(lab_ospf_neighbors_full{{{L}}})", "full"), (f"sum(lab_ospf_neighbors_expected{{{L}}})", "expected")], 4, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("EVPN sessions", "stat", [(f'sum(lab_bgp_sessions_up{{{L},afi="evpn"}})', "up"), (f'sum(lab_bgp_sessions_expected{{{L},afi="evpn"}})', "expected")], 8, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Links up", "stat", [(f"sum(lab_link_up{{{L}}})", "up"), (f"count(lab_link_up{{{L}}})", "links")], 12, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
+p.append(panel("Last verify", "stat", [(f"lab_verify_checks_passed{{{L}}}", "passed"), (f"lab_verify_checks_total{{{L}}} - lab_verify_checks_passed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}]},
+                          {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}]}}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Node health (the portal's view)", "state-timeline", [(f"lab_node_health{{{L}}}", "{{node}}")], 0, 5, 24, 8, mappings=HEALTH3,
+               thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 0.5}, {"color": "green", "value": 1}]}))
+
+p.append(row("Underlay (OSPF, BFD) and overlay (EVPN)", 13))
+p.append(panel("OSPF adjacencies Full per node", "timeseries", [(f"lab_ospf_neighbors_full{{{L}}}", "{{node}}")], 0, 14, 8, 8, min=0, decimals=0))
+p.append(panel("BFD sessions up per node", "timeseries", [(f"lab_bfd_peers_up{{{L}}}", "{{node}}")], 8, 14, 8, 8, min=0, decimals=0))
+p.append(panel("EVPN / edge BGP sessions Established", "timeseries", [(f"lab_bgp_sessions_up{{{L}}}", "{{node}} {{afi}}")], 16, 14, 8, 8, min=0, decimals=0))
+p.append(panel("Remote VTEPs per L2VNI (each leaf should see the other 3)", "timeseries", [(f"min by (vni) (lab_evpn_l2vni_remote_vteps{{{L}}})", "VNI {{vni}} (worst leaf)")], 0, 22, 8, 7, min=0, decimals=0))
+p.append(panel("MACs per VNI (all VTEPs)", "timeseries", [(f"max by (vni, type) (lab_evpn_vni_macs{{{L}}})", "{{type}} VNI {{vni}}")], 8, 22, 8, 7, min=0, decimals=0))
+p.append(panel("Default-route paths per leaf and tenant (2 = both borders)", "timeseries", [(f"lab_default_route_paths{{{L}}}", "{{node}} {{tenant}}")], 16, 22, 8, 7, min=0, max=2, decimals=0))
+p.append(panel("Links (the portal's view)", "state-timeline", [(f"lab_link_up{{{L}}}", "{{link}}")], 0, 29, 12, 12, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Fabric traffic: busiest ports (bit/s)", "timeseries", [(f'topk(8, 8 * rate(node_network_transmit_bytes_total{{{L},device=~"eth[1-9]"}}[2m]))', "{{node}} {{device}} out")], 12, 29, 12, 12, unit="bps", min=0))
+
+p.append(row("Node syslog (VictoriaLogs, lab=evpn-clab)", 41))
+p.append(panel("OSPF / BGP / BFD events / 5 min per node", "timeseries", [logs_ts(ECH + '((app_name:bgpd "%ADJCHANGE") OR (app_name:ospfd "AdjChg") OR (app_name:bfdd "state-change")) | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events', "{{hostname}}")], 0, 42, 12, 7, ds=VL, min=0))
+p.append(panel("Syslog lines / 5 min per node", "timeseries", [logs_ts(ECH + '| stats by (_time:5m, hostname) count() as lines', "{{hostname}}")], 12, 42, 12, 7, ds=VL, min=0))
+p.append(panel("Fabric syslog: FRR and commits (newest first)", "logs", [(ECH + '(app_name:bgpd OR app_name:ospfd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit)', "")], 0, 49, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+p.append(row("Containers (Telegraf)", 58))
+p.append(panel("CPU busy per node (%)", "timeseries", [(f'100 - cpu_usage_idle{{{L},cpu="cpu-total"}}', "{{host}}")], 0, 59, 12, 7, unit="percent", min=0))
+p.append(panel("Memory used per node", "timeseries", [(f"mem_used{{{L}}}", "{{host}}")], 12, 59, 12, 7, unit="bytes", min=0))
+
+y = host_row(p, 66)
+p.append(row("Lab and runs", y))
+p.append(panel("Containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+(OUT / "evpn-clab-overview.json").write_text(json.dumps(dashboard("evpn-clab-overview", "EVPN clab: overview", p, ["evpn-clab", "lab"], lab="evpn-clab"), indent=1))
 
 # ---------------------------------------------------------------- evpn-fabric: Kubernetes on the fabric (k3s + Cilium on the k8s-* nodes: every
 # node peers BGP with its leaves; the portal measures nodes / sessions / services, Cilium's agents and Hubble are scraped on every node)

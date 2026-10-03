@@ -201,6 +201,49 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "LoadBalancer service {{ $labels.service }} ({{ $labels.address }}) is announced by no node"}
 
+  - name: evpn-clab                 # VyOS on containerlab; the portal (:8096) measures the fabric. Gated on the lab running, and per node on its container
+    rules:
+      - alert: EvpnClabOspfAdjacencyDown
+        expr: (lab_ospf_neighbors_full{lab="evpn-clab"} < on (lab, node, role) lab_ospf_neighbors_expected{lab="evpn-clab"}) and on (lab, node) (lab_vm_running{lab="evpn-clab"} == 1)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} OSPF adjacencies Full, fewer than its fabric links — the underlay lost a path"}
+      - alert: EvpnClabBfdDown
+        expr: (lab_bfd_peers_up{lab="evpn-clab"} < on (lab, node, role) lab_bfd_peers_total{lab="evpn-clab"}) and on (lab, node) (lab_vm_running{lab="evpn-clab"} == 1)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} BFD session(s) up, not all"}
+      - alert: EvpnClabBgpSessionDown
+        expr: (lab_bgp_sessions_up{lab="evpn-clab"} < on (lab, node, role, afi) lab_bgp_sessions_expected{lab="evpn-clab"}) and on (lab, node) (lab_vm_running{lab="evpn-clab"} == 1)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} {{ $labels.afi }} BGP session(s) Established, fewer than expected (evpn: to the route reflectors; ipv4: the border / wan edge)"}
+      - alert: EvpnClabVtepMissingOnVni
+        expr: (lab_evpn_l2vni_remote_vteps{lab="evpn-clab"} < scalar(count(lab_vm_running{lab="evpn-clab",role="leaf"} == 1) - 1)) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: L2VNI {{ $labels.vni }} floods to {{ $value }} remote VTEPs, not every other leaf"}
+      - alert: EvpnClabDefaultRouteDegraded
+        expr: (lab_default_route_paths{lab="evpn-clab"} < 2) and on (lab, node) (lab_vm_running{lab="evpn-clab"} == 1)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: tenant {{ $labels.tenant }} reaches the outside through {{ $value }} border(s), not both"}
+      - alert: EvpnClabLinkDown
+        expr: (lab_link_up{lab="evpn-clab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.kind }} link {{ $labels.link }} is down (the portal's view)"}
+      - alert: EvpnClabNodeDown        # a node whose container is stopped while the rest of the lab runs
+        expr: (lab_vm_running{lab="evpn-clab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.role }}) is not running while the rest of evpn-clab is"}
+      - alert: EvpnClabVerifyFailing
+        expr: (lab_verify_checks_passed{lab="evpn-clab"} < lab_verify_checks_total{lab="evpn-clab"}) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "the last ./lab.sh verify passed {{ $value }} checks, not all of them"}
+
   - name: cat8000v-ipsec
     rules:
       - alert: TunnelDown

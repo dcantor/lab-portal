@@ -44,6 +44,14 @@ scrape_configs:
     metric_relabel_configs:
       - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
 
+  - job_name: evpn-clab                                            # EVPN/VXLAN leaf-spine on VyOS containers (containerlab): the nodes' node- and
+    http_sd_configs: [{url: http://10.0.0.1:8096/api/sd, refresh_interval: 60s}]   # frr-exporters on 172.20.108.0/24 (reached through the host) and the portal
+    honor_labels: true
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
+
   - job_name: lab-host                                             # the Ubuntu KVM host itself (node_exporter as a user service on the OOB bridge)
     static_configs:
       - targets: [10.0.0.1:9100]

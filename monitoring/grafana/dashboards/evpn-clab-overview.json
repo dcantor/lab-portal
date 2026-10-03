@@ -1,8 +1,8 @@
 {
- "uid": "evpn-fabric-overview",
- "title": "EVPN fabric: overview",
+ "uid": "evpn-clab-overview",
+ "title": "EVPN clab: overview",
  "tags": [
-  "evpn-fabric",
+  "evpn-clab",
   "lab"
  ],
  "timezone": "browser",
@@ -28,7 +28,7 @@
     "target": {
      "type": "tags",
      "tags": [
-      "evpn-fabric",
+      "evpn-clab",
       "run"
      ],
      "matchAny": false,
@@ -47,7 +47,7 @@
     "target": {
      "type": "tags",
      "tags": [
-      "evpn-fabric",
+      "evpn-clab",
       "test"
      ],
      "matchAny": false,
@@ -66,7 +66,7 @@
     "target": {
      "type": "tags",
      "tags": [
-      "evpn-fabric",
+      "evpn-clab",
       "steering"
      ],
      "matchAny": false,
@@ -81,7 +81,7 @@
      "type": "prometheus",
      "uid": "victoriametrics"
     },
-    "expr": "ALERTS{lab=\"evpn-fabric\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "expr": "ALERTS{lab=\"evpn-clab\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
     "step": "30s",
     "titleFormat": "{{alertname}}",
     "textFormat": "{{hostname}}",
@@ -117,7 +117,7 @@
    "gridPos": {
     "x": 0,
     "y": 1,
-    "w": 5,
+    "w": 4,
     "h": 4
    },
    "targets": [
@@ -127,7 +127,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "count(lab_node_health{lab=\"evpn-fabric\"} == 1) or vector(0)",
+     "expr": "count(lab_node_health{lab=\"evpn-clab\"} == 1) or vector(0)",
      "legendFormat": "ok"
     },
     {
@@ -136,7 +136,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "count(lab_node_health{lab=\"evpn-fabric\"})",
+     "expr": "count(lab_node_health{lab=\"evpn-clab\"})",
      "legendFormat": "nodes"
     }
    ],
@@ -166,16 +166,16 @@
   },
   {
    "id": 3,
-   "title": "Fabric BGP sessions",
+   "title": "OSPF adjacencies Full",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
     "uid": "victoriametrics"
    },
    "gridPos": {
-    "x": 5,
+    "x": 4,
     "y": 1,
-    "w": 5,
+    "w": 4,
     "h": 4
    },
    "targets": [
@@ -185,8 +185,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(lab_bgp_sessions_up{lab=\"evpn-fabric\",afi=\"ipv4\"})",
-     "legendFormat": "up"
+     "expr": "sum(lab_ospf_neighbors_full{lab=\"evpn-clab\"})",
+     "legendFormat": "full"
     },
     {
      "refId": "B",
@@ -194,7 +194,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(lab_bgp_sessions_expected{lab=\"evpn-fabric\"})",
+     "expr": "sum(lab_ospf_neighbors_expected{lab=\"evpn-clab\"})",
      "legendFormat": "expected"
     }
    ],
@@ -224,16 +224,16 @@
   },
   {
    "id": 4,
-   "title": "Defaults via both borders (leaf x tenant)",
+   "title": "EVPN sessions",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
     "uid": "victoriametrics"
    },
    "gridPos": {
-    "x": 10,
+    "x": 8,
     "y": 1,
-    "w": 5,
+    "w": 4,
     "h": 4
    },
    "targets": [
@@ -243,8 +243,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "count(lab_default_route_paths{lab=\"evpn-fabric\",role=\"leaf\"} >= 2) or vector(0)",
-     "legendFormat": "both"
+     "expr": "sum(lab_bgp_sessions_up{lab=\"evpn-clab\",afi=\"evpn\"})",
+     "legendFormat": "up"
     },
     {
      "refId": "B",
@@ -252,8 +252,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "count(lab_default_route_paths{lab=\"evpn-fabric\",role=\"leaf\"})",
-     "legendFormat": "of"
+     "expr": "sum(lab_bgp_sessions_expected{lab=\"evpn-clab\",afi=\"evpn\"})",
+     "legendFormat": "expected"
     }
    ],
    "fieldConfig": {
@@ -282,16 +282,16 @@
   },
   {
    "id": 5,
-   "title": "Last test run",
+   "title": "Links up",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
     "uid": "victoriametrics"
    },
    "gridPos": {
-    "x": 15,
+    "x": 12,
     "y": 1,
-    "w": 5,
+    "w": 4,
     "h": 4
    },
    "targets": [
@@ -301,7 +301,65 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_tests_last_passed{lab=\"evpn-fabric\"}",
+     "expr": "sum(lab_link_up{lab=\"evpn-clab\"})",
+     "legendFormat": "up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(lab_link_up{lab=\"evpn-clab\"})",
+     "legendFormat": "links"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 6,
+   "title": "Last verify",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_verify_checks_passed{lab=\"evpn-clab\"}",
      "legendFormat": "passed"
     },
     {
@@ -310,7 +368,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_tests_last_failed{lab=\"evpn-fabric\"}",
+     "expr": "lab_verify_checks_total{lab=\"evpn-clab\"} - lab_verify_checks_passed{lab=\"evpn-clab\"}",
      "legendFormat": "failed"
     }
    ],
@@ -373,7 +431,7 @@
    }
   },
   {
-   "id": 6,
+   "id": 7,
    "title": "Firing alerts",
    "type": "stat",
    "datasource": {
@@ -393,7 +451,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "count(ALERTS{lab=\"evpn-fabric\",alertstate=\"firing\",severity!=\"info\"}) or vector(0)",
+     "expr": "count(ALERTS{lab=\"evpn-clab\",alertstate=\"firing\",severity!=\"info\"}) or vector(0)",
      "legendFormat": "firing"
     }
    ],
@@ -426,7 +484,7 @@
    }
   },
   {
-   "id": 7,
+   "id": 8,
    "title": "Node health (the portal's view)",
    "type": "state-timeline",
    "datasource": {
@@ -437,7 +495,7 @@
     "x": 0,
     "y": 5,
     "w": 24,
-    "h": 9
+    "h": 8
    },
    "targets": [
     {
@@ -446,7 +504,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_node_health{lab=\"evpn-fabric\"}",
+     "expr": "lab_node_health{lab=\"evpn-clab\"}",
      "legendFormat": "{{node}}"
     }
    ],
@@ -501,21 +559,21 @@
    }
   },
   {
-   "id": 8,
+   "id": 9,
    "type": "row",
-   "title": "Underlay and overlay",
+   "title": "Underlay (OSPF, BFD) and overlay (EVPN)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 14,
+    "y": 13,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 9,
-   "title": "Fabric BGP sessions Established per node (IPv4 / EVPN)",
+   "id": 10,
+   "title": "OSPF adjacencies Full per node",
    "type": "timeseries",
    "datasource": {
     "type": "prometheus",
@@ -523,7 +581,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 15,
+    "y": 14,
     "w": 8,
     "h": 8
    },
@@ -534,49 +592,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_bgp_sessions_up{lab=\"evpn-fabric\",afi=\"ipv4\"}",
-     "legendFormat": "{{node}}"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "min": 0,
-     "decimals": 0
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 10,
-   "title": "BFD peers up per node",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "x": 8,
-    "y": 15,
-    "w": 8,
-    "h": 8
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "lab_bfd_peers_up{lab=\"evpn-fabric\"}",
+     "expr": "lab_ospf_neighbors_full{lab=\"evpn-clab\"}",
      "legendFormat": "{{node}}"
     }
    ],
@@ -599,15 +615,15 @@
   },
   {
    "id": 11,
-   "title": "Remote VTEPs per L2VNI (each leaf should see the other 5)",
+   "title": "BFD sessions up per node",
    "type": "timeseries",
    "datasource": {
     "type": "prometheus",
     "uid": "victoriametrics"
    },
    "gridPos": {
-    "x": 16,
-    "y": 15,
+    "x": 8,
+    "y": 14,
     "w": 8,
     "h": 8
    },
@@ -618,8 +634,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "min by (vni) (lab_evpn_l2vni_remote_vteps{lab=\"evpn-fabric\"})",
-     "legendFormat": "VNI {{vni}} (worst leaf)"
+     "expr": "lab_bfd_peers_up{lab=\"evpn-clab\"}",
+     "legendFormat": "{{node}}"
     }
    ],
    "fieldConfig": {
@@ -641,84 +657,16 @@
   },
   {
    "id": 12,
-   "type": "row",
-   "title": "Multihoming and the way out",
-   "collapsed": false,
-   "gridPos": {
-    "x": 0,
-    "y": 23,
-    "w": 24,
-    "h": 1
-   },
-   "panels": []
-  },
-  {
-   "id": 13,
-   "title": "Designated forwarder per Ethernet Segment",
-   "type": "state-timeline",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 24,
-    "w": 12,
-    "h": 8
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "lab_es_df{lab=\"evpn-fabric\"}",
-     "legendFormat": "{{node}} {{esi}}"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "mappings": [
-      {
-       "type": "value",
-       "options": {
-        "0": {
-         "text": "non-DF",
-         "color": "blue"
-        },
-        "1": {
-         "text": "DF",
-         "color": "green"
-        }
-       }
-      }
-     ]
-    },
-    "overrides": []
-   },
-   "options": {
-    "showValue": "never",
-    "mergeValues": true,
-    "rowHeight": 0.8,
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    }
-   }
-  },
-  {
-   "id": 14,
-   "title": "Server LACP legs up",
+   "title": "EVPN / edge BGP sessions Established",
    "type": "timeseries",
    "datasource": {
     "type": "prometheus",
     "uid": "victoriametrics"
    },
    "gridPos": {
-    "x": 12,
-    "y": 24,
-    "w": 6,
+    "x": 16,
+    "y": 14,
+    "w": 8,
     "h": 8
    },
    "targets": [
@@ -728,8 +676,134 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_server_bond_legs_up{lab=\"evpn-fabric\"}",
-     "legendFormat": "{{node}}"
+     "expr": "lab_bgp_sessions_up{lab=\"evpn-clab\"}",
+     "legendFormat": "{{node}} {{afi}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "title": "Remote VTEPs per L2VNI (each leaf should see the other 3)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 22,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "min by (vni) (lab_evpn_l2vni_remote_vteps{lab=\"evpn-clab\"})",
+     "legendFormat": "VNI {{vni}} (worst leaf)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 14,
+   "title": "MACs per VNI (all VTEPs)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 22,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "max by (vni, type) (lab_evpn_vni_macs{lab=\"evpn-clab\"})",
+     "legendFormat": "{{type}} VNI {{vni}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 15,
+   "title": "Default-route paths per leaf and tenant (2 = both borders)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 22,
+    "w": 8,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_default_route_paths{lab=\"evpn-clab\"}",
+     "legendFormat": "{{node}} {{tenant}}"
     }
    ],
    "fieldConfig": {
@@ -751,18 +825,18 @@
    }
   },
   {
-   "id": 15,
-   "title": "fw-ext sessions to the borders",
+   "id": 16,
+   "title": "Links (the portal's view)",
    "type": "state-timeline",
    "datasource": {
     "type": "prometheus",
     "uid": "victoriametrics"
    },
    "gridPos": {
-    "x": 18,
-    "y": 24,
-    "w": 6,
-    "h": 8
+    "x": 0,
+    "y": 29,
+    "w": 12,
+    "h": 12
    },
    "targets": [
     {
@@ -771,8 +845,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_edge_session_up{lab=\"evpn-fabric\"}",
-     "legendFormat": "{{border_ip}}"
+     "expr": "lab_link_up{lab=\"evpn-clab\"}",
+     "legendFormat": "{{link}}"
     }
    ],
    "fieldConfig": {
@@ -818,49 +892,6 @@
    }
   },
   {
-   "id": 16,
-   "title": "Default-route paths per leaf and tenant (2 = both borders)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "x": 0,
-    "y": 32,
-    "w": 12,
-    "h": 7
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "lab_default_route_paths{lab=\"evpn-fabric\",role=\"leaf\"}",
-     "legendFormat": "{{node}} {{tenant}}"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "min": 0,
-     "max": 2,
-     "decimals": 0
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
    "id": 17,
    "title": "Fabric traffic: busiest ports (bit/s)",
    "type": "timeseries",
@@ -870,9 +901,9 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 32,
+    "y": 29,
     "w": 12,
-    "h": 7
+    "h": 12
    },
    "targets": [
     {
@@ -881,7 +912,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "topk(8, 8 * rate(node_network_transmit_bytes_total{lab=\"evpn-fabric\",device=~\"eth[1-8]|bond[0-9]+\"}[2m]))",
+     "expr": "topk(8, 8 * rate(node_network_transmit_bytes_total{lab=\"evpn-clab\",device=~\"eth[1-9]\"}[2m]))",
      "legendFormat": "{{node}} {{device}} out"
     }
    ],
@@ -905,11 +936,11 @@
   {
    "id": 18,
    "type": "row",
-   "title": "Node syslog (VictoriaLogs)",
+   "title": "Node syslog (VictoriaLogs, lab=evpn-clab)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 39,
+    "y": 41,
     "w": 24,
     "h": 1
    },
@@ -917,7 +948,7 @@
   },
   {
    "id": 19,
-   "title": "BGP / BFD events / 5 min per node",
+   "title": "OSPF / BGP / BFD events / 5 min per node",
    "type": "timeseries",
    "datasource": {
     "type": "victoriametrics-logs-datasource",
@@ -925,7 +956,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 40,
+    "y": 42,
     "w": 12,
     "h": 7
    },
@@ -936,7 +967,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "-lab:evpn-clab hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" (app_name:bgpd \"%ADJCHANGE\") OR (app_name:bfdd \"state-change\") | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events",
+     "expr": "lab:evpn-clab ((app_name:bgpd \"%ADJCHANGE\") OR (app_name:ospfd \"AdjChg\") OR (app_name:bfdd \"state-change\")) | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events",
      "legendFormat": "{{hostname}}",
      "queryType": "statsRange"
     }
@@ -967,7 +998,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 40,
+    "y": 42,
     "w": 12,
     "h": 7
    },
@@ -978,7 +1009,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "-lab:evpn-clab hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" | stats by (_time:5m, hostname) count() as lines",
+     "expr": "lab:evpn-clab | stats by (_time:5m, hostname) count() as lines",
      "legendFormat": "{{hostname}}",
      "queryType": "statsRange"
     }
@@ -1001,7 +1032,7 @@
   },
   {
    "id": 21,
-   "title": "Fabric syslog: FRR, commits, protodown (newest first)",
+   "title": "Fabric syslog: FRR and commits (newest first)",
    "type": "logs",
    "datasource": {
     "type": "victoriametrics-logs-datasource",
@@ -1009,7 +1040,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 47,
+    "y": 49,
     "w": 24,
     "h": 9
    },
@@ -1020,7 +1051,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "-lab:evpn-clab hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" (app_name:bgpd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit OR app_name:evpn-fabric-protodown)",
+     "expr": "lab:evpn-clab (app_name:bgpd OR app_name:ospfd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit)",
      "legendFormat": ""
     }
    ],
@@ -1037,11 +1068,11 @@
   {
    "id": 22,
    "type": "row",
-   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "title": "Containers (Telegraf)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 56,
+    "y": 58,
     "w": 24,
     "h": 1
    },
@@ -1049,6 +1080,103 @@
   },
   {
    "id": 23,
+   "title": "CPU busy per node (%)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 59,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 - cpu_usage_idle{lab=\"evpn-clab\",cpu=\"cpu-total\"}",
+     "legendFormat": "{{host}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 24,
+   "title": "Memory used per node",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 59,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "mem_used{lab=\"evpn-clab\"}",
+     "legendFormat": "{{host}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 25,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 66,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 26,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1057,7 +1185,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 57,
+    "y": 67,
     "w": 4,
     "h": 4
    },
@@ -1106,7 +1234,7 @@
    }
   },
   {
-   "id": 24,
+   "id": 27,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1115,7 +1243,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 57,
+    "y": 67,
     "w": 4,
     "h": 4
    },
@@ -1164,7 +1292,7 @@
    }
   },
   {
-   "id": 25,
+   "id": 28,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1173,7 +1301,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 57,
+    "y": 67,
     "w": 5,
     "h": 4
    },
@@ -1223,7 +1351,7 @@
    }
   },
   {
-   "id": 26,
+   "id": 29,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1232,7 +1360,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 57,
+    "y": 67,
     "w": 7,
     "h": 4
    },
@@ -1300,7 +1428,7 @@
    }
   },
   {
-   "id": 27,
+   "id": 30,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1309,7 +1437,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 57,
+    "y": 67,
     "w": 4,
     "h": 4
    },
@@ -1358,7 +1486,7 @@
    }
   },
   {
-   "id": 28,
+   "id": 31,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1367,7 +1495,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 61,
+    "y": 71,
     "w": 8,
     "h": 8
    },
@@ -1437,7 +1565,7 @@
    }
   },
   {
-   "id": 29,
+   "id": 32,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1446,7 +1574,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 61,
+    "y": 71,
     "w": 8,
     "h": 8
    },
@@ -1506,7 +1634,7 @@
    }
   },
   {
-   "id": 30,
+   "id": 33,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1515,7 +1643,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 61,
+    "y": 71,
     "w": 8,
     "h": 8
    },
@@ -1549,21 +1677,21 @@
    }
   },
   {
-   "id": 31,
+   "id": 34,
    "type": "row",
    "title": "Lab and runs",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 69,
+    "y": 79,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 32,
-   "title": "VMs running",
+   "id": 35,
+   "title": "Containers running",
    "type": "state-timeline",
    "datasource": {
     "type": "prometheus",
@@ -1571,7 +1699,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 70,
+    "y": 80,
     "w": 12,
     "h": 10
    },
@@ -1582,7 +1710,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_vm_running{lab=\"evpn-fabric\"}",
+     "expr": "lab_vm_running{lab=\"evpn-clab\"}",
      "legendFormat": "{{node}} ({{role}})"
     }
    ],
@@ -1629,7 +1757,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 36,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -1638,7 +1766,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 70,
+    "y": 80,
     "w": 12,
     "h": 10
    },
@@ -1649,7 +1777,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_run_last_success{lab=\"evpn-fabric\"}",
+     "expr": "lab_run_last_success{lab=\"evpn-clab\"}",
      "legendFormat": "{{mode}}"
     }
    ],
@@ -1712,7 +1840,7 @@
   {
    "title": "\u263e Dark",
    "type": "link",
-   "url": "http://192.168.50.231:3001/d/evpn-fabric-overview?theme=dark",
+   "url": "http://192.168.50.231:3001/d/evpn-clab-overview?theme=dark",
    "keepTime": true,
    "includeVars": true,
    "targetBlank": true,
@@ -1721,7 +1849,7 @@
   {
    "title": "\u2600 Light",
    "type": "link",
-   "url": "http://192.168.50.231:3001/d/evpn-fabric-overview?theme=light",
+   "url": "http://192.168.50.231:3001/d/evpn-clab-overview?theme=light",
    "keepTime": true,
    "includeVars": true,
    "targetBlank": true,

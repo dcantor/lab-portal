@@ -14,8 +14,11 @@ services:
   victorialogs:                                   # syslog from the VyOS nodes (system syslog remote -> the native syslog receiver, UDP 5514 — 514 is the NMS rsyslog)
     image: victoriametrics/victoria-logs:v1.52.0
     restart: unless-stopped
-    command: ["--storageDataPath=/vlogs", "--retentionPeriod=90d", "--httpListenAddr=:9428", "--syslog.listenAddr.udp=:5514", "--syslog.streamFields.udp=[\"hostname\",\"app_name\"]"]
-    ports: ["9428:9428", "5514:5514/udp"]
+    # :5514 every lab's VyOS nodes; :5515 evpn-clab's, stamped lab=evpn-clab (its hostnames are evpn-fabric's)
+    command: ["--storageDataPath=/vlogs", "--retentionPeriod=90d", "--httpListenAddr=:9428",
+              "--syslog.listenAddr.udp=:5514", "--syslog.streamFields.udp=[\"hostname\",\"app_name\"]", "--syslog.extraFields.udp=",
+              "--syslog.listenAddr.udp=:5515", "--syslog.streamFields.udp=[\"lab\",\"hostname\",\"app_name\"]", "--syslog.extraFields.udp={\"lab\":\"evpn-clab\"}"]
+    ports: ["9428:9428", "5514:5514/udp", "5515:5515/udp"]
     volumes: ["vl_data:/vlogs"]
 
   vmalert-logs:                                   # log-derived alerts: LogsQL rules against VictoriaLogs; alert state written to VictoriaMetrics (ALERTS)
