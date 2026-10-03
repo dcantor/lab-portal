@@ -28,8 +28,11 @@ def make(upstream):
         headers = {k: v for k, v in request.headers.items() if k.lower() not in HOP}
         # the hub's session cookie stays here; the upstream's own cookies (a Grafana login) pass
         if "cookie" in headers:
-            kept = [c for c in headers["cookie"].split(";") if not c.strip().startswith("labhub_session=")]
-            headers["cookie"] = ";".join(kept)
+            # trimmed and re-joined: a cookie that followed the session one kept its leading space (" csrftoken=…"), an
+            # illegal header value for httpx — every page 500 for a browser with the hub session first and other cookies
+            # on this host (Nautobot's, sent to every port)
+            kept = [c.strip() for c in headers["cookie"].split(";") if c.strip() and not c.strip().startswith("labhub_session=")]
+            headers["cookie"] = "; ".join(kept)
             if not headers["cookie"].strip(): headers.pop("cookie")
         req = client.build_request(request.method, "/" + path, params=request.query_params, headers=headers, content=await request.body())
         up = await client.send(req, stream=True)

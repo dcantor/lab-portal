@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.22.1] — 2026-10-03
+
+### Fixed
+- **Grafana, Prometheus, VictoriaMetrics and VictoriaLogs answered 500 (Internal Server Error) through lab-proxy** for a
+  browser that had other cookies on the host (Nautobot's `csrftoken` / `sessionid` — cookies are per host, not per port)
+  after the hub's session cookie: removing `labhub_session` left the next cookie with a leading space, an illegal header
+  value for httpx. The cookies are now trimmed and re-joined.
+
 ## [0.22.0] — 2026-10-03
 
 ### Added
