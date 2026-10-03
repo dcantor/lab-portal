@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.23.0] — 2026-10-03
+
+### Added
+- **evpn-clab's firewall**: alert `EvpnClabFirewallDropping` (a steady stream of drops between two zones) and the dashboard
+  row "The wan's firewall" (drops per zone pair, allowed starts per rule) from the portal's `lab_firewall_packets_total`.
+
 ## [0.22.1] — 2026-10-03
 
 ### Fixed

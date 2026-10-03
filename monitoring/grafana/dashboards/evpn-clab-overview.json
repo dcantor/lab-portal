@@ -1319,7 +1319,7 @@
   {
    "id": 29,
    "type": "row",
-   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "title": "The wan's firewall (zone pairs: tenants, internet, the wan itself)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1331,6 +1331,103 @@
   },
   {
    "id": 30,
+   "title": "Dropped packets/s per zone pair",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 76,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (from, to) (rate(lab_firewall_packets_total{lab=\"evpn-clab\",action=\"drop\"}[2m]))",
+     "legendFormat": "{{from}} \u2192 {{to}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "pps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 31,
+   "title": "Allowed new connections/s per rule (replies excluded)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 76,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (from, to, rule) (rate(lab_firewall_packets_total{lab=\"evpn-clab\",action=\"accept\",rule!=\"1\"}[2m]))",
+     "legendFormat": "{{from}} \u2192 {{to}} rule {{rule}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "pps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 32,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 84,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 33,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1339,7 +1436,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 76,
+    "y": 85,
     "w": 4,
     "h": 4
    },
@@ -1388,7 +1485,7 @@
    }
   },
   {
-   "id": 31,
+   "id": 34,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1397,7 +1494,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 76,
+    "y": 85,
     "w": 4,
     "h": 4
    },
@@ -1446,7 +1543,7 @@
    }
   },
   {
-   "id": 32,
+   "id": 35,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1455,7 +1552,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 76,
+    "y": 85,
     "w": 5,
     "h": 4
    },
@@ -1505,7 +1602,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 36,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1514,7 +1611,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 76,
+    "y": 85,
     "w": 7,
     "h": 4
    },
@@ -1582,7 +1679,7 @@
    }
   },
   {
-   "id": 34,
+   "id": 37,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1591,7 +1688,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 76,
+    "y": 85,
     "w": 4,
     "h": 4
    },
@@ -1640,7 +1737,7 @@
    }
   },
   {
-   "id": 35,
+   "id": 38,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1649,7 +1746,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 80,
+    "y": 89,
     "w": 8,
     "h": 8
    },
@@ -1719,7 +1816,7 @@
    }
   },
   {
-   "id": 36,
+   "id": 39,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1728,7 +1825,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 80,
+    "y": 89,
     "w": 8,
     "h": 8
    },
@@ -1788,7 +1885,7 @@
    }
   },
   {
-   "id": 37,
+   "id": 40,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1797,7 +1894,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 80,
+    "y": 89,
     "w": 8,
     "h": 8
    },
@@ -1831,20 +1928,20 @@
    }
   },
   {
-   "id": 38,
+   "id": 41,
    "type": "row",
    "title": "Lab and runs",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 88,
+    "y": 97,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 39,
+   "id": 42,
    "title": "Containers running",
    "type": "state-timeline",
    "datasource": {
@@ -1853,7 +1950,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 89,
+    "y": 98,
     "w": 12,
     "h": 10
    },
@@ -1911,7 +2008,7 @@
    }
   },
   {
-   "id": 40,
+   "id": 43,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -1920,7 +2017,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 89,
+    "y": 98,
     "w": 12,
     "h": 10
    },

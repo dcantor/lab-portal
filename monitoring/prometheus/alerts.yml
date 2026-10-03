@@ -243,6 +243,11 @@ groups:
         for: 3m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.node }}: segment {{ $labels.esi }} ({{ $labels.host }}) through {{ $value }} VTEP(s), not both"}
+      - alert: EvpnClabFirewallDropping        # the wan's firewall dropping a steady stream between two zones (a scan, a misdirected app)
+        expr: (sum by (lab, from, to) (rate(lab_firewall_packets_total{lab="evpn-clab",action="drop"}[5m])) > 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "the wan's firewall drops {{ $value | printf \"%.1f\" }} packets/s from {{ $labels.from }} to {{ $labels.to }}"}
       - alert: EvpnClabLinkDown
         expr: (lab_link_up{lab="evpn-clab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
         for: 2m

@@ -360,7 +360,11 @@ p.append(panel("Designated forwarder per Ethernet Segment", "state-timeline", [(
 p.append(panel("Hosts' LACP legs in the active aggregator", "timeseries", [(f"lab_host_bond_legs_up{{{L}}}", "{{node}}")], 10, 67, 7, 8, min=0, max=2, decimals=0))
 p.append(panel("Segment VTEPs seen per leaf (2 = aliasing through both)", "timeseries", [(f"min by (host) (lab_es_vteps{{{L}}})", "{{host}} (worst leaf)")], 17, 67, 7, 8, min=0, max=2, decimals=0))
 
-y = host_row(p, 75)
+p.append(row("The wan's firewall (zone pairs: tenants, internet, the wan itself)", 75))
+p.append(panel("Dropped packets/s per zone pair", "timeseries", [(f'sum by (from, to) (rate(lab_firewall_packets_total{{{L},action="drop"}}[2m]))', "{{from}} → {{to}}")], 0, 76, 12, 8, unit="pps", min=0))
+p.append(panel("Allowed new connections/s per rule (replies excluded)", "timeseries", [(f'sum by (from, to, rule) (rate(lab_firewall_packets_total{{{L},action="accept",rule!="1"}}[2m]))', "{{from}} → {{to}} rule {{rule}}")], 12, 76, 12, 8, unit="pps", min=0))
+
+y = host_row(p, 84)
 p.append(row("Lab and runs", y))
 p.append(panel("Containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
