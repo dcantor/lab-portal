@@ -228,6 +228,21 @@ groups:
         for: 3m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.node }}: tenant {{ $labels.tenant }} reaches the outside through {{ $value }} border(s), not both"}
+      - alert: EvpnClabSegmentDfNotUnique      # EVPN multihoming: exactly one designated forwarder per Ethernet Segment
+        expr: (sum by (lab, esi, host) (lab_es_df{lab="evpn-clab"}) != 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "Ethernet Segment {{ $labels.esi }} ({{ $labels.host }}) has {{ $value }} designated forwarders (want exactly 1)"}
+      - alert: EvpnClabHostBondDegraded        # a dual-homed host down to one LACP leg: its segment runs on one leaf
+        expr: (lab_host_bond_legs_up{lab="evpn-clab"} < 2) and on (lab, node) (lab_vm_running{lab="evpn-clab"} == 1)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} of 2 LACP legs in its bond — one leaf carries the whole segment"}
+      - alert: EvpnClabAliasingDegraded        # a leaf reaches a segment through one VTEP only
+        expr: (lab_es_vteps{lab="evpn-clab"} < 2) and on (lab, node) (lab_vm_running{lab="evpn-clab"} == 1)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: segment {{ $labels.esi }} ({{ $labels.host }}) through {{ $value }} VTEP(s), not both"}
       - alert: EvpnClabLinkDown
         expr: (lab_link_up{lab="evpn-clab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-clab"}) > 0)
         for: 2m

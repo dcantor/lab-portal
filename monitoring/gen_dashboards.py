@@ -354,7 +354,13 @@ p.append(row("Containers (Telegraf)", 58))
 p.append(panel("CPU busy per node (%)", "timeseries", [(f'100 - cpu_usage_idle{{{L},cpu="cpu-total"}}', "{{host}}")], 0, 59, 12, 7, unit="percent", min=0))
 p.append(panel("Memory used per node", "timeseries", [(f"mem_used{{{L}}}", "{{host}}")], 12, 59, 12, 7, unit="bytes", min=0))
 
-y = host_row(p, 66)
+p.append(row("EVPN multihoming (dual-homed hosts)", 66))
+p.append(panel("Designated forwarder per Ethernet Segment", "state-timeline", [(f"lab_es_df{{{L}}}", "{{host}} on {{node}}")], 0, 67, 10, 8,
+               mappings=[{"type": "value", "options": {"0": {"text": "non-DF", "color": "blue"}, "1": {"text": "DF", "color": "green"}}}]))
+p.append(panel("Hosts' LACP legs in the active aggregator", "timeseries", [(f"lab_host_bond_legs_up{{{L}}}", "{{node}}")], 10, 67, 7, 8, min=0, max=2, decimals=0))
+p.append(panel("Segment VTEPs seen per leaf (2 = aliasing through both)", "timeseries", [(f"min by (host) (lab_es_vteps{{{L}}})", "{{host}} (worst leaf)")], 17, 67, 7, 8, min=0, max=2, decimals=0))
+
+y = host_row(p, 75)
 p.append(row("Lab and runs", y))
 p.append(panel("Containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))

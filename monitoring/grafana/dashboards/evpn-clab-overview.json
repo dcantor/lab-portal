@@ -1165,7 +1165,7 @@
   {
    "id": 25,
    "type": "row",
-   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "title": "EVPN multihoming (dual-homed hosts)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1177,6 +1177,160 @@
   },
   {
    "id": 26,
+   "title": "Designated forwarder per Ethernet Segment",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 67,
+    "w": 10,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_es_df{lab=\"evpn-clab\"}",
+     "legendFormat": "{{host}} on {{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "non-DF",
+         "color": "blue"
+        },
+        "1": {
+         "text": "DF",
+         "color": "green"
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 27,
+   "title": "Hosts' LACP legs in the active aggregator",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 10,
+    "y": 67,
+    "w": 7,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_host_bond_legs_up{lab=\"evpn-clab\"}",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "max": 2,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 28,
+   "title": "Segment VTEPs seen per leaf (2 = aliasing through both)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 17,
+    "y": 67,
+    "w": 7,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "min by (host) (lab_es_vteps{lab=\"evpn-clab\"})",
+     "legendFormat": "{{host}} (worst leaf)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "max": 2,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 29,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 75,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 30,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1185,7 +1339,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 67,
+    "y": 76,
     "w": 4,
     "h": 4
    },
@@ -1234,7 +1388,7 @@
    }
   },
   {
-   "id": 27,
+   "id": 31,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1243,7 +1397,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 67,
+    "y": 76,
     "w": 4,
     "h": 4
    },
@@ -1292,7 +1446,7 @@
    }
   },
   {
-   "id": 28,
+   "id": 32,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1301,7 +1455,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 67,
+    "y": 76,
     "w": 5,
     "h": 4
    },
@@ -1351,7 +1505,7 @@
    }
   },
   {
-   "id": 29,
+   "id": 33,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1360,7 +1514,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 67,
+    "y": 76,
     "w": 7,
     "h": 4
    },
@@ -1428,7 +1582,7 @@
    }
   },
   {
-   "id": 30,
+   "id": 34,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1437,7 +1591,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 67,
+    "y": 76,
     "w": 4,
     "h": 4
    },
@@ -1486,7 +1640,7 @@
    }
   },
   {
-   "id": 31,
+   "id": 35,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1495,7 +1649,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 71,
+    "y": 80,
     "w": 8,
     "h": 8
    },
@@ -1565,7 +1719,7 @@
    }
   },
   {
-   "id": 32,
+   "id": 36,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1574,7 +1728,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 71,
+    "y": 80,
     "w": 8,
     "h": 8
    },
@@ -1634,7 +1788,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 37,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1643,7 +1797,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 71,
+    "y": 80,
     "w": 8,
     "h": 8
    },
@@ -1677,20 +1831,20 @@
    }
   },
   {
-   "id": 34,
+   "id": 38,
    "type": "row",
    "title": "Lab and runs",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 79,
+    "y": 88,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 35,
+   "id": 39,
    "title": "Containers running",
    "type": "state-timeline",
    "datasource": {
@@ -1699,7 +1853,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 80,
+    "y": 89,
     "w": 12,
     "h": 10
    },
@@ -1757,7 +1911,7 @@
    }
   },
   {
-   "id": 36,
+   "id": 40,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -1766,7 +1920,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 80,
+    "y": 89,
     "w": 12,
     "h": 10
    },
