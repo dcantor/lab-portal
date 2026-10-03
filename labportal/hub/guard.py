@@ -105,22 +105,30 @@ _nodes = {}                                     # lab dir -> (time, [(node, role
 _live = {"at": 0.0, "states": {}}
 
 
+_declared = {}                                  # lab dir -> {domain: MiB} from a MEM column in `lab.sh status`
+
+
 def _nodes_from_status(lab_dir):
+    """[(node, role, domain)] from `lab.sh status`; a MEM column (MiB), when the lab prints one, is kept as the node's
+    declared size — the fallback when its runtime cannot report one (a containerlab lab after `down` has no containers)."""
     try:
         out = subprocess.run([str(Path(lab_dir) / "lab.sh"), "status"], capture_output=True, text=True, timeout=60).stdout
     except Exception:                                          # noqa: BLE001
         return []
-    vm_col, rows = None, []
+    vm_col, mem_col, rows, mem = None, None, [], {}
     for line in out.splitlines():
         cols = line.split()
         if cols[:1] == ["NODE"]:
             vm_col = cols.index("VM") if "VM" in cols else None
+            mem_col = cols.index("MEM") if "MEM" in cols else None
             continue
         m = re.match(r"^(\S+)\s+(\S+)\s+(running|shut off|undefined|paused|crashed|in shutdown)\b", line)
         if m:
             rest = line[m.end(3):].split()
             dom = rest[vm_col - 3] if vm_col is not None and len(rest) > vm_col - 3 else m[1]
             rows.append((m[1], m[2], dom))
+            if mem_col is not None and len(rest) > mem_col - 3 and rest[mem_col - 3].isdigit(): mem[dom] = int(rest[mem_col - 3])
+    _declared[lab_dir] = mem
     return rows
 
 
@@ -176,21 +184,33 @@ def invalidate(lab_dir=None):
     if lab_dir: _nodes.pop(lab_dir, None); _domains.pop(lab_dir, None); _totals.pop(lab_dir, None)
 
 
+def _absent(lab_dir, dom):
+    """The state of a node the runtime does not know: a containerlab lab removes its containers on `down` and keeps their
+    saved configurations, and declares their sizes (MEM in lab.sh status) — such a node is "shut off", not undefined."""
+    return "shut off" if dom in _declared.get(lab_dir, {}) else "undefined"
+
+
 def vm_states(lab_dir):
     """node -> {role, state, domain}, for the hub's cards — the same shape lab.sh status used to give."""
     live = live_states(); rows, _ = lab_nodes(lab_dir)
-    return {n: {"role": r, "state": live.get(dom, "undefined"), "domain": dom} for n, r, dom in rows}
+    return {n: {"role": r, "state": live.get(dom) or _absent(lab_dir, dom), "domain": dom} for n, r, dom in rows}
 
 
 def lab_vms(lab_dir):
     """[(node, domain, state)]."""
     live = live_states(); rows, _ = lab_nodes(lab_dir)
-    return [(n, dom, live.get(dom, "undefined")) for n, _r, dom in rows]
+    return [(n, dom, live.get(dom) or _absent(lab_dir, dom)) for n, _r, dom in rows]
+
+
+def sizes_for(lab_dir):
+    """domain -> MiB: what the runtime reports (libvirt, Docker), else what the lab declares (lab.sh status MEM)."""
+    lab_nodes(lab_dir)
+    return {**_declared.get(lab_dir, {}), **_domain_sizes()}
 
 
 def memory_plan(lab_dir, nodes=()):
     """What starting these nodes (or the whole lab) needs, and whether the host has it."""
-    sizes = _domain_sizes()
+    sizes = sizes_for(lab_dir)
     vms = [v for v in lab_vms(lab_dir) if not nodes or v[0] in nodes]
     to_start = [v for v in vms if v[2] != "running"]
     unknown = [v[0] for v in to_start if v[1] not in sizes]
@@ -241,7 +261,7 @@ def lab_total_gib(lab_dir):
     hit = _totals.get(lab_dir)
     if hit and time.time() - hit[0] < 600:
         return hit[1]
-    sizes = _domain_sizes()
+    sizes = sizes_for(lab_dir)
     doms = lab_domains(lab_dir)
     total = round(sum(sizes.get(dom, 0) for dom in doms) / 1024, 1)
     _totals[lab_dir] = (time.time(), total)

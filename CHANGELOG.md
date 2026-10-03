@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.21.0] — 2026-10-03
+
+### Fixed
+- **A containerlab lab that is down is budgeted and shown right.** After `lab.sh down` its containers are removed, so
+  Docker reported no sizes (the start was budgeted at 0 GiB) and no state (the nodes read `undefined`, red). A lab may now
+  print a MEM column (MiB) in `lab.sh status`: the hub uses it when the runtime has no size, and a declared node without a
+  container reads `shut off`.
+
 ## [0.20.0] — 2026-10-03
 
 ### Added
