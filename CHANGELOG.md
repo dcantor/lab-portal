@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.19.0] — 2026-10-03
+
+### Added
+- **The Lab Hub runs containerlab labs too** (evpn-clab, VyOS on containerlab). A lab's `lab.sh status` may list Docker
+  containers in its VM column; the hub reads their states from one `docker ps -a` in libvirt's words (running / shut off),
+  budgets memory from each container's limit and shows what the running ones hold (their cgroup's memory.current). Power
+  is unchanged: the lab's own `lab.sh up|down [node…]`. A lab whose nodes are all containers says "containers" instead
+  of "VMs" on its card. Docker is called through `sg docker` when the hub's user unit lacks the group.
+
 ## [0.18.0] — 2026-10-02
 
 ### Changed

@@ -509,7 +509,7 @@ function health(l) {
   const serious = pr.filter(x => x !== 'schedule skipped');
   if (serious.length) return { lvl: 'bad', why: serious };
   const w = [];
-  if (l.running < l.total) w.push(`${l.running} of ${l.total} VMs running`);
+  if (l.running < l.total) w.push(`${l.running} of ${l.total} ${U(l)} running`);
   if (l.power && l.power.status === 'running') w.push('a power operation is in progress');
   const t = l.tests;
   if (!t || t.error) w.push('no test results');
@@ -578,9 +578,10 @@ function setView(v) { VIEW = v; store.set('hub-view', v); renderLabs(); }
 function fold(name, on) { on ? FOLDED.add(name) : FOLDED.delete(name); store.set('hub-folded', [...FOLDED]); renderLabs(); }
 const ciPill = l => { const c = l.ci_status; if (!c) return ''; if (c.error) return '<span class="pill bad" title="CI unavailable">CI ?</span>';
   const r = c.latest; return r ? `<a class="pill ${pillOf(r.status)}" href="${esc(r.url)}" target="_blank" title="run ${r.number}${r.results ? ` · ${r.results.passed} passed, ${r.results.failed} failed` : ''}">CI ${esc(r.status)}</a>` : ''; };
+const U = l => l.unit || 'VMs';               // a containerlab lab's nodes are containers
 const vmPill = l => l.total === 0 ? '<span class="pill">no VMs read</span>'
-  : l.running === 0 ? `<span class="pill" title="every VM is shut down">off · ${l.total} VMs</span>`
-  : `<span class="pill ${l.running === l.total ? 'ok' : 'warn'}">${l.running}/${l.total} VMs running</span>`;
+  : l.running === 0 ? `<span class="pill" title="every node is shut down">off · ${l.total} ${U(l)}</span>`
+  : `<span class="pill ${l.running === l.total ? 'ok' : 'warn'}">${l.running}/${l.total} ${U(l)} running</span>`;
 const vmChipClass = st => st === 'running' ? 'running' : ['crashed', 'undefined'].includes(st) ? 'bad' : ['paused', 'in shutdown'].includes(st) ? 'warn' : '';
 const testPill = l => { const t = l.tests; return !t || t.error ? '' : `<span class="pill ${t.failed ? 'bad' : 'ok'}" title="last test run ${esc(t.when)}">tests ${t.passed}/${t.passed + t.failed}</span>`; };
 const verText = l => l.version && l.version.version ? `v${esc(l.version.version)}` : '<span title="no VERSION file">–</span>';
@@ -721,7 +722,7 @@ function renderHero(d) {
       <circle cx="${x}" cy="${y}" r="13" fill="#0b1324" stroke="${col}" stroke-width="2.2" ${l.running ? 'filter="url(#glow)"' : ''}/>
       <circle cx="${x}" cy="${y}" r="4.5" fill="${col}"/>
       <text x="${x}" y="${y + 29}" text-anchor="middle" class="nm">${esc(l.name)}</text>
-      <text x="${x}" y="${y + 42}" text-anchor="middle">${l.total ? `${l.running}/${l.total} VMs` : 'no VMs'}</text></g>`;
+      <text x="${x}" y="${y + 42}" text-anchor="middle">${l.total ? `${l.running}/${l.total} ${U(l)}` : 'no VMs'}</text></g>`;
   });
   // the hub itself
   g += `${anim ? `<circle class="ring" cx="${cx}" cy="${cy}" r="20"/>` : ''}<circle cx="${cx}" cy="${cy}" r="19" fill="url(#rg-hub)" filter="url(#glow)"/>
@@ -778,7 +779,7 @@ function cardHtml(l) {
       <dt>CI</dt><dd>${ciView(l)}</dd>
       <dt>Schedule</dt><dd>${schedView(l)}</dd>
       <dt>Needs</dt><dd>${l.total ? `${l.memory_gib} GiB when fully up` : '<span class="pill warn">memory unknown: lab.sh status lists no VMs</span>'}${(l.depends_on || []).length ? ` · depends on ${l.depends_on.map(d => `<span title="${esc(d.why)}">${esc(depName(d))}${d.kind === 'soft' ? '' : ' (hard)'}</span>`).join(', ')}` : ''}</dd>
-      <dt>VMs</dt><dd><div class="vms" style="margin-top:0">${Object.entries(l.vms).filter(([, x]) => typeof x === 'object' && x.state).map(([n, x]) => `<span class="vm ${vmChipClass(x.state)}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(x.state)}" title="${esc(x.role)} · ${esc(x.state)} — click to ${x.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div></dd></dl>
+      <dt>${U(l) === 'VMs' ? 'VMs' : 'Containers'}</dt><dd><div class="vms" style="margin-top:0">${Object.entries(l.vms).filter(([, x]) => typeof x === 'object' && x.state).map(([n, x]) => `<span class="vm ${vmChipClass(x.state)}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(x.state)}" title="${esc(x.role)} · ${esc(x.state)} — click to ${x.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div></dd></dl>
       ${opView(l.power)}
       <div class="links"><a href="${l.portal}" target="_blank">portal</a><a href="${l.portal}/docs" target="_blank">API</a><a href="${l.nautobot}" target="_blank">Nautobot</a>${l.gitea ? `<a href="${l.gitea}" target="_blank">Gitea configs</a>` : ''}${l.grafana ? `<a href="${l.grafana}" target="_blank">Grafana</a>` : ''}${l.looking_glass ? `<a href="${l.looking_glass}" target="_blank">Looking glass</a>` : ''}<a href="${l.repo}" target="_blank">GitHub</a></div>
     </div></div>`;

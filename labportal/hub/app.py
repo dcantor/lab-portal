@@ -194,7 +194,7 @@ def api_labs():
     out = []; rss = GUARD.qemu_rss()
     for lab in labs():
         vms = vm_states(lab["dir"]); running = sum(1 for v in vms.values() if isinstance(v, dict) and v.get("state") == "running")
-        out.append({**lab, "vms": vms, "running": running, "vm_source": GUARD.lab_nodes(lab["dir"])[1], "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
+        out.append({**lab, "vms": vms, "running": running, "vm_source": GUARD.lab_nodes(lab["dir"])[1], "unit": GUARD.lab_unit(lab["dir"]), "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
                     "tests": last_tests(lab["dir"]), "nautobot": lab.get("nautobot", NAUTOBOT), "power": OPS.get(lab["name"]),
                     "ci_status": CI.status(lab["ci"]) if lab.get("ci") else None,
                     "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"]),

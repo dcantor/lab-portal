@@ -9,8 +9,12 @@ Dependencies. A lab depends on other labs or on the NMS:
     portal run that seeds Nautobot fails) — "depends_on": [{"on": "nms", ...}] in labs.json, the default for every lab;
   - a lab on another lab whose VMs it attaches (hard): read from its lab.conf — srv6-core's EXT_LAB names the
     cat8000v-ipsec headends when they are attached as tenant-a sites, and nothing when they are detached.
-Starting a lab offers to start what it depends on first; shutting one down warns about the running labs that need it."""
-import os, re, subprocess, time
+Starting a lab offers to start what it depends on first; shutting one down warns about the running labs that need it.
+
+Containers. A containerlab lab (evpn-clab) lists Docker containers in `lab.sh status` where a libvirt lab lists domains.
+Their states come from one `docker ps -a` and are read in libvirt's words (running / shut off); their size is the
+container's memory limit (containerlab `memory:`), and what they hold is their cgroup's memory.current."""
+import grp, os, re, shlex, subprocess, time
 from pathlib import Path
 from . import shared as SHARED
 
@@ -31,11 +35,68 @@ def _domain_sizes():
             parts = line.split()
             if len(parts) == 2 and parts[1].isdigit():
                 sizes[parts[0]] = int(parts[1]) // 1024
+        sizes.update(_container_sizes())
         if sizes:
             _mem.update(at=time.time(), sizes=sizes)
     except Exception:                                          # noqa: BLE001 — no sizes means "unknown", never a crash
         pass
     return _mem["sizes"]
+
+
+# ---- Docker containers (containerlab labs) ------------------------------------------------------------------------------
+try: _DOCKER_GID = grp.getgrnam("docker").gr_gid
+except KeyError: _DOCKER_GID = None
+DOCKER_STATES = {"running": "running", "exited": "shut off", "created": "shut off", "dead": "crashed", "paused": "paused",
+                 "restarting": "in shutdown", "removing": "in shutdown"}
+
+
+def _docker(*args, timeout=20):
+    """docker, through `sg docker` when this process lacks the group (a user unit started before the user joined it)."""
+    cmd = ["docker", *args]
+    if _DOCKER_GID is not None and _DOCKER_GID not in os.getgroups():
+        cmd = ["sg", "docker", "-c", shlex.join(cmd)]
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+
+def _container_sizes():
+    """container name -> memory limit (MiB), for containers that have one."""
+    try:
+        ids = _docker("ps", "-aq").stdout.split()
+        if not ids: return {}
+        out = _docker("inspect", "-f", "{{.Name}} {{.HostConfig.Memory}}", *ids, timeout=60).stdout
+        return {n.lstrip("/"): int(m) // 2**20 for n, m in (l.split() for l in out.splitlines() if l.strip()) if m.isdigit() and int(m) > 0}
+    except Exception:                                          # noqa: BLE001
+        return {}
+
+
+_cs = {"at": 0.0, "states": {}}
+
+
+def container_states(max_age=2.0):
+    """container name -> state in libvirt's words, from one `docker ps -a` (cached for max_age seconds)."""
+    if time.time() - _cs["at"] < max_age: return _cs["states"]
+    try:
+        r = _docker("ps", "-a", "--format", "{{.Names}}\t{{.State}}")
+        if r.returncode == 0:
+            _cs.update(at=time.time(), states={n: DOCKER_STATES.get(st, st) for n, st in (l.split("\t", 1) for l in r.stdout.splitlines() if "\t" in l)})
+    except Exception:                                          # noqa: BLE001 — no Docker on the host is fine
+        pass
+    return _cs["states"]
+
+
+def container_rss():
+    """container name -> memory it holds (MiB): its cgroup's memory.current (systemd cgroup driver, cgroup v2)."""
+    out = {}
+    try:
+        r = _docker("ps", "--no-trunc", "--format", "{{.ID}} {{.Names}}")
+        for line in r.stdout.splitlines():
+            cid, name = line.split(None, 1)
+            for p in (f"/sys/fs/cgroup/system.slice/docker-{cid}.scope/memory.current", f"/sys/fs/cgroup/docker/{cid}/memory.current"):
+                try: out[name] = int(Path(p).read_text()) // 2**20; break
+                except OSError: continue
+    except Exception:                                          # noqa: BLE001
+        pass
+    return out
 
 
 # ---- what VMs each lab has (static: from lab.sh status, cached) and what state they are in (live: one virsh call) -----
@@ -89,7 +150,8 @@ def lab_nodes(lab_dir, refresh=False):
 
 
 def live_states(max_age=2.0):
-    """domain -> libvirt state for every VM on the host, from one `virsh list --all` (about 40 ms)."""
+    """domain -> libvirt state for every VM on the host, from one `virsh list --all` (about 40 ms), and every Docker
+    container (one `docker ps -a`) in the same words."""
     if time.time() - _live["at"] < max_age:
         return _live["states"]
     try:
@@ -98,15 +160,19 @@ def live_states(max_age=2.0):
         for line in r.stdout.splitlines():
             parts = line.split(None, 2)                       # " Id   Name   State" — the state can be two words
             if len(parts) == 3: states[parts[1]] = parts[2].strip()
-        if r.returncode == 0: _live.update(at=time.time(), states=states)
+        if r.returncode == 0:
+            _live.update(at=time.time(), states={**container_states(), **states})
     except Exception:                                          # noqa: BLE001
         pass
+    if not _live["states"]:                                    # no libvirt answer: the containers alone
+        cs = container_states()
+        if cs: _live.update(at=time.time(), states=cs)
     return _live["states"]
 
 
 def invalidate(lab_dir=None):
     """After a power operation or a rebuild: read the states (and, for that lab, its nodes) afresh."""
-    _live["at"] = 0.0
+    _live["at"] = 0.0; _cs["at"] = 0.0
     if lab_dir: _nodes.pop(lab_dir, None); _domains.pop(lab_dir, None); _totals.pop(lab_dir, None)
 
 
@@ -154,7 +220,8 @@ def lab_domains(lab_dir):
 
 
 def qemu_rss():
-    """libvirt domain -> resident memory of its QEMU process (MiB): what a running VM really holds, not its maximum."""
+    """libvirt domain -> resident memory of its QEMU process (MiB): what a running VM really holds, not its maximum; and
+    each running container -> its cgroup's memory."""
     out = {}
     for p in Path("/proc").iterdir():
         if not p.name.isdigit(): continue
@@ -165,6 +232,7 @@ def qemu_rss():
             if m and rss: out[m[1].decode()] = int(rss[1]) // 1024
         except Exception:                                      # noqa: BLE001 — processes come and go
             pass
+    out.update(container_rss())
     return out
 
 
@@ -235,3 +303,10 @@ def nms_plan(all_labs, running):
     """Shutting down the NMS: every running lab loses monitoring, CI, backups and Nautobot."""
     return {"dependents_up": [{"lab": l["name"], **d} for l in all_labs if running.get(l["name"])
                               for d in depends_on(l, all_labs) if d["on"] == "nms"]}
+
+
+def lab_unit(lab_dir):
+    """What a lab's nodes are, for the page: "containers" when every one is a Docker container, else "VMs"."""
+    rows, _ = lab_nodes(lab_dir)
+    cs = container_states() if rows else {}
+    return "containers" if rows and all(dom in cs for _n, _r, dom in rows) else "VMs"

@@ -34,6 +34,10 @@ live on — each with a bar), then every lab with its VMs (running / total, from
 last run, the last Robot result (from `results/latest`), and links to the portal, its API, Nautobot, the Gitea
 configuration repo and GitHub.
 
+**Containers.** A lab can be containers instead of VMs (evpn-clab: VyOS on containerlab). Its `lab.sh status` lists the
+containers in the VM column; the hub reads their state from Docker (running / shut off), budgets memory from each
+container's limit and measures what it holds from its cgroup. Everything else — power, schedules, tests — is the same.
+
 **Power**: each lab can be brought up or shut down from here — the whole lab with the two buttons, or any single VM by
 clicking its name. Every one of them asks first, saying what it will do and what it costs ("Shut down host-spoke2 in
 cat8000v-ipsec? It is running. A router saves its configuration first…"). The hub runs that lab's own `lab.sh up|down [node…]`, so a shutdown still saves each router's
