@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.27.0] — 2026-10-04
+
+### Added
+- **A lab without a portal** (srl-evpn, so far): `portal` is optional in labs.json. Its card says "no portal" instead
+  of a red "portal down" counted as a problem, and drops the portal and API links.
+
 ## [0.26.0] — 2026-10-04
 
 ### Added

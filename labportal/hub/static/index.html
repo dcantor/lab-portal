@@ -615,7 +615,7 @@ function compactTable(labs) {
     ${labs.map(l => { const ph = l.portal_health, vmcls = l.running === 0 ? 'bad' : (l.running === l.total ? 'ok' : 'warn');
       const op = l.power && l.power.status === 'running' ? ` <span class="pill warn">⏳</span>` : '';
       return `<tr data-name="${esc(l.name)}"><td class="name"><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span>${hdot(l)}<a href="#" data-open="${esc(l.name)}" title="open its card">${esc(l.name)}</a>${op}</td>
-        <td>${vmPill(l)}</td><td><a class="pill ${ph.up ? 'ok' : 'bad'}" href="${l.portal}" target="_blank">${ph.up ? 'up' : 'down'}</a>${ph.active ? ' <span class="pill warn">run</span>' : ''}</td>
+        <td>${vmPill(l)}</td><td>${ph.none ? '<span class="pill">none</span>' : `<a class="pill ${ph.up ? 'ok' : 'bad'}" href="${l.portal}" target="_blank">${ph.up ? 'up' : 'down'}</a>`}${ph.active ? ' <span class="pill warn">run</span>' : ''}</td>
         <td>${testPill(l)}</td><td>${ciPill(l) || '<span class="hint">–</span>'}</td><td>${verText(l)}${l.version && l.version.uncommitted ? ` <span class="hint">+${l.version.uncommitted}</span>` : ''}</td>
         <td>${l.total ? l.memory_gib + ' GiB' : '<span class="hint">?</span>'}</td><td class="hint">${nextText(l) || ((l.schedule || {}).schedule ? 'set' : '–')}</td><td>${powerBtns(l, true)}</td></tr>`; }).join('')}
     </tbody></table></div>`;
@@ -624,7 +624,7 @@ function compactTable(labs) {
 // ---- filter, sort and your own order: remembered per browser -----------------------------------------------------
 let SHOW = store.get('hub-show', 'all'), SORT = store.get('hub-sort', 'custom'), ORDER = store.get('hub-order', []), Q = '', DRAG = null, PENDING = false;
 const problems = l => [l.tests && l.tests.failed && 'tests failing', l.ci_status && l.ci_status.latest && l.ci_status.latest.status === 'failure' && 'CI failed',
-                      l.portal_health && !l.portal_health.up && 'portal down', l.power && l.power.status === 'failed' && 'power operation failed',
+                      l.portal_health && !l.portal_health.none && !l.portal_health.up && 'portal down', l.power && l.power.status === 'failed' && 'power operation failed',
                       ((l.schedule || {}).events || [])[0] && !(l.schedule.events[0].ok) && 'schedule skipped'].filter(Boolean);
 function visibleLabs(labs) {
   const q = Q.trim().toLowerCase();
@@ -809,20 +809,20 @@ function cardHtml(l) {
   const nextFact = sc.next ? `${sc.next.action} ${when(sc.next.at)}` : (sc.schedule ? (sc.schedule.enabled ? 'idle-watch only' : 'off') : '<span class="hint">none</span>');
   const fact = (k, val, title) => `<div class="fact"${title ? ` title="${esc(title)}"` : ''}><div class="k">${k}</div><div class="v">${val}</div></div>`;
   return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}" data-name="${esc(l.name)}">
-    <h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold'}">${folded ? '▸' : '▾'}</button>${hdot(l)}<a href="${l.portal}" target="_blank" title="${esc(l.dir)}">${esc(l.name)}</a>
-      ${vmPill(l)} <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${ph.active ? ` <span class="pill warn">run: ${esc(ph.active.mode)}</span>` : ''}${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''} ${alertPill(l)}
+    <h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold'}">${folded ? '▸' : '▾'}</button>${hdot(l)}<a href="${l.portal || l.repo || '#'}" target="_blank" title="${esc(l.dir)}">${esc(l.name)}</a>
+      ${vmPill(l)} ${ph.none ? '<span class="pill" title="this lab has no portal (yet)">no portal</span>' : `<span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>`}${ph.active ? ` <span class="pill warn">run: ${esc(ph.active.mode)}</span>` : ''}${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''} ${alertPill(l)}
       <span class="acts">${powerBtns(l, true)}</span></h2>
     <div class="facts">${fact('Tests', testsShort(l))}${fact('CI', ciFact)}${fact('Version', verFact)}${fact('Memory', memFact)}${fact('Next', nextFact)}</div>
     <div class="body details">
       <p class="desc">${esc(l.description || '')}</p>
-      <dl class="kv"><dt>Portal</dt><dd><a href="${l.portal}" target="_blank">${l.portal}</a>${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
+      <dl class="kv"><dt>Portal</dt><dd>${l.portal ? `<a href="${l.portal}" target="_blank">${l.portal}</a>` : '<span class="hint">none yet — lab.sh and the tests</span>'}${ph.last ? ` · last run ${esc(ph.last.mode)} <span class="pill ${ph.last.status === 'success' ? 'ok' : 'bad'}">${esc(ph.last.status)}</span>` : ''}</dd>
       <dt>Version</dt><dd>${versionView(l)}</dd>
       <dt>CI</dt><dd>${ciView(l)}</dd>
       <dt>Schedule</dt><dd>${schedView(l)}</dd>
       <dt>Needs</dt><dd>${l.total ? `${l.memory_gib} GiB when fully up` : '<span class="pill warn">memory unknown: lab.sh status lists no VMs</span>'}${(l.depends_on || []).length ? ` · depends on ${l.depends_on.map(d => `<span title="${esc(d.why)}">${esc(depName(d))}${d.kind === 'soft' ? '' : ' (hard)'}</span>`).join(', ')}` : ''}</dd>
       <dt>${U(l) === 'VMs' ? 'VMs' : 'Containers'}</dt><dd><div class="vms" style="margin-top:0">${Object.entries(l.vms).filter(([, x]) => typeof x === 'object' && x.state).map(([n, x]) => `<span class="vm ${vmChipClass(x.state)}" data-lab="${esc(l.name)}" data-node="${esc(n)}" data-state="${esc(x.state)}" title="${esc(x.role)} · ${esc(x.state)} — click to ${x.state === 'running' ? 'shut down' : 'start'}">${esc(n)}</span>`).join('')}</div></dd></dl>
       ${opView(l.power)}
-      <div class="links"><a href="${l.portal}" target="_blank">portal</a><a href="${l.portal}/docs" target="_blank">API</a><a href="${l.nautobot}" target="_blank">Nautobot</a>${l.gitea ? `<a href="${l.gitea}" target="_blank">Gitea configs</a>` : ''}${l.grafana ? `<a href="${l.grafana}" target="_blank">Grafana</a>` : ''}${l.looking_glass ? `<a href="${l.looking_glass}" target="_blank">Looking glass</a>` : ''}<a href="${l.repo}" target="_blank">GitHub</a></div>
+      <div class="links">${l.portal ? `<a href="${l.portal}" target="_blank">portal</a><a href="${l.portal}/docs" target="_blank">API</a>` : ''}<a href="${l.nautobot}" target="_blank">Nautobot</a>${l.gitea ? `<a href="${l.gitea}" target="_blank">Gitea configs</a>` : ''}${l.grafana ? `<a href="${l.grafana}" target="_blank">Grafana</a>` : ''}${l.looking_glass ? `<a href="${l.looking_glass}" target="_blank">Looking glass</a>` : ''}<a href="${l.repo}" target="_blank">GitHub</a></div>
     </div></div>`;
 }
 

@@ -106,6 +106,7 @@ def last_tests(lab_dir):
 
 
 def portal_health(url):
+    if not url: return {"up": None, "none": True}           # a lab without a portal (yet): nothing to be down
     try:
         r = requests.get(url + "/api/runs", timeout=3); runs = r.json() if r.ok else []
         active = next((x for x in runs if x.get("status") in ("running", "queued")), None)
@@ -198,7 +199,7 @@ def api_labs():
     out = []; rss = GUARD.qemu_rss()
     for lab in labs():
         vms = vm_states(lab["dir"]); running = sum(1 for v in vms.values() if isinstance(v, dict) and v.get("state") == "running")
-        out.append({**lab, "vms": vms, "running": running, "vm_source": GUARD.lab_nodes(lab["dir"])[1], "unit": GUARD.lab_unit(lab["dir"]), "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab["portal"]),
+        out.append({**lab, "vms": vms, "running": running, "vm_source": GUARD.lab_nodes(lab["dir"])[1], "unit": GUARD.lab_unit(lab["dir"]), "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal_health": portal_health(lab.get("portal")),
                     "tests": last_tests(lab["dir"]), "nautobot": lab.get("nautobot", NAUTOBOT), "power": OPS.get(lab["name"]),
                     "ci_status": CI.status(lab["ci"]) if lab.get("ci") else None,
                     "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"]),
@@ -267,7 +268,7 @@ def start_power(lab, req, why="from the hub"):
     if unknown: raise PowerRefused(422, f"no such node in {name}: {', '.join(unknown)}")
     if not req.nodes and not req.confirm: raise PowerRefused(422, f"this would {req.action} every VM of {name} — send confirm: true")
     if req.action == "down" and not req.force:   # never pull the rug from under a Terraform apply
-        active = (portal_health(lab["portal"]) or {}).get("active")
+        active = (portal_health(lab.get("portal")) or {}).get("active")
         if active: raise PowerRefused(409, f"{name}: a {active['mode']} run is in progress ({active['id']}) — let it finish, or send force: true")
         if lab.get("ci") and CI.status(lab["ci"]).get("running"):
             raise PowerRefused(409, f"{name}: a CI run is testing this lab — stop it first, or send force: true")
@@ -347,7 +348,7 @@ def services_power(req: ConfirmedPower):
     if req.action not in ("up", "down"): raise HTTPException(422, "action must be up or down")
     if not req.confirm: raise HTTPException(422, "send confirm: true")
     if req.action == "down" and not req.force:
-        busy = [(l["name"], a) for l in labs() for a in [(portal_health(l["portal"]) or {}).get("active")] if a]
+        busy = [(l["name"], a) for l in labs() for a in [(portal_health(l.get("portal")) or {}).get("active")] if a]
         if busy: raise HTTPException(409, f"portal runs in progress need Nautobot and Gitea: {', '.join(f'{n} ({a['mode']})' for n, a in busy)} — let them finish, or send force: true")
     with _ops_lock:
         cur = SERVICE_OP.get("op")
@@ -418,7 +419,7 @@ def keepawake(name: str):
 def _lab_status(lab):
     vms = vm_states(lab["dir"])
     return {"running": sum(1 for v in vms.values() if isinstance(v, dict) and v.get("state") == "running"),
-            "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal": portal_health(lab["portal"]),
+            "total": len([v for v in vms.values() if isinstance(v, dict)]), "portal": portal_health(lab.get("portal")),
             "ci": CI.status(lab["ci"]) if lab.get("ci") else None}
 
 
