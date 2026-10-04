@@ -115,7 +115,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* | stats by (sampler_address) count() as samples",
+     "expr": "sampler_address:* -lab:evpn-clab | stats by (sampler_address) count() as samples",
      "legendFormat": "{{sampler_address}}",
      "queryType": "stats"
     }
@@ -165,7 +165,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats sum(bytes) as b | math b * 16 as bytes | fields bytes",
+     "expr": "sampler_address:* -lab:evpn-clab proto:\"IPv6-Route\" | stats sum(bytes) as b | math b * 16 as bytes | fields bytes",
      "legendFormat": "bytes",
      "queryType": "stats"
     }
@@ -216,7 +216,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats count_uniq(src_addr, dst_addr) as paths",
+     "expr": "sampler_address:* -lab:evpn-clab proto:\"IPv6-Route\" | stats count_uniq(src_addr, dst_addr) as paths",
      "legendFormat": "paths",
      "queryType": "stats"
     }
@@ -266,7 +266,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats by (src_addr, dst_addr) sum(bytes) as sampled_bytes, count() as samples, count_uniq(sampler_address) as seen_by | math sampled_bytes * 16 as est_bytes | sort by (est_bytes desc) | limit 30",
+     "expr": "sampler_address:* -lab:evpn-clab proto:\"IPv6-Route\" | stats by (src_addr, dst_addr) sum(bytes) as sampled_bytes, count() as samples, count_uniq(sampler_address) as seen_by | math sampled_bytes * 16 as est_bytes | sort by (est_bytes desc) | limit 30",
      "legendFormat": "",
      "queryType": "stats"
     }
@@ -304,7 +304,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats by (sampler_address, dst_addr) sum(bytes) as sampled_bytes, count() as samples | sort by (sampler_address, sampled_bytes desc) | limit 40",
+     "expr": "sampler_address:* -lab:evpn-clab proto:\"IPv6-Route\" | stats by (sampler_address, dst_addr) sum(bytes) as sampled_bytes, count() as samples | sort by (sampler_address, sampled_bytes desc) | limit 40",
      "legendFormat": "",
      "queryType": "stats"
     }
@@ -342,7 +342,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* proto:\"IPv6-Route\" | stats by (_time:1m, dst_addr) sum(bytes) as sampled | math sampled * 16 as bytes | fields _time, dst_addr, bytes",
+     "expr": "sampler_address:* -lab:evpn-clab proto:\"IPv6-Route\" | stats by (_time:1m, dst_addr) sum(bytes) as sampled | math sampled * 16 as bytes | fields _time, dst_addr, bytes",
      "legendFormat": "{{dst_addr}}",
      "queryType": "statsRange"
     }
@@ -385,7 +385,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* | stats by (_time:1m, sampler_address) count() as samples",
+     "expr": "sampler_address:* -lab:evpn-clab | stats by (_time:1m, sampler_address) count() as samples",
      "legendFormat": "{{sampler_address}}",
      "queryType": "statsRange"
     }
@@ -427,7 +427,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* | stats by (proto, etype) count() as samples | sort by (samples desc) | limit 12",
+     "expr": "sampler_address:* -lab:evpn-clab | stats by (proto, etype) count() as samples | sort by (samples desc) | limit 12",
      "legendFormat": "",
      "queryType": "stats"
     }
@@ -465,7 +465,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "sampler_address:* proto:\"IPv6-Route\" (ipv6_routing_header_seg_left:>0 OR dst_addr:~\"^fd00:c(:[0-9a-f]+){3,}::\") | stats by (sampler_address, src_addr, dst_addr, ipv6_routing_header_addresses) count() as samples | sort by (samples desc) | limit 12",
+     "expr": "sampler_address:* -lab:evpn-clab proto:\"IPv6-Route\" (ipv6_routing_header_seg_left:>0 OR dst_addr:~\"^fd00:c(:[0-9a-f]+){3,}::\") | stats by (sampler_address, src_addr, dst_addr, ipv6_routing_header_addresses) count() as samples | sort by (samples desc) | limit 12",
      "legendFormat": "",
      "queryType": "stats"
     }

@@ -1,0 +1,29 @@
+# goflow2 mapping for evpn-clab's listener (UDP 6344): the usual fields, plus what is inside a VXLAN packet — goflow2 has
+# no VXLAN parser, so these are read at fixed offsets from the UDP header (in bits): VXLAN is 8 bytes after it (the VNI at
+# bit 32 of it), then the inner Ethernet (14 bytes, untagged), then the inner IPv4 header (assumed 20 bytes for the ports).
+# The offsets apply to every UDP sample; the Lua filter (evpn-clab.lua) keeps them only for UDP to port 4789.
+formatter:
+  fields: [type, time_received_ns, sampling_rate, sampler_address, bytes, packets, src_addr, dst_addr, etype, proto,
+           src_port, dst_port, in_if, out_if, src_mac, dst_mac, vlan_id, tcp_flags,
+           vxlan_vni, inner_etype, inner_src_addr, inner_dst_addr, inner_proto, inner_src_port, inner_dst_port]
+  protobuf:
+    - {name: vxlan_vni, index: 1101, type: varint}
+    - {name: inner_etype, index: 1102, type: varint}
+    - {name: inner_src_addr, index: 1103, type: string}
+    - {name: inner_dst_addr, index: 1104, type: string}
+    - {name: inner_proto, index: 1105, type: varint}
+    - {name: inner_src_port, index: 1106, type: varint}
+    - {name: inner_dst_port, index: 1107, type: varint}
+  render:
+    time_received_ns: datetimenano
+    inner_src_addr: ip
+    inner_dst_addr: ip
+sflow:
+  mapping:
+    - {layer: "udp", offset: 96, length: 24, destination: vxlan_vni}        # UDP 8 B + VXLAN flags 4 B
+    - {layer: "udp", offset: 224, length: 16, destination: inner_etype}     # + VXLAN 8 B + inner MACs 12 B
+    - {layer: "udp", offset: 312, length: 8, destination: inner_proto}      # + inner Ethernet 14 B + 9 B into IPv4
+    - {layer: "udp", offset: 336, length: 32, destination: inner_src_addr}
+    - {layer: "udp", offset: 368, length: 32, destination: inner_dst_addr}
+    - {layer: "udp", offset: 400, length: 16, destination: inner_src_port}  # + inner IPv4 20 B
+    - {layer: "udp", offset: 416, length: 16, destination: inner_dst_port}

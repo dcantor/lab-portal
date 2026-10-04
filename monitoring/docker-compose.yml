@@ -44,12 +44,21 @@ services:
     ports: ["6343:6343/udp", "8083:8080"]
     volumes: ["flows:/flows"]
 
+  goflow2-evpn-clab:                              # evpn-clab's sFlow (its spines, leaves and wan): VXLAN decoded by flows/evpn-clab-mapping.yaml
+    image: netsampler/goflow2:v2
+    restart: unless-stopped
+    command: ["-listen=sflow://:6344", "-format=json", "-mapping=/etc/flows/evpn-clab-mapping.yaml",
+              "-transport=file", "-transport.file=/flows/evpn-clab.json", "-addr=:8080"]
+    user: "0:0"
+    ports: ["6344:6344/udp", "8084:8080"]
+    volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
+
   flows-shipper:                                  # Fluent Bit tails goflow2's file into VictoriaLogs (structured records, stream per exporter)
     image: fluent/fluent-bit:3.2
     restart: unless-stopped
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/etc/flows/fluent-bit.conf"]
     volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
-    depends_on: [goflow2, victorialogs]
+    depends_on: [goflow2, goflow2-evpn-clab, victorialogs]
 
   flows-rotate:                                   # daily truncation of the goflow2 file
     image: busybox:1.37

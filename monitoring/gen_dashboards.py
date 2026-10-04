@@ -321,7 +321,7 @@ p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_r
 # carries lab=evpn-clab — the hostnames are evpn-fabric's, so every log query filters on that field)
 _id[0] = 0
 L = 'lab="evpn-clab"'
-ECH = 'lab:evpn-clab '
+ECH = 'lab:evpn-clab -type:SFLOW_5 '   # its syslog; its sFlow records (lab=evpn-clab too) have type SFLOW_5
 p = []
 p.append(row("The fabric", 0))
 p.append(panel("Nodes healthy", "stat", [(f"count(lab_node_health{{{L}}} == 1) or vector(0)", "ok"), (f"count(lab_node_health{{{L}}})", "nodes")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}]}))
@@ -479,7 +479,7 @@ p.append(panel("Commits and configuration changes (vyos-configd / commit)", "log
 (OUT / "vyos-telegraf.json").write_text(json.dumps(dashboard("vyos-telegraf", "VyOS telemetry: Telegraf and syslog", p, ["lab", "vyos", "telegraf"], TV), indent=1))
 # ---------------------------------------------------------------- Flows (sFlow from PEs / Ps -> goflow2 -> VictoriaLogs)
 _id[0] = 0
-FL = 'sampler_address:* '                                   # every sFlow record (goflow2 JSON, one per sampled packet)
+FL = 'sampler_address:* -lab:evpn-clab '                    # every srv6-core sFlow record (goflow2 JSON, one per sampled packet); evpn-clab has its own
 SR = FL + 'proto:"IPv6-Route" '                              # SRv6-encapsulated packets: outer IPv6 with a routing header
 p = []
 p.append(panel("Sampled packets / min per exporter", "stat", [(FL + '| stats by (sampler_address) count() as samples', "{{sampler_address}}", {"queryType": "stats"})], 0, 0, 12, 4, ds=VL, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]}))
@@ -492,4 +492,42 @@ p.append(panel("Sampled packets / min per exporter", "timeseries", [logs_ts(FL +
 p.append(panel("Protocols in the core (sampled packets)", "table", [(FL + '| stats by (proto, etype) count() as samples | sort by (samples desc) | limit 12', "", {"queryType": "stats"})], 0, 22, 8, 8, ds=VL))
 p.append(panel("Steered packets: uSID carrier (3+ uSIDs in the destination) or an SRH with segments left", "table", [(SR + '(ipv6_routing_header_seg_left:>0 OR dst_addr:~"^fd00:c(:[0-9a-f]+){3,}::") | stats by (sampler_address, src_addr, dst_addr, ipv6_routing_header_addresses) count() as samples | sort by (samples desc) | limit 12', "", {"queryType": "stats"})], 8, 22, 16, 8, ds=VL))
 (OUT / "flows.json").write_text(json.dumps(dashboard("srv6-flows", "SRv6 flows (sFlow)", p, ["srv6-core", "flows", "sflow"]), indent=1))
+# ---------------------------------------------------------------- evpn-clab flows (sFlow: hsflowd on the spines, leaves and wan -> goflow2's
+# evpn-clab listener, VXLAN decoded -> Fluent Bit names each sample (flows/evpn-clab.lua) -> VictoriaLogs). One record per sampled
+# packet; est_bytes = bytes x sampling rate. Each node samples on ingress, so a packet is counted once per *view*: access (a leaf's
+# host ports: what the hosts send), fabric (the spines: VXLAN between VTEPs), edge (the wan). `entry` marks where a packet enters
+# the lab (access, or the wan from the internet): counting only those counts every packet once — the top talkers.
+_id[0] = 0
+EF = 'lab:evpn-clab type:SFLOW_5 '
+EN = EF + 'entry:true '
+SP = EF + 'view:fabric encap:vxlan '
+ED = EF + 'view:edge '
+BPS = lambda by: f'| stats by (_time:1m, {by}) sum(est_bytes) as b | math b * 8 / 60 as bps | fields _time, {by}, bps'
+BL = {"steps": [{"color": "blue", "value": None}]}
+BYTES = [{"matcher": {"id": "byName", "options": "bytes"}, "properties": [{"id": "unit", "value": "bytes"}]}]   # only that column: a port is not KiB
+p = []
+p.append(panel("Traffic entering the lab (estimated, selected range)", "stat", [(EN + '| stats sum(est_bytes) as bytes', "bytes", {"queryType": "stats"})], 0, 0, 6, 4, ds=VL, unit="bytes", colorMode="value", thresholds=BL))
+p.append(panel("Conversations (host pairs)", "stat", [(EN + '| stats count_uniq(pair) as pairs', "pairs", {"queryType": "stats"})], 6, 0, 4, 4, ds=VL, colorMode="value", thresholds=BL))
+p.append(panel("VTEP pairs carrying VXLAN", "stat", [(SP + '| stats count_uniq(vtep_src, vtep_dst) as pairs', "pairs", {"queryType": "stats"})], 10, 0, 4, 4, ds=VL, colorMode="value", thresholds=BL))
+p.append(panel("Samples per exporter (selected range)", "stat", [(EF + '| stats by (node) count() as samples', "{{node}}", {"queryType": "stats"})], 14, 0, 10, 4, ds=VL, colorMode="value", thresholds=BL))
+p.append(row("Who talks to whom (where packets enter the lab: each packet once)", 4))
+p.append(panel("Top conversations (estimated bytes)", "table", [(EN + '| stats by (pair, tenant, app_proto, app_port) sum(est_bytes) as bytes | sort by (bytes desc) | limit 20', "", {"queryType": "stats"})], 0, 5, 10, 10, ds=VL, overrides=BYTES, columns=["pair", "tenant", "app_proto", "app_port"]))
+p.append(panel("Conversations over time (bit/s, 1-min averages, estimated)", "timeseries", [logs_ts(EN + BPS("pair"), "{{pair}}")], 10, 5, 14, 10, ds=VL, unit="bps", min=0))
+p.append(panel("Per tenant (bit/s, 1-min averages)", "timeseries", [logs_ts(EN + BPS("tenant"), "{{tenant}}")], 0, 15, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("Top senders (bit/s)", "timeseries", [logs_ts(EN + BPS("host_src"), "{{host_src}}")], 8, 15, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("Applications (protocol / destination port, estimated bytes)", "table", [(EN + '| stats by (app_proto, app_port) sum(est_bytes) as bytes | sort by (bytes desc) | limit 12', "", {"queryType": "stats"})], 16, 15, 8, 8, ds=VL, overrides=BYTES, columns=["app_proto", "app_port"]))
+p.append(row("The fabric: VXLAN between VTEPs (sampled on the spines)", 23))
+p.append(panel("VTEP pairs and VNIs (estimated bytes)", "table", [(SP + '| stats by (vtep_src, vtep_dst, vni_name) sum(est_bytes) as bytes | sort by (bytes desc) | limit 20', "", {"queryType": "stats"})], 0, 24, 10, 10, ds=VL, overrides=BYTES, columns=["vtep_src", "vtep_dst", "vni_name"]))
+p.append(panel("ECMP: VXLAN through each spine (bit/s)", "timeseries", [logs_ts(SP + BPS("node"), "{{node}}")], 10, 24, 7, 10, ds=VL, unit="bps", min=0))
+p.append(panel("Per VNI (bit/s)", "timeseries", [logs_ts(SP + BPS("vni_name"), "{{vni_name}}")], 17, 24, 7, 10, ds=VL, unit="bps", min=0))
+p.append(panel("Which spine carries which conversation (flows hash onto one spine each)", "table", [(SP + '| stats by (pair, vtep_src, vtep_dst, node) sum(est_bytes) as bytes | sort by (bytes desc) | limit 20', "", {"queryType": "stats"})], 0, 34, 12, 9, ds=VL, overrides=BYTES, columns=["pair", "vtep_src", "vtep_dst", "node"]))
+p.append(panel("Inside the tunnels (inner protocol, samples)", "table", [(SP + '| stats by (inner_proto_name, tenant) count() as samples | sort by (samples desc) | limit 10', "", {"queryType": "stats"})], 12, 34, 6, 9, ds=VL, columns=["inner_proto_name", "tenant"]))
+p.append(panel("The fabric's own traffic on the spines (BFD, BGP, OSPF: samples)", "table", [(EF + 'view:fabric -encap:vxlan | stats by (app_proto, app_port, from) count() as samples | sort by (samples desc) | limit 12', "", {"queryType": "stats"})], 18, 34, 6, 9, ds=VL, columns=["app_proto", "app_port", "from"]))
+p.append(row("North-south: the wan (borders <-> the internet, through the firewall)", 43))
+p.append(panel("Into the wan, by where it came from (bit/s)", "timeseries", [logs_ts(ED + BPS("from"), "{{from}}")], 0, 44, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("Per tenant at the edge (bit/s)", "timeseries", [logs_ts(ED + '-tenant:none ' + BPS("tenant"), "{{tenant}}")], 8, 44, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("North-south conversations (estimated bytes)", "table", [(ED + '-tenant:none | stats by (pair, from, tenant) sum(est_bytes) as bytes | sort by (bytes desc) | limit 15', "", {"queryType": "stats"})], 16, 44, 8, 8, ds=VL, overrides=BYTES, columns=["pair", "from", "tenant"]))
+p.append(row("Samples", 52))
+p.append(panel("Newest samples (message = conversation; open one for every field)", "logs", [(EF, "")], 0, 53, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+(OUT / "evpn-clab-flows.json").write_text(json.dumps(dashboard("evpn-clab-flows", "EVPN clab: flows (sFlow)", p, ["evpn-clab", "flows", "sflow"], refresh="1m", lab="evpn-clab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

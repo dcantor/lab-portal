@@ -7,6 +7,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.25.0] — 2026-10-04
+
+### Added
+- **evpn-clab flow analytics**: `goflow2-evpn-clab` (UDP 6344; goflow2 metrics on 8084) with a mapping that decodes VXLAN
+  (VNI, inner addresses, protocol, ports) by offset; Fluent Bit tails its file through `flows/evpn-clab.lua`, which names
+  every sample from the lab's fabric.yml (`flows/gen_evpn_clab.py` → `flows/evpn-clab-names.lua`) and drops egress samples,
+  into VictoriaLogs (`lab=evpn-clab`, stream per node). Dashboard **EVPN clab: flows (sFlow)**: top conversations, tenants,
+  senders, applications; VTEP pairs and VNIs, VXLAN per spine (ECMP), which spine carries which conversation, the inner
+  protocols, the fabric's own traffic; north-south per border and tenant; the raw samples.
+
+### Changed
+- `deploy.sh` restarts `flows-shipper` (Fluent Bit does not re-read its config or Lua); the goflow2 files are truncated
+  hourly instead of daily.
+
+### Fixed
+- The evpn-clab overview's "Syslog lines per node" and the SRv6 flows dashboard would have counted evpn-clab's flow records
+  (they carry `lab=evpn-clab` / `sampler_address` too): they exclude them.
+
 ## [0.24.0] — 2026-10-03
 
 ### Added

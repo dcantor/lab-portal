@@ -6,5 +6,6 @@ NMS=${NMS:-lab@10.0.0.10}; DIR=$(cd "$(dirname "$0")" && pwd); SSH="ssh -o Stric
 $SSH "$NMS" 'sudo -n true 2>/dev/null && sudo mkdir -p /opt/monitoring && sudo chown $(id -u):$(id -g) /opt/monitoring || mkdir -p /opt/monitoring'
 rsync -a --delete -e "$SSH" --exclude deploy.sh "$DIR/" "$NMS:/opt/monitoring/"
 $SSH "$NMS" 'cd /opt/monitoring && docker compose up -d --remove-orphans && sleep 3 && docker compose ps --format "{{.Name}} {{.Status}}"'
+$SSH "$NMS" 'cd /opt/monitoring && docker compose restart flows-shipper >/dev/null && echo "flows-shipper restarted"'   # Fluent Bit does not re-read its config or Lua
 $SSH "$NMS" 'curl -sf -X POST http://localhost:9090/-/reload && echo "prometheus reloaded"' || echo "prometheus reload skipped (not up yet)"
 $SSH "$NMS" 'curl -sf -X POST http://localhost:8880/-/reload && echo "vmalert-logs reloaded"' || echo "vmalert-logs reload skipped (not up yet)"   # it does not watch its rule file
