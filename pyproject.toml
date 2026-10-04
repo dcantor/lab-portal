@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labportal"
-version = "0.28.0"
+version = "0.29.0"
 description = "Shared machinery for the lab portals (cat8000v-ipsec, srv6-core): pipeline runs with resume, Robot reports, and the lab hub"
 requires-python = ">=3.11"
 dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "requests>=2.31", "httpx>=0.27"]

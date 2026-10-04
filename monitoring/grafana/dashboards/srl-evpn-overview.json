@@ -937,6 +937,162 @@
      "mode": "multi"
     }
    }
+  },
+  {
+   "id": 21,
+   "type": "row",
+   "title": "Syslog (VictoriaLogs, lab=srl-evpn): SR Linux's events",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 52,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 22,
+   "title": "Events / 5 min per node",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 53,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:srl-evpn \"|EV|\" | stats by (_time:5m, hostname) count() as events",
+     "legendFormat": "{{hostname}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 23,
+   "title": "Events by name (selected range)",
+   "type": "table",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 53,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:srl-evpn \"|EV|\" | extract \"|EV|<event>|\" | stats by (event) count() as events | sort by (events desc) | limit 15",
+     "legendFormat": "",
+     "queryType": "stats"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   },
+   "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {
+      "mode": "columns"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true
+      },
+      "renameByName": {
+       "Value": "events"
+      },
+      "indexByName": {
+       "event": 0,
+       "Value": 1
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "title": "Newest events (BGP, BFD, ports, LAGs, segments, commits)",
+   "type": "logs",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 61,
+    "w": 24,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:srl-evpn \"|EV|\" ",
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": false,
+    "sortOrder": "Descending"
+   }
   }
  ],
  "links": [

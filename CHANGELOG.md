@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.29.0] — 2026-10-04
+
+### Added
+- **srl-evpn syslog**: a VictoriaLogs listener on UDP 5516 that stamps `lab=srl-evpn`; log alert group `srl-evpn-events`
+  (BGP session fell from Established, BFD down, port down, a dual-homed host's LAG / member down, a DF change and
+  commits as info) matching SR Linux's structured event names; an events row on the srl-evpn dashboard. The generic log
+  rules exclude `lab:srl-evpn` as they do `lab:evpn-clab`.
+
 ## [0.28.0] — 2026-10-04
 
 ### Added

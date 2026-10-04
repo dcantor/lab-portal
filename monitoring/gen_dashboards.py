@@ -563,5 +563,10 @@ p.append(panel("MAC entries per VLAN (each leaf)", "timeseries", [(f'srl_macs_ac
 p.append(row("The nodes: CPU and memory", 43))
 p.append(panel("CPU % (1-minute average)", "timeseries", [(f'srl_system_average_1{{{SL}}}', "{{node}}")], 0, 44, 12, 8, unit="percent", min=0))
 p.append(panel("Memory used %", "timeseries", [(f'srl_system_utilization{{{SL}}}', "{{node}}")], 12, 44, 12, 8, unit="percent", min=0, max=100))
+p.append(row("Syslog (VictoriaLogs, lab=srl-evpn): SR Linux's events", 52))
+SE = 'lab:srl-evpn "|EV|" '
+p.append(panel("Events / 5 min per node", "timeseries", [logs_ts(SE + '| stats by (_time:5m, hostname) count() as events', "{{hostname}}")], 0, 53, 12, 8, ds=VL, min=0))
+p.append(panel("Events by name (selected range)", "table", [(SE + '| extract "|EV|<event>|" | stats by (event) count() as events | sort by (events desc) | limit 15', "", {"queryType": "stats"})], 12, 53, 12, 8, ds=VL, columns=["event"]))
+p.append(panel("Newest events (BGP, BFD, ports, LAGs, segments, commits)", "logs", [(SE, "")], 0, 61, 24, 10, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
 (OUT / "srl-evpn-overview.json").write_text(json.dumps(dashboard("srl-evpn-overview", "SR Linux EVPN Clab: overview (gNMI)", p, ["srl-evpn", "lab", "gnmi"], lab="srl-evpn"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))
