@@ -120,6 +120,14 @@
     .toolbar .ftoggle { display:inline-block } .toolbar .fgroup { display:none; width:100% } .toolbar.open .fgroup { display:flex }
     .toolbar .zone.find { order:2; width:100% } .toolbar .zone.find:has(.fgroup) { width:auto } .toolbar.open .zone.find { width:100% }
   }
+  /* ---- alerts firing now (hub/alerts.py): critical first, warnings after; nothing when all is quiet ------------------- */
+  .alerts { border-radius:10px; padding:10px 14px; margin:0 0 16px; border:1px solid var(--line); background:var(--card); font-size:var(--fs-m) }
+  .alerts.crit { border-color:var(--bad-edge); background:var(--bad-soft) } .alerts.warn { border-color:var(--amber) }
+  .alerts .head { display:flex; flex-wrap:wrap; gap:8px; align-items:center } .alerts .head b { font-size:var(--fs-l) } .alerts .head .right { margin-left:auto }
+  .alerts ul { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:4px } .alerts li { display:flex; gap:8px; align-items:baseline; min-width:0 }
+  .alerts li .what { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 } .alerts li .when { margin-left:auto; color:var(--muted); font-size:var(--fs-s); white-space:nowrap }
+  .alerts li.crit .what b { color:var(--bad) } .alerts .more { margin-top:4px }
+  @media (max-width: 640px) { .alerts li { flex-wrap:wrap } .alerts li .what { white-space:normal } .alerts li .when { margin-left:0 } }
   /* ---- the brand: a logo mark in the bar, and a "network console" banner with a live hub-and-spoke map ------------- */
   header .brand { display:flex; align-items:center; gap:8px; color:var(--header-ink); text-decoration:none; font-size:18px; letter-spacing:.01em }
   header .brand b { background:linear-gradient(90deg, #38bdf8, #a78bfa); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:800 }
@@ -198,6 +206,7 @@
   </div>
   <svg class="hero-graphic" id="hero-graphic" viewBox="0 0 560 240" role="img" aria-label="the hub and its labs"></svg>
 </section>
+<div id="alerts" aria-live="polite"></div>
 <div class="host" id="hoststats" aria-busy="true"><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div><div class="stat" aria-hidden="true"><span class="sk t"></span><span class="sk v"></span><span class="sk b"></span><span class="sk g"></span></div></div><div class="card svc slim" id="services"><span class="sk t" style="width:55%"></span></div>
 <div class="toolbar" id="toolbar">
   <div class="zone find"><button class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fgroup">Filters ▾</button>
@@ -506,9 +515,10 @@ async function powerPost(lab, body) {
 function health(l) {
   const pr = problems(l);
   if (l.running === 0) return l.power && l.power.status === 'failed' ? { lvl: 'bad', why: ['the last power operation failed'] } : { lvl: 'off', why: ['shut down'].concat(pr) };
-  const serious = pr.filter(x => x !== 'schedule skipped');
+  const al = labAlerts(l), crit = al.filter(a => a.severity === 'critical').map(a => `alert: ${a.name}`);
+  const serious = pr.filter(x => x !== 'schedule skipped').concat(crit);
   if (serious.length) return { lvl: 'bad', why: serious };
-  const w = [];
+  const w = al.filter(a => a.severity !== 'critical').map(a => `alert: ${a.name}`);
   if (l.running < l.total) w.push(`${l.running} of ${l.total} ${U(l)} running`);
   if (l.power && l.power.status === 'running') w.push('a power operation is in progress');
   const t = l.tests;
@@ -691,6 +701,8 @@ function renderHero(d) {
     `<span class="hchip ${vmsUp ? 'ok' : ''}"><b>${vmsUp}</b>/${vmsAll} VMs up</span>`,
     `<span class="hchip ${sv.state === 'ok' ? 'ok' : 'bad'}">NMS <b>${sv.vm_state === 'running' ? `${sv.up}/${sv.total}` : 'off'}</b></span>`,
     failing ? `<span class="hchip bad"><b>${failing}</b> failing</span>` : `<span class="hchip ok"><b>✓</b> nothing failing</span>`,
+    ...(() => { const c = (d.alerts || {}).counts || {}, n = (c.critical || 0) + (c.warning || 0);
+      return n ? [`<span class="hchip ${c.critical ? 'bad' : 'warn'}"><b>${n}</b> alert${n > 1 ? 's' : ''}</span>`] : []; })(),
     `<span class="hchip">mem <b>${d.host && d.host.memory ? Math.round(d.host.memory.pct) : '–'}%</b></span>`].join('');
   // the map
   const W = 560, H = 240, cx = 290, cy = 104, rx = 200, ry = 72, n = labs.length, anim = !reduceMotion();
@@ -749,7 +761,7 @@ async function load() {
   POWER = d.power_enabled !== false;
   await loadHistory().catch(() => null);
   LAST = d; renderHost(d.host); window.SV = d.services; window.LABS = d.labs; renderServices(d.services);
-  LAST = d; renderLabs(); tabStatus(d); renderHero(d);
+  LAST = d; renderLabs(); tabStatus(d); renderHero(d); renderAlerts(d.alerts, d.monitoring);
   document.querySelectorAll('[aria-busy]').forEach(x => x.removeAttribute('aria-busy'));
   const m = d.monitoring || {}; document.getElementById('mon').innerHTML = m.grafana ? `monitoring: <a href="${m.grafana}" target="_blank">Grafana</a> · <a href="${m.prometheus}/targets" target="_blank">Prometheus targets</a> · <a href="${m.prometheus}/alerts" target="_blank">alerts</a> · <a href="${m.victoriametrics}/vmui" target="_blank">VictoriaMetrics</a>${m.victorialogs ? ` · <a href="${m.victorialogs}/select/vmui" target="_blank">VictoriaLogs</a>` : ''}` : '';
   schedule(d.labs);
@@ -757,6 +769,35 @@ async function load() {
     + (POWER ? ' · power control runs each lab\'s own lab.sh; everything else about a lab is changed from its portal'
              : ' · read-only: use a lab\'s portal or lab.sh to change anything');
 }
+// ---- alerts firing now (Prometheus + the syslog rules on the NMS; there is no Alertmanager, so this is where they are seen)
+let ALERTS_OPEN = false;
+const sinceAgo = t => { if (!t) return ''; const s = Math.max(0, (Date.now() - Date.parse(t)) / 1000);
+  return s < 90 ? 'just now' : s < 5400 ? `${Math.round(s / 60)} min` : s < 129600 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} d`; };
+function renderAlerts(al, mon) {
+  const el = document.getElementById('alerts'); if (!al) { el.innerHTML = ''; return; }
+  const errs = Object.entries(al.errors || {}), c = al.counts || {}, list = al.alerts || [];
+  const link = mon && mon.prometheus ? `<a class="right" href="${mon.prometheus}/alerts" target="_blank">Prometheus alerts ↗</a>` : '';
+  if (!list.length && !errs.length) { el.className = ''; el.innerHTML = ''; return; }
+  if (!list.length) { el.className = 'alerts warn';
+    el.innerHTML = `<div class="head"><span class="hdot warn"></span><b>Alerts unknown</b><span class="hint">nothing is watching the labs: ${errs.map(([s, e]) => `${esc(s)} — ${esc(e)}`).join(' · ')}</span></div>`; return; }
+  const row = a => `<li class="${a.severity === 'critical' ? 'crit' : ''}"><span class="pill ${a.severity === 'critical' ? 'bad' : 'warn'}">${esc(a.severity)}</span>
+      <span class="what" title="${esc(a.summary)}"><b>${esc(a.name)}</b> <span class="hint">${esc(a.lab || '')}</span> ${esc(a.summary)}</span>
+      <span class="when" title="${esc(a.since || '')} · ${esc(a.source)}">${sinceAgo(a.since)}</span></li>`;
+  const crit = list.filter(a => a.severity === 'critical'), warn = list.filter(a => a.severity !== 'critical');
+  const shownWarn = ALERTS_OPEN || !crit.length ? warn : [];
+  el.className = 'alerts ' + (crit.length ? 'crit' : 'warn');
+  el.innerHTML = `<div class="head"><span class="hdot ${crit.length ? 'bad' : 'warn'}"></span><b>${crit.length ? `${crit.length} critical` : ''}${crit.length && warn.length ? ' · ' : ''}${warn.length ? `${warn.length} warning${warn.length > 1 ? 's' : ''}` : ''}</b>
+      <span class="hint">firing now${errs.length ? ` · could not read ${errs.map(([s]) => esc(s)).join(', ')}` : ''}</span>${link}</div>
+    <ul>${crit.map(row).join('')}${shownWarn.slice(0, ALERTS_OPEN ? 99 : 6).map(row).join('')}</ul>
+    ${(crit.length && warn.length && !ALERTS_OPEN) || (!crit.length && warn.length > 6 && !ALERTS_OPEN) ? `<div class="more"><button class="link" data-alerts="1">show ${crit.length ? `the ${warn.length} warning${warn.length > 1 ? 's' : ''}` : `all ${warn.length}`} ▾</button></div>`
+      : ALERTS_OPEN && warn.length ? `<div class="more"><button class="link" data-alerts="0">less ▴</button></div>` : ''}`;
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-alerts]'); if (!b) return; ALERTS_OPEN = b.dataset.alerts === '1'; renderAlerts(LAST.alerts, LAST.monitoring); });
+const labAlerts = l => ((LAST && LAST.alerts && LAST.alerts.alerts) || []).filter(a => a.lab === l.name);
+function alertPill(l) { const a = labAlerts(l); if (!a.length) return '';
+  const crit = a.filter(x => x.severity === 'critical').length;
+  return `<span class="pill ${crit ? 'bad' : 'warn'}" title="${esc(a.map(x => `${x.severity}: ${x.name} — ${x.summary}`).join('\n'))}">${a.length} alert${a.length > 1 ? 's' : ''}</span>`; }
+
 function cardHtml(l) {
   const ph = l.portal_health, folded = FOLDED.has(l.name), issues = problems(l), v = l.version || {}, c = l.ci_status, sc = l.schedule || {};
   const ciFact = !c ? '<span class="hint">not set up</span>' : c.error ? '<span class="pill bad" title="' + esc(c.error) + '">unavailable</span>'
@@ -769,7 +810,7 @@ function cardHtml(l) {
   const fact = (k, val, title) => `<div class="fact"${title ? ` title="${esc(title)}"` : ''}><div class="k">${k}</div><div class="v">${val}</div></div>`;
   return `<div class="card lab ${folded ? 'collapsed' : ''}" id="lab-${esc(l.name)}" data-name="${esc(l.name)}">
     <h2><span class="handle" draggable="true" data-drag="${esc(l.name)}" title="drag to reorder">⠿</span><button class="fold" data-fold="${esc(l.name)}" aria-expanded="${!folded}" title="${folded ? 'unfold' : 'fold'}">${folded ? '▸' : '▾'}</button>${hdot(l)}<a href="${l.portal}" target="_blank" title="${esc(l.dir)}">${esc(l.name)}</a>
-      ${vmPill(l)} <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${ph.active ? ` <span class="pill warn">run: ${esc(ph.active.mode)}</span>` : ''}${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''}
+      ${vmPill(l)} <span class="pill ${ph.up ? 'ok' : 'bad'}">portal ${ph.up ? 'up' : 'down'}</span>${ph.active ? ` <span class="pill warn">run: ${esc(ph.active.mode)}</span>` : ''}${issues.length ? ` <span class="pill bad" title="${esc(issues.join(', '))}">⚠ ${issues.length}</span>` : ''} ${alertPill(l)}
       <span class="acts">${powerBtns(l, true)}</span></h2>
     <div class="facts">${fact('Tests', testsShort(l))}${fact('CI', ciFact)}${fact('Version', verFact)}${fact('Memory', memFact)}${fact('Next', nextFact)}</div>
     <div class="body details">

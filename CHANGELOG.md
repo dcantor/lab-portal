@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.26.0] — 2026-10-04
+
+### Added
+- **The hub shows the alerts firing now.** There is no Alertmanager, and evpn-clab's wan exporters had been down for a day
+  with `ExporterDown` firing unseen. A banner lists what Prometheus and vmalert-logs have firing (critical first, then
+  warnings; `info` left out), each lab card gets an "N alerts" pill and its health dot follows its alerts, and the banner
+  at the top counts them. "Alerts unknown" when the NMS does not answer. `GET /api/alerts` (`labportal/hub/alerts.py`).
+
 ## [0.25.0] — 2026-10-04
 
 ### Added

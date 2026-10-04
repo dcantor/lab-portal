@@ -50,6 +50,16 @@ the hub read-only again. Everything else about a lab — provisioning, day-2 cha
     POST /api/labs/cat8000v-ipsec/power  {"action": "down", "nodes": ["spoke1"]}
     GET  /api/labs/cat8000v-ipsec/power                     # the current or last operation, with lab.sh's output
 
+**Alerts firing now.** There is no Alertmanager, so the hub is where alerts are seen (`labportal/hub/alerts.py`).
+- A banner above the host stats lists what is firing in Prometheus (metric rules) and in vmalert-logs (syslog rules):
+  critical alerts first and in red, then warnings (shown at once when nothing is critical, behind "show" otherwise), each
+  with its lab, its summary and how long it has been firing. `info` alerts (commits and the like) are left out. Nothing is
+  shown when all is quiet; "Alerts unknown" when neither evaluator answers (the NMS is off: nothing is watching).
+- Each lab card gets an "N alerts" pill, a critical alert turns its health dot red and a warning amber, and the banner at
+  the top counts them.
+- Why: evpn-clab's wan exporters were down for a day with `ExporterDown` firing the whole time, and nobody saw it.
+- `GET /api/alerts`; the sources are `LAB_HUB_PROMETHEUS` and `LAB_HUB_VMALERT` (default the NMS, ports 9090 and 8880).
+
 **Shared services.** A card above the labs shows the NMS VM and each service on it, with a link to each and what it is
 used for: Prometheus, VictoriaMetrics, VictoriaLogs, Grafana, Gitea and Nautobot.
 - It shows whether each service answers, and states plainly when the NMS is off, because then nothing alerts, CI does not

@@ -25,7 +25,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 import requests
-from . import auth as AUTH, ci as CI, guard as GUARD, history as HIST, schedule as SCHED, shared as SHARED, version as VERSION
+from . import alerts as ALERTS, auth as AUTH, ci as CI, guard as GUARD, history as HIST, schedule as SCHED, shared as SHARED, version as VERSION
 from .. import nmsbackup as NMSBACKUP
 
 CONFIG = Path(os.environ.get("LAB_HUB_CONFIG", Path.home() / ".config" / "lab-hub" / "labs.json"))
@@ -181,6 +181,10 @@ def logout():
 def host_history(hours: float = 24): return HIST.series(min(max(hours, 1), 24))
 
 
+@app.get("/api/alerts", summary="Alerts firing now (Prometheus and the syslog rules), critical first; info alerts left out")
+def api_alerts(): return ALERTS.firing()
+
+
 @app.get("/api/me", summary="Who is signed in")
 def me(request: Request): return {"user": getattr(request.state, "user", None), "auth": AUTH.ENABLED}
 
@@ -201,7 +205,7 @@ def api_labs():
                     "memory_used_gib": round(sum(rss.get(d, 0) for d in GUARD.lab_domains(lab["dir"])) / 1024, 1),
                     "version": VERSION.lab_version(lab)})
         out[-1]["schedule"] = SCHED.view(lab["name"], running, out[-1]["portal_health"], out[-1]["ci_status"])
-    return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER,
+    return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER, "alerts": ALERTS.firing(),
             "services": {**SHARED.status(), "power": SERVICE_OP.get("op"), "backup": NMSBACKUP.latest(),
                          "memory_used_gib": round(rss.get(SHARED.config()["vm"], 0) / 1024, 1)}, "generated": time.time()}
 
