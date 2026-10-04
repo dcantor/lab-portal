@@ -52,6 +52,12 @@ scrape_configs:
     metric_relabel_configs:
       - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
 
+  - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
+    static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
+    honor_labels: true
+    metric_relabel_configs:
+      - {regex: "source|subscription_name", action: labeldrop}   # node says it; the subscription is in the name
+
   - job_name: lab-host                                             # the Ubuntu KVM host itself (node_exporter as a user service on the OOB bridge)
     static_configs:
       - targets: [10.0.0.1:9100]

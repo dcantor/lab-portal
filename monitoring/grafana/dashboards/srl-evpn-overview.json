@@ -1,0 +1,974 @@
+{
+ "uid": "srl-evpn-overview",
+ "title": "SR Linux EVPN Clab: overview (gNMI)",
+ "tags": [
+  "srl-evpn",
+  "lab",
+  "gnmi"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "annotations": {
+  "list": [
+   {
+    "name": "Runs and tests",
+    "enable": true,
+    "iconColor": "#5794F2",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srl-evpn",
+      "run"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Test events (failover, reflector)",
+    "enable": true,
+    "iconColor": "#F2495C",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srl-evpn",
+      "test"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Steering changes",
+    "enable": true,
+    "iconColor": "#FF9830",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "srl-evpn",
+      "steering"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Router syslog alerts (vmalert-logs)",
+    "enable": true,
+    "iconColor": "#B877D9",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "expr": "ALERTS{lab=\"srl-evpn\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{hostname}}",
+    "tagKeys": "alertname,hostname"
+   }
+  ]
+ },
+ "templating": {
+  "list": []
+ },
+ "panels": [
+  {
+   "id": 1,
+   "title": "BGP sessions established",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(srl_bgp_session_state{lab=\"srl-evpn\"})",
+     "legendFormat": "up"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(srl_bgp_session_state{lab=\"srl-evpn\"})",
+     "legendFormat": "configured"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 2,
+   "title": "BGP sessions down",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 0,
+    "w": 3,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(srl_bgp_session_state{lab=\"srl-evpn\"} == 0) or vector(0)",
+     "legendFormat": "down"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 3,
+   "title": "BFD sessions down",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 9,
+    "y": 0,
+    "w": 3,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(srl_bfd_session_state{lab=\"srl-evpn\"} == 0) or vector(0)",
+     "legendFormat": "down"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 4,
+   "title": "Enabled ports down",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 3,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count((srl_iface_oper_state{lab=\"srl-evpn\",interface_name=~\"ethernet-.*\"} == 0) and on (node, interface_name) srl_iface_in_octets{lab=\"srl-evpn\"}) or vector(0)",
+     "legendFormat": "down"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 5,
+   "title": "Ethernet Segments up",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 15,
+    "y": 0,
+    "w": 9,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "srl_es_oper_state{lab=\"srl-evpn\"}",
+     "legendFormat": "{{node}} {{ethernet_segment_name}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 6,
+   "type": "row",
+   "title": "Sessions per node",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 4,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 7,
+   "title": "BGP sessions established per node (underlay + overlay + edge)",
+   "type": "bargauge",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 5,
+    "w": 12,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (node) (srl_bgp_session_state{lab=\"srl-evpn\"})",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true
+   }
+  },
+  {
+   "id": 8,
+   "title": "Sessions not established",
+   "type": "table",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 5,
+    "w": 12,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "srl_bgp_session_state{lab=\"srl-evpn\"} == 0",
+     "legendFormat": "",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   },
+   "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {
+      "mode": "columns"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "Value": true,
+       "__name__": true,
+       "lab": true,
+       "job": true,
+       "instance": true,
+       "site": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "type": "row",
+   "title": "Traffic (bit/s, every enabled port)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 15,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 10,
+   "title": "Per node, in + out",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 16,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (node) (rate(srl_iface_in_octets{lab=\"srl-evpn\",interface_name=~\"ethernet-.*\"}[2m]) + rate(srl_iface_out_octets{lab=\"srl-evpn\",interface_name=~\"ethernet-.*\"}[2m])) * 8",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 11,
+   "title": "Per pod (leaf ports, in)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 16,
+    "w": 6,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (pod) (rate(srl_iface_in_octets{lab=\"srl-evpn\",role=\"leaf\",interface_name=~\"ethernet-.*\"}[2m])) * 8",
+     "legendFormat": "pod {{pod}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "title": "Through the super-spines (between the pods)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 16,
+    "w": 6,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (node) (rate(srl_iface_in_octets{lab=\"srl-evpn\",role=\"superspine\",interface_name=~\"ethernet-.*\"}[2m])) * 8",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "title": "Busiest ports",
+   "type": "table",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 25,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "topk(15, (rate(srl_iface_in_octets{lab=\"srl-evpn\",interface_name=~\"ethernet-.*\"}[5m]) + rate(srl_iface_out_octets{lab=\"srl-evpn\",interface_name=~\"ethernet-.*\"}[5m])) * 8)",
+     "legendFormat": "",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   },
+   "transformations": [
+    {
+     "id": "labelsToFields",
+     "options": {
+      "mode": "columns"
+     }
+    },
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "lab": true,
+       "job": true,
+       "instance": true,
+       "pod": true,
+       "site": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "title": "Errors and discards / s",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 25,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (node) (rate(srl_iface_in_error_packets{lab=\"srl-evpn\"}[5m]) + rate(srl_iface_in_discarded_packets{lab=\"srl-evpn\"}[5m]) + rate(srl_iface_out_discarded_packets{lab=\"srl-evpn\"}[5m]))",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 15,
+   "type": "row",
+   "title": "Routes and MACs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 34,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 16,
+   "title": "Active routes per tenant (each leaf / border)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 35,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "srl_routes_active_routes{lab=\"srl-evpn\",network_instance_name=~\"red|blue\"}",
+     "legendFormat": "{{node}} {{network_instance_name}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 17,
+   "title": "MAC entries per VLAN (each leaf)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 35,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "srl_macs_active_entries{lab=\"srl-evpn\"}",
+     "legendFormat": "{{node}} {{network_instance_name}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 18,
+   "type": "row",
+   "title": "The nodes: CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 43,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 19,
+   "title": "CPU % (1-minute average)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 44,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "srl_system_average_1{lab=\"srl-evpn\"}",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 20,
+   "title": "Memory used %",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 44,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "srl_system_utilization{lab=\"srl-evpn\"}",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  }
+ ],
+ "links": [
+  {
+   "title": "Lab hub",
+   "type": "link",
+   "url": "http://192.168.50.231:8088",
+   "targetBlank": true
+  },
+  {
+   "title": "Prometheus alerts",
+   "type": "link",
+   "url": "http://192.168.50.231:9091/alerts",
+   "targetBlank": true
+  },
+  {
+   "title": "\u263e Dark",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/srl-evpn-overview?theme=dark",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the dark theme (new tab)"
+  },
+  {
+   "title": "\u2600 Light",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/srl-evpn-overview?theme=light",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the light theme (new tab)"
+  }
+ ]
+}

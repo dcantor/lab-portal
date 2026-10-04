@@ -351,3 +351,36 @@ groups:
         for: 30m
         labels: {severity: warning}
         annotations: {summary: "cat8000v-ipsec: no Golden Config compliance run for {{ $value | humanizeDuration }} while the lab is up — the portal's scheduled run is not happening"}
+
+  - name: srl-evpn                  # Nokia SR Linux 5-stage Clos over gNMI (gnmic-srl-evpn). When the lab is down its series expire (60 s), so
+    rules:                          # nothing fires; a node that stops answering while the rest run shows as its sessions' peers going down
+      - alert: SrlEvpnBgpSessionDown
+        expr: srl_bgp_session_state{lab="srl-evpn"} == 0
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: BGP to {{ $labels.neighbor_peer_address }} ({{ $labels.network_instance_name }}) is not established"}
+      - alert: SrlEvpnBfdDown
+        expr: srl_bfd_session_state{lab="srl-evpn"} == 0
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: a BFD session is down"}
+      - alert: SrlEvpnInterfaceDown         # enabled ports only (they report counters); the chassis' unused ports are down by design
+        expr: (srl_iface_oper_state{lab="srl-evpn"} == 0) and on (node, interface_name) srl_iface_in_octets{lab="srl-evpn"}
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} {{ $labels.interface_name }} is down"}
+      - alert: SrlEvpnSegmentDown
+        expr: srl_es_oper_state{lab="srl-evpn"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: Ethernet Segment {{ $labels.ethernet_segment_name }} is down (its dual-homed host is down to one leaf)"}
+      - alert: SrlEvpnNodeCpuHigh
+        expr: srl_system_average_1{lab="srl-evpn"} > 90
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: CPU {{ $value | printf \"%.0f\" }} % for 10 minutes"}
+      - alert: SrlEvpnNodeMemoryHigh
+        expr: srl_system_utilization{lab="srl-evpn"} > 90
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: memory {{ $value | printf \"%.0f\" }} % used"}

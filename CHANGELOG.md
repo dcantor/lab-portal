@@ -7,6 +7,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.28.0] — 2026-10-04
+
+### Added
+- **srl-evpn telemetry over gNMI**: `gnmic-srl-evpn` (gnmic 0.49.0) subscribes to the lab's 16 SR Linux nodes — BGP,
+  BFD, interfaces (state, octets, errors, discards), Ethernet Segments, routes, MACs, CPU, memory, every 15 s — and
+  exports them to Prometheus (job `srl-evpn`, lab / node / role / pod labels). Targets from the lab's fabric.yml
+  (`gnmic/gen_srl_evpn.py`). Alerts `SrlEvpnBgpSessionDown`, `SrlEvpnBfdDown`, `SrlEvpnInterfaceDown` (enabled ports),
+  `SrlEvpnSegmentDown` (critical), `SrlEvpnNodeCpuHigh`, `SrlEvpnNodeMemoryHigh` — on the hub's banner; dashboard
+  **SR Linux EVPN Clab: overview (gNMI)**. Tested: a cut fabric link raised the BGP and interface alerts on both ends
+  within 110 s, and they cleared after the restore.
+
 ## [0.27.0] — 2026-10-04
 
 ### Added

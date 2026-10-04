@@ -66,6 +66,12 @@ services:
     command: ["sh", "/etc/flows/rotate.sh"]
     volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
 
+  gnmic-srl-evpn:                                 # srl-evpn's SR Linux nodes over gNMI (port 57400, reached through the host): BGP, BFD,
+    image: ghcr.io/openconfig/gnmic:0.49.0        # interfaces, Ethernet Segments, routes, MACs, CPU, memory -> Prometheus (:9804)
+    restart: unless-stopped
+    command: ["--config", "/etc/gnmic/srl-evpn.yml", "subscribe"]
+    volumes: ["./gnmic:/etc/gnmic:ro"]
+
   prometheus:
     image: prom/prometheus:v3.14.0
     restart: unless-stopped

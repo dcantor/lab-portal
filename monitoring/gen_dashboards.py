@@ -31,6 +31,7 @@ def panel(title, kind, targets, x, y, w, h, unit=None, ds=VM, legend=True, **opt
     for k, v in opts.items():
         if k in ("thresholds", "mappings", "min", "max", "decimals", "color", "custom"): p["fieldConfig"]["defaults"][k] = v
         elif k == "overrides": p["fieldConfig"]["overrides"] = v
+        elif k == "transformations": p["transformations"] = v
         else: p["options"][k] = v
     return p
 
@@ -530,4 +531,37 @@ p.append(panel("North-south conversations (estimated bytes)", "table", [(ED + '-
 p.append(row("Samples", 52))
 p.append(panel("Newest samples (message = conversation; open one for every field)", "logs", [(EF, "")], 0, 53, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
 (OUT / "evpn-clab-flows.json").write_text(json.dumps(dashboard("evpn-clab-flows", "EVPN clab: flows (sFlow)", p, ["evpn-clab", "flows", "sflow"], refresh="1m", lab="evpn-clab"), indent=1))
+# ---------------------------------------------------------------- srl-evpn: Nokia SR Linux 5-stage Clos over gNMI (gnmic-srl-evpn ->
+# Prometheus -> VictoriaMetrics): sessions, BFD, interfaces, Ethernet Segments, traffic, routes, MACs, CPU and memory per node
+_id[0] = 0
+SL = 'lab="srl-evpn"'
+EN = f'and on (node, interface_name) srl_iface_in_octets{{{SL}}}'          # enabled ports only (they report counters)
+FP = f'interface_name=~"ethernet-.*"'
+OKS = {"steps": [{"color": "red", "value": None}, {"color": "green", "value": 1}]}
+p = []
+p.append(panel("BGP sessions established", "stat", [(f'sum(srl_bgp_session_state{{{SL}}})', "up"), (f'count(srl_bgp_session_state{{{SL}}})', "configured")], 0, 0, 6, 4, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]}))
+p.append(panel("BGP sessions down", "stat", [(f'count(srl_bgp_session_state{{{SL}}} == 0) or vector(0)', "down")], 6, 0, 3, 4, thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("BFD sessions down", "stat", [(f'count(srl_bfd_session_state{{{SL}}} == 0) or vector(0)', "down")], 9, 0, 3, 4, thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Enabled ports down", "stat", [(f'count((srl_iface_oper_state{{{SL},{FP}}} == 0) {EN}) or vector(0)', "down")], 12, 0, 3, 4, thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Ethernet Segments up", "stat", [(f'srl_es_oper_state{{{SL}}}', "{{node}} {{ethernet_segment_name}}")], 15, 0, 9, 4, colorMode="background", textMode="name", mappings=UPDOWN_MAP, thresholds=OKS))
+p.append(row("Sessions per node", 4))
+p.append(panel("BGP sessions established per node (underlay + overlay + edge)", "bargauge", [(f'sum by (node) (srl_bgp_session_state{{{SL}}})', "{{node}}")], 0, 5, 12, 10, min=0))
+p.append(panel("Sessions not established", "table", [(f'srl_bgp_session_state{{{SL}}} == 0', "", {"instant": True, "format": "table"})], 12, 5, 12, 10,
+               transformations=[{"id": "labelsToFields", "options": {"mode": "columns"}}, {"id": "merge", "options": {}},
+                                {"id": "organize", "options": {"excludeByName": {"Time": True, "Value": True, "__name__": True, "lab": True, "job": True, "instance": True, "site": True}}}]))
+p.append(row("Traffic (bit/s, every enabled port)", 15))
+p.append(panel("Per node, in + out", "timeseries", [(f'sum by (node) (rate(srl_iface_in_octets{{{SL},{FP}}}[2m]) + rate(srl_iface_out_octets{{{SL},{FP}}}[2m])) * 8', "{{node}}")], 0, 16, 12, 9, unit="bps", min=0))
+p.append(panel("Per pod (leaf ports, in)", "timeseries", [(f'sum by (pod) (rate(srl_iface_in_octets{{{SL},role="leaf",{FP}}}[2m])) * 8', "pod {{pod}}")], 12, 16, 6, 9, unit="bps", min=0))
+p.append(panel("Through the super-spines (between the pods)", "timeseries", [(f'sum by (node) (rate(srl_iface_in_octets{{{SL},role="superspine",{FP}}}[2m])) * 8', "{{node}}")], 18, 16, 6, 9, unit="bps", min=0))
+p.append(panel("Busiest ports", "table", [(f'topk(15, (rate(srl_iface_in_octets{{{SL},{FP}}}[5m]) + rate(srl_iface_out_octets{{{SL},{FP}}}[5m])) * 8)', "", {"instant": True, "format": "table"})], 0, 25, 12, 9, unit="bps",
+               transformations=[{"id": "labelsToFields", "options": {"mode": "columns"}}, {"id": "merge", "options": {}},
+                                {"id": "organize", "options": {"excludeByName": {"Time": True, "lab": True, "job": True, "instance": True, "pod": True, "site": True}}}]))
+p.append(panel("Errors and discards / s", "timeseries", [(f'sum by (node) (rate(srl_iface_in_error_packets{{{SL}}}[5m]) + rate(srl_iface_in_discarded_packets{{{SL}}}[5m]) + rate(srl_iface_out_discarded_packets{{{SL}}}[5m]))', "{{node}}")], 12, 25, 12, 9, min=0))
+p.append(row("Routes and MACs", 34))
+p.append(panel("Active routes per tenant (each leaf / border)", "timeseries", [(f'srl_routes_active_routes{{{SL},network_instance_name=~"red|blue"}}', "{{node}} {{network_instance_name}}")], 0, 35, 12, 8, min=0))
+p.append(panel("MAC entries per VLAN (each leaf)", "timeseries", [(f'srl_macs_active_entries{{{SL}}}', "{{node}} {{network_instance_name}}")], 12, 35, 12, 8, min=0))
+p.append(row("The nodes: CPU and memory", 43))
+p.append(panel("CPU % (1-minute average)", "timeseries", [(f'srl_system_average_1{{{SL}}}', "{{node}}")], 0, 44, 12, 8, unit="percent", min=0))
+p.append(panel("Memory used %", "timeseries", [(f'srl_system_utilization{{{SL}}}', "{{node}}")], 12, 44, 12, 8, unit="percent", min=0, max=100))
+(OUT / "srl-evpn-overview.json").write_text(json.dumps(dashboard("srl-evpn-overview", "SR Linux EVPN Clab: overview (gNMI)", p, ["srl-evpn", "lab", "gnmi"], lab="srl-evpn"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))
