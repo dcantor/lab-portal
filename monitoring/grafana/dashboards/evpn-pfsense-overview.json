@@ -243,8 +243,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum by (vip) (lab_carp_master{lab=\"evpn-pfsense\"})",
-     "legendFormat": "{{vip}}"
+     "expr": "sum by (pair, vip) (lab_carp_master{lab=\"evpn-pfsense\"})",
+     "legendFormat": "{{pair}} {{vip}}"
     }
    ],
    "fieldConfig": {
@@ -561,7 +561,7 @@
   {
    "id": 9,
    "type": "row",
-   "title": "The firewall pair (pfSense: CARP, BGP and BFD with the borders, pfsync, pf)",
+   "title": "The firewall pairs (pfSense: red, blue \u00b7 OPNsense: green, yellow \u2014 CARP, BGP and BFD with the borders, pfsync, pf)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -573,7 +573,7 @@
   },
   {
    "id": 10,
-   "title": "CARP state per firewall and VIP (MASTER should be pf1)",
+   "title": "CARP state per firewall and VIP (MASTER should be pf1 / opn1)",
    "type": "state-timeline",
    "datasource": {
     "type": "prometheus",
@@ -918,7 +918,7 @@
   },
   {
    "id": 16,
-   "title": "The policy: packets/s per rule (both firewalls)",
+   "title": "The policy: packets/s per rule (each pair, both firewalls)",
    "type": "timeseries",
    "datasource": {
     "type": "prometheus",
@@ -937,8 +937,8 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum by (rule) (rate(lab_firewall_packets_total{lab=\"evpn-pfsense\",rule=~\".*->.*\"}[2m]))",
-     "legendFormat": "{{rule}}"
+     "expr": "sum by (pair, rule) (rate(lab_firewall_packets_total{lab=\"evpn-pfsense\",rule=~\".*->.*\"}[2m]))",
+     "legendFormat": "{{pair}}: {{rule}}"
     }
    ],
    "fieldConfig": {

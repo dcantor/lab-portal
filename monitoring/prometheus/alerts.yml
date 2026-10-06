@@ -268,7 +268,7 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the last ./lab.sh verify passed {{ $value }} checks, not all of them"}
 
-  - name: evpn-pfsense              # VyOS on containerlab + a pfSense HA pair; the portal (:8098) is the only source. Gated on the lab running
+  - name: evpn-pfsense              # VyOS on containerlab + a pfSense pair (red, blue) and an OPNsense pair (green, yellow); the portal (:8098) is the only source. Gated on the lab running
     rules:
       - alert: EvpnPfsenseFirewallDown
         expr: (lab_vm_running{lab="evpn-pfsense",role="firewall"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
@@ -281,22 +281,22 @@ groups:
         labels: {severity: critical}
         annotations: {summary: "{{ $labels.node }} is running but unhealthy: no SSH, a BGP session with a border down, or tenant routes not in its kernel"}
       - alert: EvpnPfsenseCarpNoMaster
-        expr: (sum by (lab, vhid, vip) (lab_carp_master{lab="evpn-pfsense"}) == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        expr: (sum by (lab, pair, vhid, vip) (lab_carp_master{lab="evpn-pfsense"}) == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
         for: 1m
         labels: {severity: critical}
-        annotations: {summary: "no firewall is CARP MASTER of the {{ $labels.vip }} VIP (vhid {{ $labels.vhid }}): traffic to it goes nowhere"}
+        annotations: {summary: "no {{ $labels.pair }} firewall is CARP MASTER of the {{ $labels.vip }} VIP (vhid {{ $labels.vhid }}): traffic to it goes nowhere"}
       - alert: EvpnPfsenseCarpSplitBrain
         # split brain: each firewall answers for the VIP, states and replies go astray
-        expr: (sum by (lab, vhid, vip) (lab_carp_master{lab="evpn-pfsense"}) > 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        expr: (sum by (lab, pair, vhid, vip) (lab_carp_master{lab="evpn-pfsense"}) > 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
         for: 1m
         labels: {severity: critical}
-        annotations: {summary: "both firewalls are CARP MASTER of the {{ $labels.vip }} VIP (vhid {{ $labels.vhid }}) — the sync link or CARP between them is broken"}
+        annotations: {summary: "both {{ $labels.pair }} firewalls are CARP MASTER of the {{ $labels.vip }} VIP (vhid {{ $labels.vhid }}) — the sync link or CARP between them is broken"}
       - alert: EvpnPfsensePrimaryNotMaster
-        # after a failover pf1 takes the VIPs back when it returns (preempt)
-        expr: (lab_carp_master{lab="evpn-pfsense",node="pf1"} == 0) and on (lab, node) (lab_node_health{lab="evpn-pfsense",node="pf1"} == 1)
+        # after a failover the primary (pf1, opn1) takes the VIPs back when it returns (preempt)
+        expr: (lab_carp_master{lab="evpn-pfsense",node=~"pf1|opn1"} == 0) and on (lab, node) (lab_node_health{lab="evpn-pfsense",node=~"pf1|opn1"} == 1)
         for: 10m
         labels: {severity: warning}
-        annotations: {summary: "pf1 is healthy but not MASTER of the {{ $labels.vip }} VIP for 10 min — demoted on purpose, or preemption did not take it back"}
+        annotations: {summary: "{{ $labels.node }} (the {{ $labels.pair }} primary) is healthy but not MASTER of the {{ $labels.vip }} VIP for 10 min — demoted on purpose, or preemption did not take it back"}
       - alert: EvpnPfsenseFirewallBgpDown
         expr: (lab_firewall_bgp_up{lab="evpn-pfsense"} == 0) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
         for: 1m

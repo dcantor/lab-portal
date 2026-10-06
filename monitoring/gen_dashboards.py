@@ -377,8 +377,8 @@ p.append(panel("Containers running", "state-timeline", [(f"lab_vm_running{{{L}}}
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, y + 1, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "evpn-clab-overview.json").write_text(json.dumps(dashboard("evpn-clab-overview", "EVPN clab: overview", p, ["evpn-clab", "lab"], lab="evpn-clab"), indent=1))
 
-# ---------------------------------------------------------------- evpn-pfsense overview (EVPN on VyOS containers, two tenant VRFs routed only through a
-# pfSense HA pair on KVM). The portal :8098 is the only source: the fabric through docker exec, the firewalls over SSH — CARP per VIP,
+# ---------------------------------------------------------------- evpn-pfsense overview (EVPN on VyOS containers, four tenant VRFs in two domains:
+# red/blue routed only through a pfSense HA pair, green/yellow only through an OPNsense pair, KVM). The portal :8098 is the only source: the fabric through docker exec, the firewalls over SSH — CARP per VIP,
 # BGP and BFD with the borders, pfsync, pf's states, counters and per-rule packets. No exporters, no syslog (the firewalls' management
 # network is isolated from the NMS)
 _id[0] = 0
@@ -389,7 +389,7 @@ p = []
 p.append(row("The lab", 0))
 p.append(panel("Nodes healthy", "stat", [(f'count(lab_node_health{{{L},role!="firewall"}} == 1) or vector(0)', "ok"), (f'count(lab_node_health{{{L},role!="firewall"}})', "nodes")], 0, 1, 4, 4, colorMode="value", thresholds=G1))
 p.append(panel("Firewalls healthy", "stat", [(f'count(lab_node_health{{{L},role="firewall"}} == 1) or vector(0)', "ok"), (f'count(lab_node_health{{{L},role="firewall"}})', "firewalls")], 4, 1, 4, 4, colorMode="value", thresholds=G1))
-p.append(panel("CARP masters per VIP (want 1)", "stat", [(f"sum by (vip) (lab_carp_master{{{L}}})", "{{vip}}")], 8, 1, 4, 4, colorMode="background", decimals=0,
+p.append(panel("CARP masters per VIP (want 1)", "stat", [(f"sum by (pair, vip) (lab_carp_master{{{L}}})", "{{pair}} {{vip}}")], 8, 1, 4, 4, colorMode="background", decimals=0,
                thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 1}, {"color": "red", "value": 2}]}))
 p.append(panel("Links up", "stat", [(f"sum(lab_link_up{{{L}}})", "up"), (f"count(lab_link_up{{{L}}})", "links")], 12, 1, 4, 4, colorMode="value", thresholds=G1))
 p.append(panel("Last verify", "stat", [(f"lab_verify_checks_passed{{{L}}}", "passed"), (f"lab_verify_checks_total{{{L}}} - lab_verify_checks_passed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
@@ -399,15 +399,15 @@ p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing
 p.append(panel("Node health (the portal's view)", "state-timeline", [(f"lab_node_health{{{L}}}", "{{node}}")], 0, 5, 24, 9, mappings=HEALTH3,
                thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 0.5}, {"color": "green", "value": 1}]}))
 
-p.append(row("The firewall pair (pfSense: CARP, BGP and BFD with the borders, pfsync, pf)", 14))
-p.append(panel("CARP state per firewall and VIP (MASTER should be pf1)", "state-timeline", [(f"lab_carp_master{{{L}}}", "{{node}} {{vip}}")], 0, 15, 12, 8, mappings=CARP_MAP,
+p.append(row("The firewall pairs (pfSense: red, blue · OPNsense: green, yellow — CARP, BGP and BFD with the borders, pfsync, pf)", 14))
+p.append(panel("CARP state per firewall and VIP (MASTER should be pf1 / opn1)", "state-timeline", [(f"lab_carp_master{{{L}}}", "{{node}} {{vip}}")], 0, 15, 12, 8, mappings=CARP_MAP,
                thresholds={"steps": [{"color": "blue", "value": None}, {"color": "green", "value": 1}]}))
 p.append(panel("BGP with the borders (per firewall, border, tenant)", "state-timeline", [(f"lab_firewall_bgp_up{{{L}}}", "{{node}} ↔ {{border}} {{tenant}}")], 12, 15, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("BFD sessions up per firewall", "timeseries", [(f"lab_firewall_bfd_peers_up{{{L}}}", "{{node}} up"), (f"lab_firewall_bfd_peers_total{{{L}}}", "{{node}} configured")], 0, 23, 6, 7, min=0, decimals=0))
 p.append(panel("pf state table entries", "timeseries", [(f"lab_pf_states{{{L}}}", "{{node}}")], 6, 23, 6, 7, min=0, decimals=0))
 p.append(panel("State mismatches / 5 min (streams dropped as out of window)", "timeseries", [(f'increase(lab_pf_counter_total{{{L},counter="state-mismatch"}}[5m])', "{{node}}")], 12, 23, 6, 7, min=0, decimals=0))
 p.append(panel("Kernel routes / pfsync maxupd", "state-timeline", [(f"lab_firewall_kernel_ok{{{L}}}", "{{node}} kernel routes"), (f"lab_pfsync_maxupd{{{L}}} == bool 1", "{{node}} maxupd 1")], 18, 23, 6, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("The policy: packets/s per rule (both firewalls)", "timeseries", [(f'sum by (rule) (rate(lab_firewall_packets_total{{{L},rule=~".*->.*"}}[2m]))', "{{rule}}")], 0, 30, 12, 8, unit="pps", min=0))
+p.append(panel("The policy: packets/s per rule (each pair, both firewalls)", "timeseries", [(f'sum by (pair, rule) (rate(lab_firewall_packets_total{{{L},rule=~".*->.*"}}[2m]))', "{{pair}}: {{rule}}")], 0, 30, 12, 8, unit="pps", min=0))
 p.append(panel("Blocked between tenants (packets/s)", "timeseries", [(f'sum by (rule, node) (rate(lab_firewall_packets_total{{{L},rule=~".*blocked"}}[2m]))', "{{node}} {{rule}}")], 12, 30, 6, 8, unit="pps", min=0))
 p.append(panel("pf counters / 5 min", "timeseries", [(f'increase(lab_pf_counter_total{{{L},counter!~"match|state-insert"}}[5m]) > 0', "{{node}} {{counter}}")], 18, 30, 6, 8, min=0, decimals=0))
 

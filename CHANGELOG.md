@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.30.1] — 2026-10-06
+
+### Changed
+- **Monitoring: evpn-pfsense has two firewall pairs** (pfSense for red/blue, OPNsense for green/yellow, which number
+  their CARP VIPs alike): the CARP alerts sum per `pair`, the primary-not-MASTER alert covers pf1 and opn1, and the
+  dashboard's CARP and policy panels are per pair.
+
 ## [0.30.0] — 2026-10-06
 
 ### Added
