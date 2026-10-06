@@ -52,6 +52,11 @@ scrape_configs:
     metric_relabel_configs:
       - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
 
+  - job_name: evpn-pfsense                                         # EVPN on VyOS containers + a pfSense HA pair (KVM): the portal measures both — the fabric
+    static_configs: [{targets: ["10.0.0.1:8098"]}]                 # through docker exec, the firewalls over SSH (CARP, BGP, BFD, pfsync, pf); no exporters
+    honor_labels: true
+    scrape_interval: 30s
+
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
     honor_labels: true

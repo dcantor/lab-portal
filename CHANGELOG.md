@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.30.0] — 2026-10-06
+
+### Added
+- **Monitoring: evpn-pfsense** (EVPN on VyOS containers, two VRFs routed only through a pfSense HA pair): a Prometheus
+  job on its portal's `/metrics` (10.0.0.1:8098, the lab's only source), the alert group `evpn-pfsense` (23 rules: the
+  firewalls — down, unhealthy, CARP with no master or split brain per VIP, the primary not MASTER, BGP / BFD with the
+  borders, tenant routes missing from a firewall's kernel, pfsync maxupd, state mismatches, a blocked rule hammered, the
+  portal not polling — and the fabric's, as evpn-clab's), and the dashboard **EVPN pfSense: overview**.
+
 ## [0.29.0] — 2026-10-04
 
 ### Added

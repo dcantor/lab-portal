@@ -268,6 +268,127 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the last ./lab.sh verify passed {{ $value }} checks, not all of them"}
 
+  - name: evpn-pfsense              # VyOS on containerlab + a pfSense HA pair; the portal (:8098) is the only source. Gated on the lab running
+    rules:
+      - alert: EvpnPfsenseFirewallDown
+        expr: (lab_vm_running{lab="evpn-pfsense",role="firewall"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }} (pfSense) is powered off — its peer carries every VIP alone, without a standby"}
+      - alert: EvpnPfsenseFirewallUnhealthy
+        expr: (lab_node_health{lab="evpn-pfsense",role="firewall"} == 0) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }} is running but unhealthy: no SSH, a BGP session with a border down, or tenant routes not in its kernel"}
+      - alert: EvpnPfsenseCarpNoMaster
+        expr: (sum by (lab, vhid, vip) (lab_carp_master{lab="evpn-pfsense"}) == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "no firewall is CARP MASTER of the {{ $labels.vip }} VIP (vhid {{ $labels.vhid }}): traffic to it goes nowhere"}
+      - alert: EvpnPfsenseCarpSplitBrain
+        # split brain: each firewall answers for the VIP, states and replies go astray
+        expr: (sum by (lab, vhid, vip) (lab_carp_master{lab="evpn-pfsense"}) > 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "both firewalls are CARP MASTER of the {{ $labels.vip }} VIP (vhid {{ $labels.vhid }}) — the sync link or CARP between them is broken"}
+      - alert: EvpnPfsensePrimaryNotMaster
+        # after a failover pf1 takes the VIPs back when it returns (preempt)
+        expr: (lab_carp_master{lab="evpn-pfsense",node="pf1"} == 0) and on (lab, node) (lab_node_health{lab="evpn-pfsense",node="pf1"} == 1)
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "pf1 is healthy but not MASTER of the {{ $labels.vip }} VIP for 10 min — demoted on purpose, or preemption did not take it back"}
+      - alert: EvpnPfsenseFirewallBgpDown
+        expr: (lab_firewall_bgp_up{lab="evpn-pfsense"} == 0) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: BGP with {{ $labels.border }} in tenant {{ $labels.tenant }} is not Established"}
+      - alert: EvpnPfsenseFirewallBfdDown
+        expr: (lab_firewall_bfd_peers_up{lab="evpn-pfsense"} < on (lab, node, role) lab_firewall_bfd_peers_total{lab="evpn-pfsense"}) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} BFD session(s) with the borders up, not all — a border cut would take ~9 s to notice"}
+      - alert: EvpnPfsenseKernelRoutesWrong
+        # rc.reload_all once took FRR's routes out of the kernel without zebra noticing
+        expr: (lab_firewall_kernel_ok{lab="evpn-pfsense"} == 0) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: a tenant network is not in the kernel out of its VLAN (FRR and the kernel apart?) — traffic goes out of the WAN; restart FRR"}
+      - alert: EvpnPfsensePfsyncMaxupd
+        # fabric.yml firewall_cluster.pfsync_maxupd; a boot shellcmd sets it
+        expr: (lab_pfsync_maxupd{lab="evpn-pfsense"} != 1) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: pfsync maxupd is {{ $value }}, not 1 — a fast TCP stream may not survive a failover"}
+      - alert: EvpnPfsenseStateMismatches
+        expr: (increase(lab_pf_counter_total{lab="evpn-pfsense",counter="state-mismatch"}[10m]) > 20) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: {{ $value | printf \"%.0f\" }} state mismatches in 10 min — streams dropped as out of window (a failover with stale pfsync state?)"}
+      - alert: EvpnPfsenseTenantsBlocked
+        expr: (sum by (lab, rule) (rate(lab_firewall_packets_total{lab="evpn-pfsense",rule=~".*blocked"}[5m])) > 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "the firewalls block {{ $value | printf \"%.1f\" }} packets/s on \"{{ $labels.rule }}\" — a host keeps trying what the policy forbids"}
+      - alert: EvpnPfsenseOspfAdjacencyDown
+        expr: (lab_ospf_neighbors_full{lab="evpn-pfsense"} < on (lab, node, role) lab_ospf_neighbors_expected{lab="evpn-pfsense"}) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} OSPF adjacencies Full, fewer than its fabric links"}
+      - alert: EvpnPfsenseBfdDown
+        expr: (lab_bfd_peers_up{lab="evpn-pfsense"} < on (lab, node, role) lab_bfd_peers_total{lab="evpn-pfsense"}) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} BFD session(s) up, not all"}
+      - alert: EvpnPfsenseBgpSessionDown
+        expr: (lab_bgp_sessions_up{lab="evpn-pfsense"} < on (lab, node, role, afi) lab_bgp_sessions_expected{lab="evpn-pfsense"}) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} {{ $labels.afi }} BGP session(s) Established, fewer than expected (evpn: the route reflectors; ipv4: both firewalls in each tenant)"}
+      - alert: EvpnPfsenseVtepMissingOnVni
+        expr: (lab_evpn_l2vni_remote_vteps{lab="evpn-pfsense"} < scalar(count(lab_vm_running{lab="evpn-pfsense",role="leaf"} == 1) - 1)) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: L2VNI {{ $labels.vni }} floods to {{ $value }} remote VTEPs, not every other leaf"}
+      - alert: EvpnPfsenseDefaultRouteDegraded
+        expr: (lab_default_route_paths{lab="evpn-pfsense"} < 2) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: tenant {{ $labels.tenant }} reaches the firewalls through {{ $value }} border(s), not both"}
+      - alert: EvpnPfsenseSegmentDfNotUnique
+        expr: (sum by (lab, esi, host) (lab_es_df{lab="evpn-pfsense"}) != 1) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "Ethernet Segment {{ $labels.esi }} ({{ $labels.host }}) has {{ $value }} designated forwarders (want exactly 1)"}
+      - alert: EvpnPfsenseHostBondDegraded
+        expr: (lab_host_bond_legs_up{lab="evpn-pfsense"} < 2) and on (lab, node) (lab_vm_running{lab="evpn-pfsense"} == 1)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: {{ $value }} of 2 LACP legs in its bond"}
+      - alert: EvpnPfsenseNodeRestarted
+        expr: (increase(lab_container_restarts{lab="evpn-pfsense"}[10m]) > 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.node }}'s container restarted on its own and lost its containerlab links — ./lab.sh down && ./lab.sh up"}
+      - alert: EvpnPfsenseLinkDown
+        expr: (lab_link_up{lab="evpn-pfsense"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.kind }} link {{ $labels.link }} is down (the portal's view)"}
+      - alert: EvpnPfsenseNodeDown
+        expr: (lab_vm_running{lab="evpn-pfsense",role!="firewall"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.role }}) is not running while the rest of evpn-pfsense is"}
+      - alert: EvpnPfsenseVerifyFailing
+        expr: (lab_verify_checks_passed{lab="evpn-pfsense"} < lab_verify_checks_total{lab="evpn-pfsense"}) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "the last ./lab.sh verify passed {{ $value }} checks, not all of them"}
+      - alert: EvpnPfsensePortalNotPolling
+        # the portal is this lab's only metrics source
+        expr: (time() - lab_collector_last_refresh_seconds{lab="evpn-pfsense"} > 120) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-pfsense"}) > 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "the evpn-pfsense portal has not polled the lab for {{ $value | printf \"%.0f\" }} s — every other alert of this lab is blind"}
+
   - name: cat8000v-ipsec
     rules:
       - alert: TunnelDown
