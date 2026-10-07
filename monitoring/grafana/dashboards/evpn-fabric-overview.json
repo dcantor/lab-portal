@@ -936,7 +936,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "-lab:evpn-clab hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" (app_name:bgpd \"%ADJCHANGE\") OR (app_name:bfdd \"state-change\") | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events",
+     "expr": "-lab:evpn-clab -lab:srl-evpn -lab:evpn-pfsense hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" (app_name:bgpd \"%ADJCHANGE\") OR (app_name:bfdd \"state-change\") | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events",
      "legendFormat": "{{hostname}}",
      "queryType": "statsRange"
     }
@@ -978,7 +978,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "-lab:evpn-clab hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" | stats by (_time:5m, hostname) count() as lines",
+     "expr": "-lab:evpn-clab -lab:srl-evpn -lab:evpn-pfsense hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" | stats by (_time:5m, hostname) count() as lines",
      "legendFormat": "{{hostname}}",
      "queryType": "statsRange"
     }
@@ -1020,7 +1020,7 @@
       "type": "victoriametrics-logs-datasource",
       "uid": "victorialogs"
      },
-     "expr": "-lab:evpn-clab hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" (app_name:bgpd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit OR app_name:evpn-fabric-protodown)",
+     "expr": "-lab:evpn-clab -lab:srl-evpn -lab:evpn-pfsense hostname:~\"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$\" (app_name:bgpd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit OR app_name:evpn-fabric-protodown)",
      "legendFormat": ""
     }
    ],

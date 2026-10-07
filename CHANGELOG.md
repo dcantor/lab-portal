@@ -7,6 +7,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.31.0] — 2026-10-06
+
+### Added
+- **Monitoring: evpn-pfsense's syslog and sFlow.** VictoriaLogs listens on UDP 5517 for it (lab=evpn-pfsense: its VyOS
+  nodes, and its pfSense and OPNsense firewalls through a relay on the lab host); a goflow2 for its sFlow (UDP 6345,
+  VXLAN decoded as evpn-clab's), named by `flows/evpn-pfsense.lua` (`flows/gen_evpn_pfsense.py` writes the names from the
+  lab's fabric.yml); the vmalert-logs group `evpn-pfsense-events` (BGP / OSPF / BFD, CARP transitions, FRR restarts,
+  commits); the dashboard **EVPN pfSense: flows** and a syslog row on its overview.
+
+### Fixed
+- The other labs' hostname-based log rules and dashboards (spine1, leaf1, border1 …) now exclude evpn-pfsense (and the
+  evpn-fabric dashboard srl-evpn), and srv6-core's flows exclude evpn-pfsense's sFlow records.
+
 ## [0.30.1] — 2026-10-06
 
 ### Changed

@@ -14,12 +14,14 @@ services:
   victorialogs:                                   # syslog from the VyOS nodes (system syslog remote -> the native syslog receiver, UDP 5514 — 514 is the NMS rsyslog)
     image: victoriametrics/victoria-logs:v1.52.0
     restart: unless-stopped
-    # :5514 every lab's VyOS nodes; :5515 evpn-clab's, :5516 srl-evpn's (SR Linux), each stamped with its lab (the hostnames are evpn-fabric's)
+    # :5514 every lab's VyOS nodes; :5515 evpn-clab's, :5516 srl-evpn's (SR Linux), :5517 evpn-pfsense's (VyOS + its pfSense and
+    # OPNsense firewalls, through a relay on the host), each stamped with its lab (the hostnames are evpn-fabric's)
     command: ["--storageDataPath=/vlogs", "--retentionPeriod=90d", "--httpListenAddr=:9428",
               "--syslog.listenAddr.udp=:5514", "--syslog.streamFields.udp=[\"hostname\",\"app_name\"]", "--syslog.extraFields.udp=",
               "--syslog.listenAddr.udp=:5515", "--syslog.streamFields.udp=[\"lab\",\"hostname\",\"app_name\"]", "--syslog.extraFields.udp={\"lab\":\"evpn-clab\"}",
-              "--syslog.listenAddr.udp=:5516", "--syslog.streamFields.udp=[\"lab\",\"hostname\",\"app_name\"]", "--syslog.extraFields.udp={\"lab\":\"srl-evpn\"}"]
-    ports: ["9428:9428", "5514:5514/udp", "5515:5515/udp", "5516:5516/udp"]
+              "--syslog.listenAddr.udp=:5516", "--syslog.streamFields.udp=[\"lab\",\"hostname\",\"app_name\"]", "--syslog.extraFields.udp={\"lab\":\"srl-evpn\"}",
+              "--syslog.listenAddr.udp=:5517", "--syslog.streamFields.udp=[\"lab\",\"hostname\",\"app_name\"]", "--syslog.extraFields.udp={\"lab\":\"evpn-pfsense\"}"]
+    ports: ["9428:9428", "5514:5514/udp", "5515:5515/udp", "5516:5516/udp", "5517:5517/udp"]
     volumes: ["vl_data:/vlogs"]
 
   vmalert-logs:                                   # log-derived alerts: LogsQL rules against VictoriaLogs; alert state written to VictoriaMetrics (ALERTS)
@@ -54,12 +56,21 @@ services:
     ports: ["6344:6344/udp", "8084:8080"]
     volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
 
+  goflow2-evpn-pfsense:                           # evpn-pfsense's sFlow (its spines, leaves and borders): VXLAN decoded as evpn-clab's
+    image: netsampler/goflow2:v2
+    restart: unless-stopped
+    command: ["-listen=sflow://:6345", "-format=json", "-mapping=/etc/flows/evpn-clab-mapping.yaml",
+              "-transport=file", "-transport.file=/flows/evpn-pfsense.json", "-addr=:8080"]
+    user: "0:0"
+    ports: ["6345:6345/udp", "8085:8080"]
+    volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
+
   flows-shipper:                                  # Fluent Bit tails goflow2's file into VictoriaLogs (structured records, stream per exporter)
     image: fluent/fluent-bit:3.2
     restart: unless-stopped
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/etc/flows/fluent-bit.conf"]
     volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
-    depends_on: [goflow2, goflow2-evpn-clab, victorialogs]
+    depends_on: [goflow2, goflow2-evpn-clab, goflow2-evpn-pfsense, victorialogs]
 
   flows-rotate:                                   # daily truncation of the goflow2 file
     image: busybox:1.37

@@ -279,7 +279,7 @@ p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_r
 # fabric — sessions, VNIs, segments, default routes — every node is scraped and pushes Telegraf, every node's syslog is in VictoriaLogs)
 _id[0] = 0
 L = 'lab="evpn-fabric"'
-EVH = '-lab:evpn-clab hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" '   # evpn-clab has the same hostnames: its syslog carries lab=evpn-clab
+EVH = '-lab:evpn-clab -lab:srl-evpn -lab:evpn-pfsense hostname:~"^(spine[0-9]+|leaf[0-9]+|border[0-9]+|fw-ext)$" '   # the other EVPN labs have the same hostnames: their syslog carries their lab
 HEALTH3 = [{"type": "value", "options": {"0": {"text": "down", "color": "red"}, "0.5": {"text": "degraded", "color": "orange"}, "1": {"text": "ok", "color": "green"}}}]
 p = []
 p.append(row("The fabric", 0))
@@ -426,9 +426,16 @@ p.append(panel("Designated forwarder per Ethernet Segment", "state-timeline", [(
 p.append(panel("Hosts' LACP legs in the active aggregator", "timeseries", [(f"lab_host_bond_legs_up{{{L}}}", "{{node}}")], 10, 67, 7, 8, min=0, max=2, decimals=0))
 p.append(panel("Segment VTEPs seen per leaf (2 = aliasing through both)", "timeseries", [(f"min by (host) (lab_es_vteps{{{L}}})", "{{host}} (worst leaf)")], 17, 67, 7, 8, min=0, max=2, decimals=0))
 
-p.append(row("Lab and runs", 75))
-p.append(panel("Containers and firewall VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 76, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 76, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+PSL = 'lab:evpn-pfsense -type:SFLOW_5 '   # its syslog (the VyOS nodes, and the four firewalls through the host's relay)
+p.append(row("Syslog (VictoriaLogs, lab=evpn-pfsense: the switches and the four firewalls)", 75))
+p.append(panel("BGP / OSPF / BFD / CARP events / 5 min per node", "timeseries", [logs_ts(PSL + '((app_name:bgpd "%ADJCHANGE") OR (app_name:ospfd "AdjChg") OR (app_name:bfdd "state-change") OR ("carp:" "->")) | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events', "{{hostname}}")], 0, 76, 12, 7, ds=VL, min=0))
+p.append(panel("Syslog lines / 5 min per node", "timeseries", [logs_ts(PSL + '| stats by (_time:5m, hostname) count() as lines', "{{hostname}}")], 12, 76, 12, 7, ds=VL, min=0))
+p.append(panel("The firewalls' syslog (pfSense, OPNsense — newest first)", "logs", [(PSL + 'hostname:~"^(pf|opn)[0-9]+([.].*)?$" -app_name:filterlog', "")], 0, 83, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+p.append(panel("The fabric's syslog: FRR and commits (newest first)", "logs", [(PSL + '(app_name:bgpd OR app_name:ospfd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit)', "")], 12, 83, 12, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+p.append(row("Lab and runs", 92))
+p.append(panel("Containers and firewall VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 93, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 93, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "evpn-pfsense-overview.json").write_text(json.dumps(dashboard("evpn-pfsense-overview", "EVPN pfSense: overview", p, ["evpn-pfsense", "lab"], lab="evpn-pfsense"), indent=1))
 
 # ---------------------------------------------------------------- evpn-fabric: Kubernetes on the fabric (k3s + Cilium on the k8s-* nodes: every
@@ -534,7 +541,7 @@ p.append(panel("Commits and configuration changes (vyos-configd / commit)", "log
 (OUT / "vyos-telegraf.json").write_text(json.dumps(dashboard("vyos-telegraf", "VyOS telemetry: Telegraf and syslog", p, ["lab", "vyos", "telegraf"], TV), indent=1))
 # ---------------------------------------------------------------- Flows (sFlow from PEs / Ps -> goflow2 -> VictoriaLogs)
 _id[0] = 0
-FL = 'sampler_address:* -lab:evpn-clab '                    # every srv6-core sFlow record (goflow2 JSON, one per sampled packet); evpn-clab has its own
+FL = 'sampler_address:* -lab:evpn-clab -lab:evpn-pfsense '  # every srv6-core sFlow record (goflow2 JSON, one per sampled packet); evpn-clab and evpn-pfsense have their own
 SR = FL + 'proto:"IPv6-Route" '                              # SRv6-encapsulated packets: outer IPv6 with a routing header
 p = []
 p.append(panel("Sampled packets / min per exporter", "stat", [(FL + '| stats by (sampler_address) count() as samples', "{{sampler_address}}", {"queryType": "stats"})], 0, 0, 12, 4, ds=VL, colorMode="value", thresholds={"steps": [{"color": "blue", "value": None}]}))
@@ -585,6 +592,45 @@ p.append(panel("North-south conversations (estimated bytes)", "table", [(ED + '-
 p.append(row("Samples", 52))
 p.append(panel("Newest samples (message = conversation; open one for every field)", "logs", [(EF, "")], 0, 53, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
 (OUT / "evpn-clab-flows.json").write_text(json.dumps(dashboard("evpn-clab-flows", "EVPN clab: flows (sFlow)", p, ["evpn-clab", "flows", "sflow"], refresh="1m", lab="evpn-clab"), indent=1))
+
+# ---------------------------------------------------------------- evpn-pfsense flows (sFlow: hsflowd on the spines, leaves and borders -> goflow2's
+# evpn-pfsense listener, VXLAN decoded -> Fluent Bit names each sample (flows/evpn-pfsense.lua) -> VictoriaLogs). One record per sampled
+# packet; est_bytes = bytes x sampling rate. Each node samples on ingress, so a packet is counted once per *view*: access (a leaf's
+# host ports: what the hosts send), fabric (the spines: VXLAN between VTEPs), edge (a border's transit ports: what the firewall pairs send back). `entry` marks where
+# a packet enters the lab (access, or the internet coming back in at a border): counting only those counts every packet once — the top talkers.
+_id[0] = 0
+EF = 'lab:evpn-pfsense type:SFLOW_5 '
+EN = EF + 'entry:true '
+SP = EF + 'view:fabric encap:vxlan '
+ED = EF + 'view:edge '
+BPS = lambda by: f'| stats by (_time:1m, {by}) sum(est_bytes) as b | math b * 8 / 60 as bps | fields _time, {by}, bps'
+BL = {"steps": [{"color": "blue", "value": None}]}
+BYTES = [{"matcher": {"id": "byName", "options": "bytes"}, "properties": [{"id": "unit", "value": "bytes"}]}]   # only that column: a port is not KiB
+p = []
+p.append(panel("Traffic entering the lab (estimated, selected range)", "stat", [(EN + '| stats sum(est_bytes) as bytes', "bytes", {"queryType": "stats"})], 0, 0, 6, 4, ds=VL, unit="bytes", colorMode="value", thresholds=BL))
+p.append(panel("Conversations (host pairs)", "stat", [(EN + '| stats count_uniq(pair) as pairs', "pairs", {"queryType": "stats"})], 6, 0, 4, 4, ds=VL, colorMode="value", thresholds=BL))
+p.append(panel("VTEP pairs carrying VXLAN", "stat", [(SP + '| stats count_uniq(vtep_src, vtep_dst) as pairs', "pairs", {"queryType": "stats"})], 10, 0, 4, 4, ds=VL, colorMode="value", thresholds=BL))
+p.append(panel("Samples per exporter (selected range)", "stat", [(EF + '| stats by (node) count() as samples', "{{node}}", {"queryType": "stats"})], 14, 0, 10, 4, ds=VL, colorMode="value", thresholds=BL))
+p.append(row("Who talks to whom (where packets enter the lab: each packet once)", 4))
+p.append(panel("Top conversations (estimated bytes)", "table", [(EN + '| stats by (pair, tenant, app_proto, app_port) sum(est_bytes) as bytes | sort by (bytes desc) | limit 20', "", {"queryType": "stats"})], 0, 5, 10, 10, ds=VL, overrides=BYTES, columns=["pair", "tenant", "app_proto", "app_port"]))
+p.append(panel("Conversations over time (bit/s, 1-min averages, estimated)", "timeseries", [logs_ts(EN + BPS("pair"), "{{pair}}")], 10, 5, 14, 10, ds=VL, unit="bps", min=0))
+p.append(panel("Per tenant (bit/s, 1-min averages)", "timeseries", [logs_ts(EN + BPS("tenant"), "{{tenant}}")], 0, 15, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("Top senders (bit/s)", "timeseries", [logs_ts(EN + BPS("host_src"), "{{host_src}}")], 8, 15, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("Applications (protocol / destination port, estimated bytes)", "table", [(EN + '| stats by (app_proto, app_port) sum(est_bytes) as bytes | sort by (bytes desc) | limit 12', "", {"queryType": "stats"})], 16, 15, 8, 8, ds=VL, overrides=BYTES, columns=["app_proto", "app_port"]))
+p.append(row("The fabric: VXLAN between VTEPs (sampled on the spines)", 23))
+p.append(panel("VTEP pairs and VNIs (estimated bytes)", "table", [(SP + '| stats by (vtep_src, vtep_dst, vni_name) sum(est_bytes) as bytes | sort by (bytes desc) | limit 20', "", {"queryType": "stats"})], 0, 24, 10, 10, ds=VL, overrides=BYTES, columns=["vtep_src", "vtep_dst", "vni_name"]))
+p.append(panel("ECMP: VXLAN through each spine (bit/s)", "timeseries", [logs_ts(SP + BPS("node"), "{{node}}")], 10, 24, 7, 10, ds=VL, unit="bps", min=0))
+p.append(panel("Per VNI (bit/s)", "timeseries", [logs_ts(SP + BPS("vni_name"), "{{vni_name}}")], 17, 24, 7, 10, ds=VL, unit="bps", min=0))
+p.append(panel("Which spine carries which conversation (flows hash onto one spine each)", "table", [(SP + '| stats by (pair, vtep_src, vtep_dst, node) sum(est_bytes) as bytes | sort by (bytes desc) | limit 20', "", {"queryType": "stats"})], 0, 34, 12, 9, ds=VL, overrides=BYTES, columns=["pair", "vtep_src", "vtep_dst", "node"]))
+p.append(panel("Inside the tunnels (inner protocol, samples)", "table", [(SP + '| stats by (inner_proto_name, tenant) count() as samples | sort by (samples desc) | limit 10', "", {"queryType": "stats"})], 12, 34, 6, 9, ds=VL, columns=["inner_proto_name", "tenant"]))
+p.append(panel("The fabric's own traffic on the spines (BFD, BGP, OSPF: samples)", "table", [(EF + 'view:fabric -encap:vxlan | stats by (app_proto, app_port, from) count() as samples | sort by (samples desc) | limit 12', "", {"queryType": "stats"})], 18, 34, 6, 9, ds=VL, columns=["app_proto", "app_port", "from"]))
+p.append(row("Back from the firewall pairs (sampled on the borders' transit ports: the other tenant, the internet)", 43))
+p.append(panel("From the firewalls into the fabric, by transit port (bit/s)", "timeseries", [logs_ts(ED + BPS("from"), "{{from}}")], 0, 44, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("Per tenant from the firewalls (bit/s)", "timeseries", [logs_ts(ED + '-tenant:none ' + BPS("tenant"), "{{tenant}}")], 8, 44, 8, 8, ds=VL, unit="bps", min=0))
+p.append(panel("Through the firewalls: conversations (estimated bytes)", "table", [(ED + '-tenant:none | stats by (pair, from, tenant) sum(est_bytes) as bytes | sort by (bytes desc) | limit 15', "", {"queryType": "stats"})], 16, 44, 8, 8, ds=VL, overrides=BYTES, columns=["pair", "from", "tenant"]))
+p.append(row("Samples", 52))
+p.append(panel("Newest samples (message = conversation; open one for every field)", "logs", [(EF, "")], 0, 53, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+(OUT / "evpn-pfsense-flows.json").write_text(json.dumps(dashboard("evpn-pfsense-flows", "EVPN pfSense: flows (sFlow)", p, ["evpn-pfsense", "flows", "sflow"], refresh="1m", lab="evpn-pfsense"), indent=1))
 # ---------------------------------------------------------------- srl-evpn: Nokia SR Linux 5-stage Clos over gNMI (gnmic-srl-evpn ->
 # Prometheus -> VictoriaMetrics): sessions, BFD, interfaces, Ethernet Segments, traffic, routes, MACs, CPU and memory per node
 _id[0] = 0

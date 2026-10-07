@@ -1532,7 +1532,7 @@
   {
    "id": 31,
    "type": "row",
-   "title": "Lab and runs",
+   "title": "Syslog (VictoriaLogs, lab=evpn-pfsense: the switches and the four firewalls)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1544,6 +1544,173 @@
   },
   {
    "id": 32,
+   "title": "BGP / OSPF / BFD / CARP events / 5 min per node",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 76,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:evpn-pfsense -type:SFLOW_5 ((app_name:bgpd \"%ADJCHANGE\") OR (app_name:ospfd \"AdjChg\") OR (app_name:bfdd \"state-change\") OR (\"carp:\" \"->\")) | uniq by (_time, hostname, _msg) | stats by (_time:5m, hostname) count() as events",
+     "legendFormat": "{{hostname}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 33,
+   "title": "Syslog lines / 5 min per node",
+   "type": "timeseries",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 76,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:evpn-pfsense -type:SFLOW_5 | stats by (_time:5m, hostname) count() as lines",
+     "legendFormat": "{{hostname}}",
+     "queryType": "statsRange"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 34,
+   "title": "The firewalls' syslog (pfSense, OPNsense \u2014 newest first)",
+   "type": "logs",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 83,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:evpn-pfsense -type:SFLOW_5 hostname:~\"^(pf|opn)[0-9]+([.].*)?$\" -app_name:filterlog",
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": false,
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 35,
+   "title": "The fabric's syslog: FRR and commits (newest first)",
+   "type": "logs",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 83,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:evpn-pfsense -type:SFLOW_5 (app_name:bgpd OR app_name:ospfd OR app_name:bfdd OR app_name:zebra OR app_name:watchfrr OR app_name:commit)",
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": false,
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 36,
+   "type": "row",
+   "title": "Lab and runs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 92,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 37,
    "title": "Containers and firewall VMs running",
    "type": "state-timeline",
    "datasource": {
@@ -1552,7 +1719,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 76,
+    "y": 93,
     "w": 12,
     "h": 10
    },
@@ -1610,7 +1777,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 38,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -1619,7 +1786,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 76,
+    "y": 93,
     "w": 12,
     "h": 10
    },
