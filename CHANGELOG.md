@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.32.0] — 2026-10-07
+
+### Added
+- **Monitoring: mesh-lab** (a service mesh on k3d: the same shop under no mesh, Istio ambient, Istio sidecars or Linkerd).
+  The scrape job `mesh-lab` (its portal, 10.0.0.1:8099, the only source); the alert group `mesh-lab` — an access-matrix
+  cell not as the policy says (`MeshLabAccessUnexpected`: a fail-open or a wrongly refused call), a shop pod outside the
+  mesh's data plane, a Deployment or a mesh component not ready, each gated on the cluster running and lasting longer
+  than a mesh switch; the dashboard **mesh-lab: overview** (the mesh and level over time, every probe -> service cell,
+  the pods in the data plane, the mesh's components, each mesh's latency at its last benchmark, runs).
+
 ## [0.31.0] — 2026-10-06
 
 ### Added

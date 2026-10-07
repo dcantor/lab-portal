@@ -438,6 +438,44 @@ p.append(panel("Containers and firewall VMs running", "state-timeline", [(f"lab_
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 93, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "evpn-pfsense-overview.json").write_text(json.dumps(dashboard("evpn-pfsense-overview", "EVPN pfSense: overview", p, ["evpn-pfsense", "lab"], lab="evpn-pfsense"), indent=1))
 
+# ---------------------------------------------------------------- mesh-lab overview (a service mesh on k3d: the same shop under no mesh, Istio ambient,
+# Istio sidecars or Linkerd). The portal :8099 is the only source, through kubectl: the mesh and policy level, the shop's Deployments and whether
+# their pods are in the data plane, the mesh's own components, the access matrix (every probe pod against every service), each mesh's latency
+_id[0] = 0
+L = 'lab="mesh-lab"'
+p = []
+p.append(row("The lab", 0))
+p.append(panel("Mesh / policy level", "stat", [(f"lab_mesh_info{{{L}}}", "{{mesh}} · {{level}}")], 0, 1, 6, 4, colorMode="none", textMode="name"))
+p.append(panel("Access matrix: cells not as the policy says", "stat", [(f"lab_access_mismatches{{{L}}}", "unexpected")], 6, 1, 5, 4, colorMode="background", decimals=0,
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Deployments in the mesh", "stat", [(f"count(lab_deploy_in_mesh{{{L}}} == 1) or vector(0)", "in mesh"), (f"count(lab_deploy_in_mesh{{{L}}})", "deployments")], 11, 1, 5, 4, colorMode="value", thresholds=G1))
+p.append(panel("Last tests", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}]},
+                          {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Mesh over time", "state-timeline", [(f"lab_mesh_info{{{L}}}", "{{mesh}} · {{level}}")], 0, 5, 24, 5, mappings=[{"type": "value", "options": {"1": {"text": "deployed", "color": "blue"}}}]))
+
+p.append(row("Access (every probe pod against every shop service, at the protocol level)", 10))
+p.append(panel("Each cell as the policy says? (probe -> service)", "state-timeline", [(f"lab_access_as_expected{{{L}}}", "{{probe}} -> {{service}} ({{expected}})")], 0, 11, 16, 18,
+               mappings=[{"type": "value", "options": {"0": {"text": "unexpected", "color": "red"}, "1": {"text": "as expected", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Answered (allowed) per probe", "timeseries", [(f"sum by (probe) (lab_access_answered{{{L}}})", "{{probe}}")], 16, 11, 8, 9, min=0, decimals=0))
+p.append(panel("Unexpected cells", "timeseries", [(f"lab_access_mismatches{{{L}}}", "unexpected")], 16, 20, 8, 9, min=0, decimals=0))
+
+p.append(row("Workloads and the mesh's own components", 29))
+p.append(panel("Shop pods in the data plane (per Deployment)", "state-timeline", [(f"lab_deploy_in_mesh{{{L}}}", "{{deploy}}")], 0, 30, 12, 10,
+               mappings=[{"type": "value", "options": {"0": {"text": "outside", "color": "orange"}, "1": {"text": "in mesh", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Ready replicas per Deployment", "timeseries", [(f"lab_deploy_ready_replicas{{{L}}}", "{{deploy}}")], 12, 30, 6, 10, min=0, decimals=0))
+p.append(panel("Mesh components ready / wanted", "timeseries", [(f"lab_mesh_component_ready{{{L}}}", "{{component}} ready"), (f"lab_mesh_component_want{{{L}}}", "{{component}} wanted")], 18, 30, 6, 10, min=0, decimals=0))
+
+p.append(row("Latency each mesh adds (tools/bench.py: the page is a fan-out to six services, the hop one gRPC call)", 40))
+p.append(panel("p99 at each mesh's last benchmark", "bargauge", [(f'lab_bench_latency_ms{{{L},quantile="p99"}}', "{{mesh}} {{target}}")], 0, 41, 12, 9, unit="ms", min=0))
+p.append(panel("p50 at each mesh's last benchmark", "bargauge", [(f'lab_bench_latency_ms{{{L},quantile="p50"}}', "{{mesh}} {{target}}")], 12, 41, 12, 9, unit="ms", min=0))
+
+p.append(row("Lab and runs", 50))
+p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 51, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 51, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+(OUT / "mesh-lab-overview.json").write_text(json.dumps(dashboard("mesh-lab-overview", "mesh-lab: overview", p, ["mesh-lab", "lab"], lab="mesh-lab"), indent=1))
+
 # ---------------------------------------------------------------- evpn-fabric: Kubernetes on the fabric (k3s + Cilium on the k8s-* nodes: every
 # node peers BGP with its leaves; the portal measures nodes / sessions / services, Cilium's agents and Hubble are scraped on every node)
 _id[0] = 0

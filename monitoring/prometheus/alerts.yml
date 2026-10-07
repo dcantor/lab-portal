@@ -389,6 +389,30 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the evpn-pfsense portal has not polled the lab for {{ $value | printf \"%.0f\" }} s — every other alert of this lab is blind"}
 
+  - name: mesh-lab                  # service mesh on k3d; the portal (:8099) measures it through kubectl. Gated on the cluster running; `for` outlasts a
+    rules:                          # mesh switch (~1.5 min: the shop restarts into the new data plane)
+      - alert: MeshLabAccessUnexpected
+        # a probe reached what the policy denies (fail open — e.g. a pod not re-captured after a node restart) or was refused what it allows
+        expr: (lab_access_mismatches{lab="mesh-lab"} > 0) and on (lab) (sum by (lab) (lab_vm_running{lab="mesh-lab"}) > 0)
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $value }} cell(s) of the access matrix are not what {{ with query \"lab_mesh_info{lab='mesh-lab'}\" }}{{ . | first | label \"mesh\" }}/{{ . | first | label \"level\" }}{{ end }} should allow — see the portal's matrix"}
+      - alert: MeshLabPodOutsideMesh
+        expr: (lab_deploy_in_mesh{lab="mesh-lab"} == 0) and on (lab) (lab_mesh_info{lab="mesh-lab",mesh!="none"} == 1)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.deploy }} has a pod outside the mesh's data plane — its traffic is plain and no policy applies to it"}
+      - alert: MeshLabDeploymentNotReady
+        expr: (lab_deploy_ready_replicas{lab="mesh-lab"} < lab_deploy_replicas{lab="mesh-lab"}) and on (lab) (sum by (lab) (lab_vm_running{lab="mesh-lab"}) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.deploy }}: {{ $value }} replica(s) ready, fewer than it wants"}
+      - alert: MeshLabMeshComponentNotReady
+        expr: (lab_mesh_component_ready{lab="mesh-lab"} < lab_mesh_component_want{lab="mesh-lab"}) and on (lab) (sum by (lab) (lab_vm_running{lab="mesh-lab"}) > 0)
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "the mesh's {{ $labels.kind }} {{ $labels.component }} has {{ $value }} pod(s) ready, fewer than it wants"}
+
   - name: cat8000v-ipsec
     rules:
       - alert: TunnelDown

@@ -57,6 +57,11 @@ scrape_configs:
     honor_labels: true
     scrape_interval: 30s
 
+  - job_name: mesh-lab                                             # service mesh on k3d (Istio ambient / sidecars, Linkerd): the portal measures the
+    static_configs: [{targets: ["10.0.0.1:8099"]}]                 # cluster, the access matrix and each mesh's latency through kubectl; no exporters
+    honor_labels: true
+    scrape_interval: 30s
+
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
     honor_labels: true
