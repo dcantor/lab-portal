@@ -471,9 +471,21 @@ p.append(row("Latency each mesh adds (tools/bench.py: the page is a fan-out to s
 p.append(panel("p99 at each mesh's last benchmark", "bargauge", [(f'lab_bench_latency_ms{{{L},quantile="p99"}}', "{{mesh}} {{target}}")], 0, 41, 12, 9, unit="ms", min=0))
 p.append(panel("p50 at each mesh's last benchmark", "bargauge", [(f'lab_bench_latency_ms{{{L},quantile="p50"}}', "{{mesh}} {{target}}")], 12, 41, 12, 9, unit="ms", min=0))
 
-p.append(row("Lab and runs", 50))
-p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 51, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 51, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(row("Releases (a share of productcatalog routed to a candidate build) and outages (one service down: which pages still work)", 50))
+p.append(panel("% routed to the candidate", "timeseries", [(f"lab_release_weight{{{L}}}", "{{candidate}}")], 0, 51, 8, 8, min=0, max=100, unit="percent", decimals=0))
+p.append(panel("Home pages sampled, by the build that answered", "timeseries", [(f"lab_release_pages{{{L}}}", "{{build}}")], 8, 51, 8, 8, min=0, decimals=0, custom={"stacking": {"mode": "normal"}, "fillOpacity": 60},
+               overrides=[{"matcher": {"id": "byName", "options": n}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": c}}]}
+                          for n, c in (("v1", "#64748b"), ("v2", "blue"), ("error", "red"))]))
+p.append(panel("Home page latency during the release", "timeseries", [(f"lab_release_page_ms{{{L}}}", "{{quantile}}")], 16, 51, 8, 8, unit="ms", min=0))
+p.append(panel("Outage table: page still works with the service down", "state-timeline", [(f"lab_outage_page_ok{{{L}}}", "{{service}} down: {{page}}")], 0, 59, 16, 14,
+               mappings=[{"type": "value", "options": {"0": {"text": "broken", "color": "red"}, "1": {"text": "works", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Recovery after each outage", "bargauge", [(f"lab_outage_recovery_seconds{{{L}}}", "{{service}}")], 16, 59, 8, 10, unit="s", min=0))
+p.append(panel("Last progressive rollout", "stat", [(f"lab_release_rollout_rolled_back{{{L}}}", "{{candidate}} on {{mesh}}")], 16, 69, 8, 4, colorMode="background",
+               mappings=[{"type": "value", "options": {"0": {"text": "completed", "color": "green"}, "1": {"text": "rolled back", "color": "orange"}}}]))
+
+p.append(row("Lab and runs", 73))
+p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 74, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 74, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 (OUT / "mesh-lab-overview.json").write_text(json.dumps(dashboard("mesh-lab-overview", "mesh-lab: overview", p, ["mesh-lab", "lab"], lab="mesh-lab"), indent=1))
 
 # ---------------------------------------------------------------- evpn-fabric: Kubernetes on the fabric (k3s + Cilium on the k8s-* nodes: every

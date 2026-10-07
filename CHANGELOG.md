@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.33.0] — 2026-10-07
+
+### Added
+
+- **mesh-lab 0.2.0 on the Grafana dashboard** (*mesh-lab: overview*): a Releases and outages row — the % routed to the
+  candidate build, the home pages sampled by the build that answered (v1, v2, errors), their latency, the last
+  progressive rollout (completed or rolled back), the outage table (each page with each service down) and the time each
+  outage took to recover.
+
 ## [0.32.0] — 2026-10-07
 
 ### Added
