@@ -90,7 +90,38 @@
   ]
  },
  "templating": {
-  "list": []
+  "list": [
+   {
+    "name": "cluster",
+    "label": "cluster",
+    "type": "custom",
+    "query": "main,cilium",
+    "includeAll": true,
+    "multi": false,
+    "allValue": ".*",
+    "current": {
+     "text": "main",
+     "value": "main"
+    },
+    "options": [
+     {
+      "text": "All",
+      "value": "$__all",
+      "selected": false
+     },
+     {
+      "text": "main",
+      "value": "main",
+      "selected": true
+     },
+     {
+      "text": "cilium",
+      "value": "cilium",
+      "selected": false
+     }
+    ]
+   }
+  ]
  },
  "panels": [
   {
@@ -127,7 +158,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_mesh_info{lab=\"mesh-lab\"}",
+     "expr": "lab_mesh_info{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{mesh}} \u00b7 {{level}}"
     }
    ],
@@ -167,7 +198,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_access_mismatches{lab=\"mesh-lab\"}",
+     "expr": "lab_access_mismatches{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "unexpected"
     }
    ],
@@ -221,7 +252,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "count(lab_deploy_in_mesh{lab=\"mesh-lab\"} == 1) or vector(0)",
+     "expr": "count(lab_deploy_in_mesh{lab=\"mesh-lab\",cluster=~\"$cluster\"} == 1) or vector(0)",
      "legendFormat": "in mesh"
     },
     {
@@ -230,7 +261,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "count(lab_deploy_in_mesh{lab=\"mesh-lab\"})",
+     "expr": "count(lab_deploy_in_mesh{lab=\"mesh-lab\",cluster=~\"$cluster\"})",
      "legendFormat": "deployments"
     }
    ],
@@ -279,7 +310,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_tests_last_passed{lab=\"mesh-lab\"}",
+     "expr": "lab_tests_last_passed{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "passed"
     },
     {
@@ -288,7 +319,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_tests_last_failed{lab=\"mesh-lab\"}",
+     "expr": "lab_tests_last_failed{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "failed"
     }
    ],
@@ -371,7 +402,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "count(ALERTS{lab=\"mesh-lab\",alertstate=\"firing\",severity!=\"info\"}) or vector(0)",
+     "expr": "count(ALERTS{lab=\"mesh-lab\",cluster=~\"$cluster\",alertstate=\"firing\",severity!=\"info\"}) or vector(0)",
      "legendFormat": "firing"
     }
    ],
@@ -424,7 +455,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_mesh_info{lab=\"mesh-lab\"}",
+     "expr": "lab_mesh_info{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{mesh}} \u00b7 {{level}}"
     }
    ],
@@ -488,7 +519,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_access_as_expected{lab=\"mesh-lab\"}",
+     "expr": "lab_access_as_expected{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{probe}} -> {{service}} ({{expected}})"
     }
    ],
@@ -555,7 +586,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum by (probe) (lab_access_answered{lab=\"mesh-lab\"})",
+     "expr": "sum by (probe) (lab_access_answered{lab=\"mesh-lab\",cluster=~\"$cluster\"})",
      "legendFormat": "{{probe}}"
     }
    ],
@@ -597,7 +628,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_access_mismatches{lab=\"mesh-lab\"}",
+     "expr": "lab_access_mismatches{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "unexpected"
     }
    ],
@@ -652,7 +683,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_deploy_in_mesh{lab=\"mesh-lab\"}",
+     "expr": "lab_deploy_in_mesh{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{deploy}}"
     }
    ],
@@ -719,7 +750,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_deploy_ready_replicas{lab=\"mesh-lab\"}",
+     "expr": "lab_deploy_ready_replicas{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{deploy}}"
     }
    ],
@@ -761,7 +792,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_mesh_component_ready{lab=\"mesh-lab\"}",
+     "expr": "lab_mesh_component_ready{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{component}} ready"
     },
     {
@@ -770,7 +801,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_mesh_component_want{lab=\"mesh-lab\"}",
+     "expr": "lab_mesh_component_want{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{component}} wanted"
     }
    ],
@@ -825,7 +856,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_bench_latency_ms{lab=\"mesh-lab\",quantile=\"p99\"}",
+     "expr": "lab_bench_latency_ms{lab=\"mesh-lab\",cluster=~\"$cluster\",quantile=\"p99\"}",
      "legendFormat": "{{mesh}} {{target}}"
     }
    ],
@@ -868,7 +899,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_bench_latency_ms{lab=\"mesh-lab\",quantile=\"p50\"}",
+     "expr": "lab_bench_latency_ms{lab=\"mesh-lab\",cluster=~\"$cluster\",quantile=\"p50\"}",
      "legendFormat": "{{mesh}} {{target}}"
     }
    ],
@@ -924,7 +955,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_release_weight{lab=\"mesh-lab\"}",
+     "expr": "lab_release_weight{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{candidate}}"
     }
    ],
@@ -968,7 +999,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_release_pages{lab=\"mesh-lab\"}",
+     "expr": "lab_release_pages{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{build}}"
     }
    ],
@@ -1062,7 +1093,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_release_page_ms{lab=\"mesh-lab\"}",
+     "expr": "lab_release_page_ms{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{quantile}}"
     }
    ],
@@ -1104,7 +1135,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_outage_page_ok{lab=\"mesh-lab\"}",
+     "expr": "lab_outage_page_ok{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{service}} down: {{page}}"
     }
    ],
@@ -1171,7 +1202,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_outage_recovery_seconds{lab=\"mesh-lab\"}",
+     "expr": "lab_outage_recovery_seconds{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{service}}"
     }
    ],
@@ -1214,7 +1245,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_release_rollout_rolled_back{lab=\"mesh-lab\"}",
+     "expr": "lab_release_rollout_rolled_back{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{candidate}} on {{mesh}}"
     }
    ],
@@ -1283,7 +1314,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_vm_running{lab=\"mesh-lab\"}",
+     "expr": "lab_vm_running{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{node}} ({{role}})"
     }
    ],
@@ -1350,7 +1381,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "lab_run_last_success{lab=\"mesh-lab\"}",
+     "expr": "lab_run_last_success{lab=\"mesh-lab\",cluster=~\"$cluster\"}",
      "legendFormat": "{{mode}}"
     }
    ],

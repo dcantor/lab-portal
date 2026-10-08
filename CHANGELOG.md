@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.34.0] — 2026-10-07
+
+### Added
+
+- **Hub: `extra_links` in labs.json** — a list of `{label, url}` shown on the lab's card next to its portal (mesh-lab: its
+  Cilium cluster's portal).
+- **mesh-lab's Cilium cluster in monitoring**: a second scrape target (the portal on :8101), both labelled `cluster`
+  (main, cilium); the *mesh-lab: overview* dashboard gets a `cluster` variable; the four mesh-lab alerts join and report
+  per cluster.
+
 ## [0.33.0] — 2026-10-07
 
 ### Added

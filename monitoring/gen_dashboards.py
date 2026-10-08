@@ -439,10 +439,13 @@ p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_r
 (OUT / "evpn-pfsense-overview.json").write_text(json.dumps(dashboard("evpn-pfsense-overview", "EVPN pfSense: overview", p, ["evpn-pfsense", "lab"], lab="evpn-pfsense"), indent=1))
 
 # ---------------------------------------------------------------- mesh-lab overview (a service mesh on k3d: the same shop under no mesh, Istio ambient,
-# Istio sidecars or Linkerd). The portal :8099 is the only source, through kubectl: the mesh and policy level, the shop's Deployments and whether
+# Istio sidecars or Linkerd — and, on a second cluster, Cilium; the variable `cluster` picks one). The portal :8099 is the only source, through kubectl: the mesh and policy level, the shop's Deployments and whether
 # their pods are in the data plane, the mesh's own components, the access matrix (every probe pod against every service), each mesh's latency
 _id[0] = 0
-L = 'lab="mesh-lab"'
+L = 'lab="mesh-lab",cluster=~"$cluster"'     # two clusters (each its own portal, scraped with a cluster label): main and cilium
+MLV = [{"name": "cluster", "label": "cluster", "type": "custom", "query": "main,cilium", "includeAll": True, "multi": False,
+        "allValue": ".*", "current": {"text": "main", "value": "main"},
+        "options": [{"text": t, "value": v, "selected": v == "main"} for t, v in (("All", "$__all"), ("main", "main"), ("cilium", "cilium"))]}]
 p = []
 p.append(row("The lab", 0))
 p.append(panel("Mesh / policy level", "stat", [(f"lab_mesh_info{{{L}}}", "{{mesh}} · {{level}}")], 0, 1, 6, 4, colorMode="none", textMode="name"))
@@ -486,7 +489,7 @@ p.append(panel("Last progressive rollout", "stat", [(f"lab_release_rollout_rolle
 p.append(row("Lab and runs", 73))
 p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 74, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 74, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-(OUT / "mesh-lab-overview.json").write_text(json.dumps(dashboard("mesh-lab-overview", "mesh-lab: overview", p, ["mesh-lab", "lab"], lab="mesh-lab"), indent=1))
+(OUT / "mesh-lab-overview.json").write_text(json.dumps(dashboard("mesh-lab-overview", "mesh-lab: overview", p, ["mesh-lab", "lab"], variables=MLV, lab="mesh-lab"), indent=1))
 
 # ---------------------------------------------------------------- evpn-fabric: Kubernetes on the fabric (k3s + Cilium on the k8s-* nodes: every
 # node peers BGP with its leaves; the portal measures nodes / sessions / services, Cilium's agents and Hubble are scraped on every node)

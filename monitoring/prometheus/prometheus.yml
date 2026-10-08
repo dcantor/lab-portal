@@ -57,8 +57,10 @@ scrape_configs:
     honor_labels: true
     scrape_interval: 30s
 
-  - job_name: mesh-lab                                             # service mesh on k3d (Istio ambient / sidecars, Linkerd): the portal measures the
-    static_configs: [{targets: ["10.0.0.1:8099"]}]                 # cluster, the access matrix and each mesh's latency through kubectl; no exporters
+  - job_name: mesh-lab                                             # service mesh on k3d (Istio ambient / sidecars, Linkerd; Cilium on a second cluster):
+    static_configs:                                                # a portal per cluster measures it, the access matrix and each mesh's latency through
+      - {targets: ["10.0.0.1:8099"], labels: {cluster: main}}      # kubectl; no exporters
+      - {targets: ["10.0.0.1:8101"], labels: {cluster: cilium}}
     honor_labels: true
     scrape_interval: 30s
 
