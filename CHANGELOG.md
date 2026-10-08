@@ -7,6 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.35.0] — 2026-10-08
+
+### Added
+
+- **p4-lab in monitoring**: Prometheus job `p4-lab` (the portal on :8103), alert group `p4-lab` (controller down, a
+  P4Runtime session down, a switch not on the compiled program, a fabric link down, an ECMP group with no path, write
+  errors, a switch holding packets — INT median hop latency over 5 ms for 5 min), and the dashboard **p4-lab: overview
+  (P4 / INT)**: sessions, links and probe latency, live ECMP next hops, INT hop latency per switch (median and worst),
+  path latency per host pair, flows per spine, reports, queue depth; the INT flow records the portal posts to
+  VictoriaLogs (`lab:p4-lab type:INT`: slowest path latency per path, flows per path, the newest records); traffic,
+  drops and packet-in by reason; runs; the lab host.
+
 ## [0.34.0] — 2026-10-07
 
 ### Added

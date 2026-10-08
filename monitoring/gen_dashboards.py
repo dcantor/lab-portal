@@ -722,4 +722,50 @@ p.append(panel("Events / 5 min per node", "timeseries", [logs_ts(SE + '| stats b
 p.append(panel("Events by name (selected range)", "table", [(SE + '| extract "|EV|<event>|" | stats by (event) count() as events | sort by (events desc) | limit 15', "", {"queryType": "stats"})], 12, 53, 12, 8, ds=VL, columns=["event"]))
 p.append(panel("Newest events (BGP, BFD, ports, LAGs, segments, commits)", "logs", [(SE, "")], 0, 61, 24, 10, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
 (OUT / "srl-evpn-overview.json").write_text(json.dumps(dashboard("srl-evpn-overview", "SR Linux EVPN Clab: overview (gNMI)", p, ["srl-evpn", "lab", "gnmi"], lab="srl-evpn"), indent=1))
+# ---------------------------------------------------------------- p4-lab: our own switch (BMv2 running fabric.p4, programmed over P4Runtime by the lab's
+# controller): sessions, links from the controller's probes, ECMP groups, and INT — every tenant packet carries a record from each switch it crosses; the
+# portal (:8103) turns the reports into per-switch latency and per-pair path latency, and ships one record per flow to VictoriaLogs (lab=p4-lab type=INT)
+_id[0] = 0
+L = 'lab="p4-lab"'
+PI = 'lab:p4-lab type:INT '
+p = []
+p.append(row("The lab", 0))
+p.append(panel("P4Runtime sessions", "stat", [(f"sum(lab_p4rt_session_up{{{L}}})", "up"), (f"count(lab_p4rt_session_up{{{L}}})", "switches")], 0, 1, 4, 4, colorMode="value", thresholds=G1))
+p.append(panel("Fabric links up", "stat", [(f"sum(lab_p4_link_up{{{L}}})", "up"), (f"count(lab_p4_link_up{{{L}}})", "links")], 4, 1, 4, 4, colorMode="value", thresholds=G1))
+p.append(panel("ECMP groups with no path", "stat", [(f"count(lab_p4_ecmp_group_members{{{L}}} == 0) or vector(0)", "no path")], 8, 1, 4, 4, thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+p.append(panel("Last tests", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 12, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}}]},
+                          {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("INT flows (last 30 s)", "stat", [(f"sum by (tenant) (lab_p4_int_flows{{{L}}})", "{{tenant}}")], 16, 1, 4, 4, colorMode="value", thresholds=G1))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds={"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}))
+
+p.append(row("INT: inside the switches (each tenant packet's hop records, reported by the egress leaf)", 5))
+p.append(panel("Hop latency, median per switch (µs a packet spends inside it)", "timeseries", [(f'lab_p4_int_hop_latency_us{{{L},stat="p50"}}', "{{switch}}")], 0, 6, 12, 9, unit="µs", min=0))
+p.append(panel("Hop latency, worst in the last minute", "timeseries", [(f'lab_p4_int_hop_latency_us{{{L},stat="max"}}', "{{switch}}")], 12, 6, 12, 9, unit="µs", min=0))
+p.append(panel("Path latency per host pair (sum of hops, slowest flow)", "timeseries", [(f'lab_p4_int_path_latency_us{{{L}}}', "{{src}} -> {{dst}} ({{tenant}})")], 0, 15, 10, 9, unit="µs", min=0))
+p.append(panel("Flows by the spine their tunnel crossed (ECMP)", "timeseries", [(f'lab_p4_int_flows_via{{{L}}}', "{{spine}}")], 10, 15, 7, 9, min=0, decimals=0, custom={"stacking": {"mode": "normal"}, "fillOpacity": 40}))
+p.append(panel("Reports / s (periodic, latency events)", "timeseries", [(f'rate(lab_p4_int_reports_total{{{L}}}[2m])', "{{kind}}")], 17, 15, 7, 5, min=0))
+p.append(panel("Deepest queue (packets)", "timeseries", [(f'lab_p4_int_queue_depth_max{{{L}}}', "{{switch}}")], 17, 20, 7, 4, min=0, decimals=0))
+
+p.append(row("INT flow records (VictoriaLogs lab=p4-lab type=INT: one per flow every 15 s)", 24))
+p.append(panel("Slowest path latency per path (1 min)", "timeseries", [logs_ts(PI + '| stats by (_time:1m, path) max(latency_us) as us', "{{path}}")], 0, 25, 12, 8, ds=VL, unit="µs", min=0))
+p.append(panel("Flows per path (selected range)", "table", [(PI + '| stats by (tenant, path) count_uniq(_msg) as flows | sort by (flows desc) | limit 20', "", {"queryType": "stats"})], 12, 25, 12, 8, ds=VL, columns=["tenant", "path"]))
+p.append(panel("Newest flow records", "logs", [(PI, "")], 0, 33, 24, 9, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+p.append(row("Links (the controller's probes, 5 a second each way) and ECMP", 42))
+p.append(panel("Fabric links", "state-timeline", [(f"lab_p4_link_up{{{L}}}", "{{link}}")], 0, 43, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Probe latency (controller -> switch -> link -> switch -> controller)", "timeseries", [(f"lab_p4_link_probe_latency_ms{{{L}}}", "{{from}} -> {{to}}")], 12, 43, 12, 7, unit="ms", min=0, legend=False))
+p.append(panel("Live next hops per ECMP group (group = destination switch's id)", "timeseries", [(f"lab_p4_ecmp_group_members{{{L}}}", "{{switch}} -> {{group}}")], 0, 50, 12, 8, min=0, decimals=0, legend=False))
+p.append(panel("Link state changes", "timeseries", [(f"increase(lab_p4_link_changes_total{{{L}}}[5m])", "{{link}}")], 12, 50, 12, 8, min=0, decimals=0))
+
+p.append(row("Traffic, drops and the control plane", 58))
+p.append(panel("Bit rate per switch (all ports, in)", "timeseries", [(f'sum by (switch) (rate(lab_p4_port_bytes_total{{{L},dir="in"}}[2m])) * 8', "{{switch}}")], 0, 59, 8, 8, unit="bps", min=0))
+p.append(panel("Drops / s by reason", "timeseries", [(f'sum by (switch, reason) (rate(lab_p4_drops_total{{{L}}}[2m]))', "{{switch}} {{reason}}")], 8, 59, 8, 8, min=0))
+p.append(panel("Packets to the controller / s (packet-in by reason)", "timeseries", [(f'sum by (reason) (rate(lab_p4_punts_total{{{L}}}[2m]))', "{{reason}}")], 16, 59, 8, 8, min=0))
+
+p.append(row("Lab and runs", 67))
+p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 68, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 68, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 76)
+(OUT / "p4-lab-overview.json").write_text(json.dumps(dashboard("p4-lab-overview", "p4-lab: overview (P4 / INT)", p, ["p4-lab", "lab", "int"], lab="p4-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

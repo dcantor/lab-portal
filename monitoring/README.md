@@ -49,6 +49,16 @@ LACP leg and node health. Its log rules (`evpn-fabric-events`) carry `lab: evpn-
 `operations-events` exclude its hostnames (they would be labelled `lab=srv6-core` by the evaluator), and the IPsec lab's
 firewall rules match `fw-(east|central|west)` exactly rather than `fw-*` (evpn-fabric has an `fw-ext`).
 
+**p4-lab** (job `p4-lab`, the portal `10.0.0.1:8103`): BMv2 switches running the lab's own P4 program, programmed by its
+own controller — no exporters; the portal reads the controller. Sessions, links (the controller's probes), ECMP groups,
+ports, drops, punts, and **INT** (in-band network telemetry): every tenant packet carries a record from each switch it
+crosses, the egress leaf reports each flow, and the portal exports per-switch hop latency (`lab_p4_int_hop_latency_us`
+p50 / avg / max over the last minute), queue depth, flows per spine and path latency per host pair — and ships one
+record per flow every 15 s into **VictoriaLogs** over HTTP (`/insert/jsonline`; stream `lab=p4-lab, type=INT`; fields
+`path`, `spine`, `latency_us`, `hop_<switch>_us`, `tenant`, `src_host` / `dst_host`, `proto`, ports). Alert group
+`p4-lab` (controller, sessions, pipeline, links, no path, write errors, a switch holding packets > 5 ms for 5 min).
+Dashboard **p4-lab: overview (P4 / INT)**.
+
 **evpn-clab** (job `evpn-clab`, SD `http://10.0.0.1:8096/api/sd`): VyOS on containerlab, management network
 172.20.108.0/24 on the host's Docker bridge — the NMS reaches it through the host (its default route), no NIC of its own.
 Telegraf pushes and syslog leave the containers masqueraded to the host's address. Its hostnames are evpn-fabric's

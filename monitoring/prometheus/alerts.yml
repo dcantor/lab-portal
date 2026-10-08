@@ -413,6 +413,44 @@ groups:
         labels: {severity: critical}
         annotations: {summary: "{{ $labels.cluster }} cluster: the mesh's {{ $labels.kind }} {{ $labels.component }} has {{ $value }} pod(s) ready, fewer than it wants"}
 
+  - name: p4-lab                    # BMv2 switches programmed by our own controller (portal :8103). Gated on the lab running; a test cuts a link for
+    rules:                          # ~10 s at a time, well under the link alert's `for`
+      - alert: P4ControllerDown
+        expr: (lab_controller_up{lab="p4-lab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="p4-lab"}) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "the p4-lab controller's API does not answer: nobody answers ARP / ND for the gateways, reroutes around failures or collects INT"}
+      - alert: P4SessionDown
+        expr: (lab_p4rt_session_up{lab="p4-lab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="p4-lab"}) > 0)
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.switch }} has no P4Runtime session with the controller (the switch keeps forwarding what it holds)"}
+      - alert: P4PipelineNotCurrent
+        expr: (lab_p4_pipeline_current{lab="p4-lab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="p4-lab"}) > 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.switch }} does not run the compiled fabric.p4 (cookie differs)"}
+      - alert: P4LinkDown
+        expr: (lab_p4_link_up{lab="p4-lab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="p4-lab"}) > 0)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "fabric link {{ $labels.link }} carries no probes (both ways): it is out of every ECMP group"}
+      - alert: P4NoPath
+        expr: (lab_p4_ecmp_group_members{lab="p4-lab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="p4-lab"}) > 0)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.switch }} has no live path to the switch of group {{ $labels.group }}: its traffic there is dropped (no path)"}
+      - alert: P4WriteErrors
+        expr: increase(lab_p4_write_errors_total{lab="p4-lab"}[10m]) > 0
+        labels: {severity: warning}
+        annotations: {summary: "P4Runtime writes to {{ $labels.switch }} failed in the last 10 min (the controller's events say which)"}
+      - alert: P4HopSlow
+        # INT: a switch whose median hop latency stays above 5 ms is holding packets (BMv2's input buffer under load)
+        expr: lab_p4_int_hop_latency_us{lab="p4-lab",stat="p50"} > 5000
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "INT: {{ $labels.switch }} holds packets {{ $value }} µs (median, last minute)"}
+
   - name: cat8000v-ipsec
     rules:
       - alert: TunnelDown

@@ -64,6 +64,11 @@ scrape_configs:
     honor_labels: true
     scrape_interval: 30s
 
+  - job_name: p4-lab                                               # our own switch: BMv2 + P4Runtime on containerlab — the portal (:8103) reads the
+    static_configs: [{targets: ["10.0.0.1:8103"]}]                 # controller: sessions, links (probes), ECMP groups, ports, drops, punts, and INT
+    honor_labels: true                                             # (per-switch hop latency, flows per spine, path latency per host pair); INT's per-flow
+    scrape_interval: 30s                                           # records go to VictoriaLogs (lab=p4-lab, type=INT) from the portal
+
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
     honor_labels: true
