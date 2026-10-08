@@ -724,7 +724,8 @@ p.append(panel("Newest events (BGP, BFD, ports, LAGs, segments, commits)", "logs
 (OUT / "srl-evpn-overview.json").write_text(json.dumps(dashboard("srl-evpn-overview", "SR Linux EVPN Clab: overview (gNMI)", p, ["srl-evpn", "lab", "gnmi"], lab="srl-evpn"), indent=1))
 # ---------------------------------------------------------------- p4-lab: our own switch (BMv2 running fabric.p4, programmed over P4Runtime by the lab's
 # controller): sessions, links from the controller's probes, ECMP groups, and INT — every tenant packet carries a record from each switch it crosses; the
-# portal (:8103) turns the reports into per-switch latency and per-pair path latency, and ships one record per flow to VictoriaLogs (lab=p4-lab type=INT)
+# portal (:8103) turns the reports into per-switch latency and per-pair path latency, and ships one record per flow to VictoriaLogs (lab=p4-lab type=INT);
+# and the stateful data plane (0.5): the leaves' firewall drops, heavy hitters (digests from a count-min sketch, type=HH) and the flows a meter polices
 _id[0] = 0
 L = 'lab="p4-lab"'
 PI = 'lab:p4-lab type:INT '
@@ -763,9 +764,15 @@ p.append(panel("Bit rate per switch (all ports, in)", "timeseries", [(f'sum by (
 p.append(panel("Drops / s by reason", "timeseries", [(f'sum by (switch, reason) (rate(lab_p4_drops_total{{{L}}}[2m]))', "{{switch}} {{reason}}")], 8, 59, 8, 8, min=0))
 p.append(panel("Packets to the controller / s (packet-in by reason)", "timeseries", [(f'sum by (reason) (rate(lab_p4_punts_total{{{L}}}[2m]))', "{{reason}}")], 16, 59, 8, 8, min=0))
 
-p.append(row("Lab and runs", 67))
-p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 68, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 68, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-host_row(p, 76)
+p.append(row("Stateful (registers on the leaves): the firewall, heavy hitters (count-min sketch -> digest -> a meter)", 67))
+p.append(panel("Firewall drops / s per leaf (inbound to a protected host, not permitted)", "timeseries", [(f'rate(lab_p4_drops_total{{{L},reason="firewall"}}[2m])', "{{switch}}")], 0, 68, 8, 8, min=0))
+p.append(panel("Heavy hitters by tenant, flows policed per leaf", "timeseries", [(f'lab_p4_heavy_hitters{{{L}}}', "heavy {{tenant}}"), (f'lab_p4_policed_flows{{{L}}}', "policed at {{switch}}")], 8, 68, 8, 8, min=0, decimals=0))
+p.append(panel("Policed drops / s (over the meter's rate)", "timeseries", [(f'rate(lab_p4_drops_total{{{L},reason="policed"}}[2m])', "{{switch}}")], 16, 68, 8, 8, min=0))
+p.append(panel("Heavy hitters (VictoriaLogs lab=p4-lab type=HH)", "logs", [('lab:p4-lab type:HH ', "")], 0, 76, 24, 7, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+p.append(row("Lab and runs", 83))
+p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 84, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 84, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 92)
 (OUT / "p4-lab-overview.json").write_text(json.dumps(dashboard("p4-lab-overview", "p4-lab: overview (P4 / INT)", p, ["p4-lab", "lab", "int"], lab="p4-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

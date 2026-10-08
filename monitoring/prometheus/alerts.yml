@@ -444,6 +444,12 @@ groups:
         expr: increase(lab_p4_write_errors_total{lab="p4-lab"}[10m]) > 0
         labels: {severity: warning}
         annotations: {summary: "P4Runtime writes to {{ $labels.switch }} failed in the last 10 min (the controller's events say which)"}
+      - alert: P4HeavyHitterPoliced
+        # informational: the controller polices a heavy hitter of a policed tenant (red) on its leaf
+        expr: lab_p4_policed_flows{lab="p4-lab"} > 0
+        for: 1m
+        labels: {severity: info}
+        annotations: {summary: "{{ $labels.switch }} polices {{ $value }} heavy-hitter flow(s) to the configured rate"}
       - alert: P4HopSlow
         # INT: a switch whose median hop latency stays above 5 ms is holding packets (BMv2's input buffer under load)
         expr: lab_p4_int_hop_latency_us{lab="p4-lab",stat="p50"} > 5000

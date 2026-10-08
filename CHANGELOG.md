@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.36.0] — 2026-10-08
+
+### Added
+
+- **p4-lab 0.5.0's stateful data plane in monitoring**: a Stateful row on *p4-lab: overview* — firewall drops per leaf,
+  heavy hitters by tenant and flows policed per leaf, policed drops, and the heavy-hitter records the portal posts to
+  VictoriaLogs (`lab:p4-lab type:HH`); an info alert `P4HeavyHitterPoliced`.
+
 ## [0.35.0] — 2026-10-08
 
 ### Added

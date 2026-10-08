@@ -56,8 +56,10 @@ crosses, the egress leaf reports each flow, and the portal exports per-switch ho
 p50 / avg / max over the last minute), queue depth, flows per spine and path latency per host pair — and ships one
 record per flow every 15 s into **VictoriaLogs** over HTTP (`/insert/jsonline`; stream `lab=p4-lab, type=INT`; fields
 `path`, `spine`, `latency_us`, `hop_<switch>_us`, `tenant`, `src_host` / `dst_host`, `proto`, ports). Alert group
-`p4-lab` (controller, sessions, pipeline, links, no path, write errors, a switch holding packets > 5 ms for 5 min).
-Dashboard **p4-lab: overview (P4 / INT)**.
+`p4-lab` (controller, sessions, pipeline, links, no path, write errors, a switch holding packets > 5 ms for 5 min, and
+an info alert while a heavy hitter is policed). Since p4-lab 0.5 its stateful data plane too: firewall and policer drops
+(`lab_p4_drops_total{reason="firewall"|"policed"}`), `lab_p4_heavy_hitters{tenant}`, `lab_p4_policed_flows{switch}`,
+and one VictoriaLogs record per heavy hitter per 15 s (`lab:p4-lab type:HH`). Dashboard **p4-lab: overview (P4 / INT)**.
 
 **evpn-clab** (job `evpn-clab`, SD `http://10.0.0.1:8096/api/sd`): VyOS on containerlab, management network
 172.20.108.0/24 on the host's Docker bridge — the NMS reaches it through the host (its default route), no NIC of its own.

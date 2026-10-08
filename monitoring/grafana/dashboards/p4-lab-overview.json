@@ -1244,7 +1244,7 @@
   {
    "id": 28,
    "type": "row",
-   "title": "Lab and runs",
+   "title": "Stateful (registers on the leaves): the firewall, heavy hitters (count-min sketch -> digest -> a meter)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1256,6 +1256,187 @@
   },
   {
    "id": 29,
+   "title": "Firewall drops / s per leaf (inbound to a protected host, not permitted)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 68,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(lab_p4_drops_total{lab=\"p4-lab\",reason=\"firewall\"}[2m])",
+     "legendFormat": "{{switch}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 30,
+   "title": "Heavy hitters by tenant, flows policed per leaf",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 68,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_p4_heavy_hitters{lab=\"p4-lab\"}",
+     "legendFormat": "heavy {{tenant}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_p4_policed_flows{lab=\"p4-lab\"}",
+     "legendFormat": "policed at {{switch}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 31,
+   "title": "Policed drops / s (over the meter's rate)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 68,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(lab_p4_drops_total{lab=\"p4-lab\",reason=\"policed\"}[2m])",
+     "legendFormat": "{{switch}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 32,
+   "title": "Heavy hitters (VictoriaLogs lab=p4-lab type=HH)",
+   "type": "logs",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 76,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "lab:p4-lab type:HH ",
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": false,
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 33,
+   "type": "row",
+   "title": "Lab and runs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 83,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 34,
    "title": "Node containers running",
    "type": "state-timeline",
    "datasource": {
@@ -1264,7 +1445,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 68,
+    "y": 84,
     "w": 12,
     "h": 8
    },
@@ -1322,7 +1503,7 @@
    }
   },
   {
-   "id": 30,
+   "id": 35,
    "title": "Portal runs: last outcome per mode",
    "type": "state-timeline",
    "datasource": {
@@ -1331,7 +1512,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 68,
+    "y": 84,
     "w": 12,
     "h": 8
    },
@@ -1389,20 +1570,20 @@
    }
   },
   {
-   "id": 31,
+   "id": 36,
    "type": "row",
    "title": "Ubuntu lab host (KVM): CPU and memory",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 76,
+    "y": 92,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 32,
+   "id": 37,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1411,7 +1592,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 77,
+    "y": 93,
     "w": 4,
     "h": 4
    },
@@ -1460,7 +1641,7 @@
    }
   },
   {
-   "id": 33,
+   "id": 38,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1469,7 +1650,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 77,
+    "y": 93,
     "w": 4,
     "h": 4
    },
@@ -1518,7 +1699,7 @@
    }
   },
   {
-   "id": 34,
+   "id": 39,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1527,7 +1708,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 77,
+    "y": 93,
     "w": 5,
     "h": 4
    },
@@ -1577,7 +1758,7 @@
    }
   },
   {
-   "id": 35,
+   "id": 40,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1586,7 +1767,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 77,
+    "y": 93,
     "w": 7,
     "h": 4
    },
@@ -1654,7 +1835,7 @@
    }
   },
   {
-   "id": 36,
+   "id": 41,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1663,7 +1844,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 77,
+    "y": 93,
     "w": 4,
     "h": 4
    },
@@ -1712,7 +1893,7 @@
    }
   },
   {
-   "id": 37,
+   "id": 42,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1721,7 +1902,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 81,
+    "y": 97,
     "w": 8,
     "h": 8
    },
@@ -1791,7 +1972,7 @@
    }
   },
   {
-   "id": 38,
+   "id": 43,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1800,7 +1981,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 81,
+    "y": 97,
     "w": 8,
     "h": 8
    },
@@ -1860,7 +2041,7 @@
    }
   },
   {
-   "id": 39,
+   "id": 44,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1869,7 +2050,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 81,
+    "y": 97,
     "w": 8,
     "h": 8
    },
