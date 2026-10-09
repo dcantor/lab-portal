@@ -61,6 +61,22 @@ an info alert while a heavy hitter is policed). Since p4-lab 0.5 its stateful da
 (`lab_p4_drops_total{reason="firewall"|"policed"}`), `lab_p4_heavy_hitters{tenant}`, `lab_p4_policed_flows{switch}`,
 and one VictoriaLogs record per heavy hitter per 15 s (`lab:p4-lab type:HH`). Dashboard **p4-lab: overview (P4 / INT)**.
 
+**evpn-prefect** (job `evpn-prefect`, SD `http://10.0.0.1:8105/api/sd`): VyOS on containerlab, built and run by Prefect
+flows. Management network 172.20.118.0/24, reached through the host. Every switch's node- and frr-exporter (`job` node
+/ frr, labels `node`, `role`) and the portal: Prefect (`lab_prefect_up`, workers, finished runs, runs waiting for
+approval, each deployment's last outcome), the switches against the applied intent (`lab_switch_drift_lines`), the
+last validation (`lab_fabric_checks`), each switch's VyOS version (`lab_switch_version_info`) and maintenance, the event
+bridge (`lab_eventd_*`). The portal ships into **VictoriaLogs** every finished flow run (`lab:evpn-prefect type:RUN`),
+the flows' logs (`type:FLOWLOG`) and the switches' events (`type:EVENT`). Alert group `evpn-prefect`. Its alerts with
+`incident="true"` (failing checks, drift, an exporter down) go through **Alertmanager** to the portal, which turns them
+into Prefect events that start the lab's diagnosis. Dashboard **evpn-prefect: overview (Prefect / EVPN)**.
+
+**Alertmanager** (`:9093`, `alertmanager/alertmanager.yml`): Prometheus sends it every alert. A lab that wants its
+alerts acted on gets a route with its own receiver (today only evpn-prefect's incident alerts, as a webhook to its
+portal). Everything else goes to `blackhole`, so the Hub and Grafana show alerts as before. Webhook tokens are not in
+this repository: they live on the NMS in `/opt/monitoring-secrets/alertmanager/`, outside what `deploy.sh` syncs, and
+are mounted at `/etc/alertmanager-secrets`. evpn-prefect's `./lab.sh nms-token` writes its own.
+
 **evpn-clab** (job `evpn-clab`, SD `http://10.0.0.1:8096/api/sd`): VyOS on containerlab, management network
 172.20.108.0/24 on the host's Docker bridge — the NMS reaches it through the host (its default route), no NIC of its own.
 Telegraf pushes and syslog leave the containers masqueraded to the host's address. Its hostnames are evpn-fabric's

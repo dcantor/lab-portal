@@ -99,6 +99,16 @@ services:
       - prom_data:/prometheus
     depends_on: [victoriametrics]
 
+  alertmanager:                                   # routes the alerts a lab asks to be acted on (alertmanager/alertmanager.yml); the rest go nowhere
+    image: prom/alertmanager:v0.34.1
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager", "--web.listen-address=:9093"]
+    ports: ["9093:9093"]
+    volumes:
+      - ./alertmanager:/etc/alertmanager:ro
+      - /opt/monitoring-secrets/alertmanager:/etc/alertmanager-secrets:ro   # the lab portals' webhook tokens (not in the repository, not rsynced; beside the read-only config, not in it)
+      - am_data:/alertmanager
+
   grafana:
     image: grafana/grafana-oss:13.0.2
     restart: unless-stopped
@@ -120,6 +130,7 @@ services:
     depends_on: [victoriametrics, victorialogs, prometheus]
 
 volumes:
+  am_data:
   vm_data:
   vl_data:
   flows:

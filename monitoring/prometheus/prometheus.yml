@@ -9,6 +9,10 @@ global:
 
 rule_files: [alerts.yml]
 
+alerting:                                                            # Alertmanager (alertmanager/alertmanager.yml): it routes evpn-prefect's incident
+  alertmanagers:                                                     # alerts to that lab's portal (a Prefect event -> fabric-diagnose) and drops the rest
+    - static_configs: [{targets: ["alertmanager:9093"]}]
+
 remote_write:
   - url: http://victoriametrics:8428/api/v1/write
     queue_config: {max_samples_per_send: 5000, batch_send_deadline: 5s}
@@ -68,6 +72,14 @@ scrape_configs:
     static_configs: [{targets: ["10.0.0.1:8103"]}]                 # controller: sessions, links (probes), ECMP groups, ports, drops, punts, and INT
     honor_labels: true                                             # (per-switch hop latency, flows per spine, path latency per host pair); INT's per-flow
     scrape_interval: 30s                                           # records go to VictoriaLogs (lab=p4-lab, type=INT) from the portal
+
+  - job_name: evpn-prefect                                         # EVPN/VXLAN on VyOS containers built and run by Prefect flows (containerlab): every
+    http_sd_configs: [{url: http://10.0.0.1:8105/api/sd, refresh_interval: 60s}]   # switch's node- and frr-exporter (172.20.118.0/24, through the host)
+    honor_labels: true                                             # and the portal (Prefect, flow runs, drift, checks, versions, maintenance, eventd)
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
 
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod

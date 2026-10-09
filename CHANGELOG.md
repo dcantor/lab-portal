@@ -7,6 +7,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.37.0] — 2026-10-09
+
+### Added
+- **Monitoring: Alertmanager** (`prom/alertmanager:v0.34.1`, `:9093`, `monitoring/alertmanager/alertmanager.yml`).
+  Prometheus now sends it every alert (`alerting:` in `prometheus.yml`). Only evpn-prefect's incident alerts
+  (`lab="evpn-prefect"`, `incident="true"`) are routed anywhere: a webhook to that lab's portal, with a bearer token
+  read from `/opt/monitoring-secrets/alertmanager/` on the NMS (not in git, not rsynced). Everything else goes to the
+  `blackhole` receiver, so nothing changes for the other labs.
+- **Monitoring: evpn-prefect** (scrape job via the portal's SD, `10.0.0.1:8105`):
+  - every switch's node- and frr-exporter, and the portal's metrics;
+  - alert group `evpn-prefect` (11 rules: Prefect or its worker down, failing checks, drift, an exporter down, a failed
+    run, approvals waiting, maintenance too long, the event bridge, log shipping);
+  - dashboard **evpn-prefect: overview (Prefect / EVPN)**: Prefect, flow runs from VictoriaLogs, drift, maintenance,
+    versions, traffic and OSPF / BFD from the exporters, incidents and switch events.
+
 ## [0.36.0] — 2026-10-08
 
 ### Added

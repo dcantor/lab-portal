@@ -573,3 +573,62 @@ groups:
         for: 10m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.node }}: memory {{ $value | printf \"%.0f\" }} % used"}
+
+  - name: evpn-prefect              # the fabric Prefect builds and runs (portal :8105). incident: "true" routes an alert to the lab's portal through
+    rules:                          # Alertmanager — it becomes a Prefect event and starts fabric-diagnose. Gated on the lab running; quiet while a
+      - alert: EvpnPrefectPortalDown  # switch is in maintenance where the alert is about the fabric
+        expr: up{lab="evpn-prefect",job="portal"} == 0
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "the evpn-prefect portal does not answer the scrape (no metrics, no change requests, no event bridge)"}
+      - alert: EvpnPrefectPrefectDown
+        expr: (lab_prefect_up{lab="evpn-prefect"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-prefect"}) > 0)
+        for: 3m
+        labels: {severity: critical}
+        annotations: {summary: "Prefect's API does not answer: no flow runs — no changes, no checks, no remediation"}
+      - alert: EvpnPrefectNoWorker
+        expr: (lab_prefect_workers_online{lab="evpn-prefect"} == 0) and on (lab) (lab_prefect_up{lab="evpn-prefect"} == 1)
+        for: 3m
+        labels: {severity: critical}
+        annotations: {summary: "no worker polls the work pool fabric: runs are scheduled and never start"}
+      - alert: EvpnPrefectFabricChecksFailing
+        expr: (lab_fabric_checks{lab="evpn-prefect",result="fail"} > 0) and on (lab) (sum by (lab) (lab_switch_maintenance{lab="evpn-prefect"}) == 0)
+        for: 1m
+        labels: {severity: critical, incident: "true"}
+        annotations: {summary: "the last fabric validation failed {{ $value }} checks"}
+      - alert: EvpnPrefectSwitchDrift
+        expr: (lab_switch_drift_lines{lab="evpn-prefect"} > 0) and on (lab, switch) (lab_switch_maintenance{lab="evpn-prefect"} == 0)
+        for: 15m
+        labels: {severity: warning, incident: "true"}
+        annotations: {summary: "{{ $labels.switch }} differs from the applied intent by {{ $value }} lines (and nobody remediated it)"}
+      - alert: EvpnPrefectSwitchExporterDown
+        expr: (up{lab="evpn-prefect",job=~"node|frr"} == 0) and on (lab, node) (label_replace(lab_switch_maintenance{lab="evpn-prefect"}, "node", "$1", "switch", "(.*)") == 0)
+        for: 3m
+        labels: {severity: warning, incident: "true", switch: "{{ $labels.node }}"}
+        annotations: {summary: "{{ $labels.node }}'s {{ $labels.job }}-exporter does not answer (the switch, or its management, is down)"}
+      - alert: EvpnPrefectRunFailed
+        expr: lab_prefect_last_run_ok{lab="evpn-prefect"} == 0
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "the last {{ $labels.deployment }} run ended {{ $labels.state }}"}
+      - alert: EvpnPrefectApprovalWaiting
+        expr: lab_prefect_runs_waiting_approval{lab="evpn-prefect"} > 0
+        for: 30m
+        labels: {severity: info}
+        annotations: {summary: "{{ $value }} {{ $labels.deployment }} run(s) waiting for approval for over 30 min (the portal's Change requests card)"}
+      - alert: EvpnPrefectMaintenanceTooLong
+        expr: lab_switch_maintenance{lab="evpn-prefect"} == 1
+        for: 1h
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.switch }} has been drained for maintenance for over an hour (drift checks and diagnoses stand down meanwhile)"}
+      - alert: EvpnPrefectEventBridgeDown
+        expr: (lab_eventd_up{lab="evpn-prefect"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-prefect"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "eventd does not answer: switch syslog is not turned into events (no diagnosis on a lost adjacency)"}
+      - alert: EvpnPrefectLogsNotShipping
+        expr: lab_vlogs_ship_ok{lab="evpn-prefect"} == 0
+        for: 10m
+        labels: {severity: info}
+        annotations: {summary: "the portal cannot ship flow runs, flow logs and switch events to VictoriaLogs"}
+

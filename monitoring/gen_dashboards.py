@@ -775,4 +775,50 @@ p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 84, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 host_row(p, 92)
 (OUT / "p4-lab-overview.json").write_text(json.dumps(dashboard("p4-lab-overview", "p4-lab: overview (P4 / INT)", p, ["p4-lab", "lab", "int"], lab="p4-lab"), indent=1))
+# ---------------------------------------------------------------- evpn-prefect: an EVPN/VXLAN fabric of VyOS containers built and run by Prefect flows from
+# intent in git. The portal (:8105) reports Prefect (flow runs, approvals waiting, outcomes), the switches against the intent (drift), the last validation,
+# each switch's VyOS version and maintenance; the switches' own node- and frr-exporters give traffic and OSPF / BFD; VictoriaLogs has every finished run
+# (type=RUN), the flows' logs (type=FLOWLOG) and the switches' events (type=EVENT), all shipped by the portal (lab=evpn-prefect)
+_id[0] = 0
+L = 'lab="evpn-prefect"'
+EL = 'lab:evpn-prefect '
+RED1 = {"steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]}
+p = []
+p.append(row("The lab", 0))
+p.append(panel("Prefect", "stat", [(f"lab_prefect_up{{{L}}}", "API"), (f"lab_prefect_workers_online{{{L}}}", "workers")], 0, 1, 4, 4, colorMode="value", thresholds=UPDOWN))
+p.append(panel("Switches holding the intent", "stat", [(f"count(lab_switch_drift_lines{{{L}}} == 0) or vector(0)", "in sync"), (f"count(lab_switch_drift_lines{{{L}}} > 0) or vector(0)", "drifted")], 4, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "drifted"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "in sync"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Last validation", "stat", [(f'lab_fabric_checks{{{L},result="pass"}}', "passed"), (f'lab_fabric_checks{{{L},result="fail"}}', "failed")], 8, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Waiting for approval", "stat", [(f"sum(lab_prefect_runs_waiting_approval{{{L}}})", "runs")], 12, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 1}]}))
+p.append(panel("In maintenance", "stat", [(f"sum(lab_switch_maintenance{{{L}}})", "switches")], 16, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 1}]}))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("Flows (Prefect): every finished run, VictoriaLogs lab=evpn-prefect type=RUN", 5))
+p.append(panel("Finished runs per 10 min, by outcome", "timeseries", [logs_ts(EL + 'type:RUN | stats by (_time:10m, outcome) count() as runs', "{{outcome}}")], 0, 6, 12, 8, ds=VL, min=0, decimals=0,
+               custom={"drawStyle": "bars", "stacking": {"mode": "normal"}, "fillOpacity": 70}))
+p.append(panel("Runs by deployment and outcome (selected range)", "table", [(EL + 'type:RUN | stats by (deployment, outcome) count() as runs | sort by (runs desc) | limit 30', "", {"queryType": "stats"})], 12, 6, 12, 8, ds=VL, columns=["deployment", "outcome"]))
+p.append(panel("Finished runs", "logs", [(EL + 'type:RUN', "")], 0, 14, 24, 8, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+p.append(panel("Flow warnings and errors", "logs", [(EL + 'type:FLOWLOG level:(warning OR error OR critical)', "")], 0, 22, 24, 6, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+p.append(row("The switches against the intent", 28))
+p.append(panel("Drift (lines a switch differs from the applied intent by)", "timeseries", [(f"lab_switch_drift_lines{{{L}}}", "{{switch}}")], 0, 29, 8, 8, min=0, decimals=0))
+p.append(panel("Maintenance (drained: OSPF max-metric)", "state-timeline", [(f"lab_switch_maintenance{{{L}}}", "{{switch}}")], 8, 29, 8, 8,
+               mappings=[{"type": "value", "options": {"0": {"text": "in service", "color": "green"}, "1": {"text": "maintenance", "color": "orange"}}}]))
+p.append(panel("VyOS version per switch", "stat", [(f"lab_switch_version_info{{{L}}}", "{{switch}}: {{version}}")], 16, 29, 8, 8, textMode="name", colorMode="none", orientation="horizontal"))
+
+p.append(row("The fabric: traffic and the underlay (the switches' node- and frr-exporters)", 37))
+p.append(panel("Bit rate per switch, fabric and host ports (in)", "timeseries", [(f'sum by (node) (rate(node_network_receive_bytes_total{{{L},device=~"eth[1-9]"}}[1m])) * 8', "{{node}}")], 0, 38, 8, 8, unit="bps", min=0))
+p.append(panel("OSPF neighbours per switch", "timeseries", [(f"sum by (node) (frr_ospf_neighbor_adjacencies{{{L}}})", "{{node}}")], 8, 38, 8, 8, min=0, decimals=0))
+p.append(panel("BFD peers up per switch", "timeseries", [(f"sum by (node) (frr_bfd_peer_state{{{L}}})", "{{node}}")], 16, 38, 8, 8, min=0, decimals=0))
+
+p.append(row("Incidents and lifecycle", 46))
+p.append(panel("Diagnoses, recoveries, drift checks, upgrades (24 h, by outcome)", "bargauge", [(f"lab_prefect_outcomes_24h{{{L}}}", "{{deployment}}: {{outcome}}")], 0, 47, 10, 10, decimals=0, min=0))
+p.append(panel("Switch events (eventd: adjacency changes, commits)", "logs", [(EL + 'type:EVENT', "")], 10, 47, 14, 10, ds=VL, showTime=True, wrapLogMessage=False, sortOrder="Descending"))
+
+p.append(row("Lab and runs", 57))
+p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 58, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 58, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 68)
+(OUT / "evpn-prefect-overview.json").write_text(json.dumps(dashboard("evpn-prefect-overview", "evpn-prefect: overview (Prefect / EVPN)", p, ["evpn-prefect", "lab", "prefect"], lab="evpn-prefect"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))
