@@ -7,6 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.38.0] - 2026-10-10
+
+### Added
+- Monitoring: evpn-nodered — Prometheus job (service discovery from its portal, :8107: every switch's node- and
+  frr-exporter on 172.20.120.0/24 and the portal), alert group `evpn-nodered` (10 rules), an Alertmanager route sending
+  its `incident="true"` alerts straight to Node-RED (`http://10.0.0.1:1880/hooks/alertmanager`, basic auth from
+  `/opt/monitoring-secrets/alertmanager/evpn-nodered.password`), and the dashboard **evpn-nodered: overview (Node-RED /
+  EVPN)**.
+
+### Changed
+- `monitoring/deploy.sh` reloads Alertmanager too (it does not watch its configuration).
+
 ## [0.37.0] — 2026-10-09
 
 ### Added

@@ -9,3 +9,4 @@ $SSH "$NMS" 'cd /opt/monitoring && docker compose up -d --remove-orphans && slee
 $SSH "$NMS" 'cd /opt/monitoring && docker compose restart flows-shipper >/dev/null && echo "flows-shipper restarted"'   # Fluent Bit does not re-read its config or Lua
 $SSH "$NMS" 'curl -sf -X POST http://localhost:9090/-/reload && echo "prometheus reloaded"' || echo "prometheus reload skipped (not up yet)"
 $SSH "$NMS" 'curl -sf -X POST http://localhost:8880/-/reload && echo "vmalert-logs reloaded"' || echo "vmalert-logs reload skipped (not up yet)"   # it does not watch its rule file
+$SSH "$NMS" 'curl -sf -X POST http://localhost:9093/-/reload && echo "alertmanager reloaded"' || echo "alertmanager reload skipped (not up yet)"   # nor does Alertmanager its config

@@ -9,8 +9,8 @@ global:
 
 rule_files: [alerts.yml]
 
-alerting:                                                            # Alertmanager (alertmanager/alertmanager.yml): it routes evpn-prefect's incident
-  alertmanagers:                                                     # alerts to that lab's portal (a Prefect event -> fabric-diagnose) and drops the rest
+alerting:                                                            # Alertmanager (alertmanager/alertmanager.yml): it routes evpn-prefect's and
+  alertmanagers:                                                     # evpn-nodered's incident alerts to the labs (-> fabric-diagnose) and drops the rest
     - static_configs: [{targets: ["alertmanager:9093"]}]
 
 remote_write:
@@ -76,6 +76,14 @@ scrape_configs:
   - job_name: evpn-prefect                                         # EVPN/VXLAN on VyOS containers built and run by Prefect flows (containerlab): every
     http_sd_configs: [{url: http://10.0.0.1:8105/api/sd, refresh_interval: 60s}]   # switch's node- and frr-exporter (172.20.118.0/24, through the host)
     honor_labels: true                                             # and the portal (Prefect, flow runs, drift, checks, versions, maintenance, eventd)
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+    metric_relabel_configs:
+      - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
+
+  - job_name: evpn-nodered                                         # the same fabric built and run by Node-RED flows (containerlab): every switch's
+    http_sd_configs: [{url: http://10.0.0.1:8107/api/sd, refresh_interval: 60s}]   # node- and frr-exporter (172.20.120.0/24, through the host)
+    honor_labels: true                                             # and the portal (Node-RED, workflow outcomes, checks, drift, maintenance, versions)
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
     metric_relabel_configs:

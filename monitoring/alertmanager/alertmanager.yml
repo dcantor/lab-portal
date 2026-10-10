@@ -1,9 +1,10 @@
 # The NMS's Alertmanager (added for evpn-prefect 0.6). Prometheus sends it every alert; only the ones a lab asks to be acted
-# on are routed somewhere — today evpn-prefect's incident alerts (labels lab="evpn-prefect", incident="true"), to that lab's
-# portal, which turns each into a Prefect event (nms.alert.firing / resolved) that starts fabric-diagnose. Everything else
-# goes to a receiver that does nothing: the Hub and Grafana show alerts as before.
+# on are routed somewhere — evpn-prefect's incident alerts (labels lab="evpn-prefect", incident="true") to that lab's portal,
+# which turns each into a Prefect event (nms.alert.firing / resolved) that starts fabric-diagnose; evpn-nodered's straight to
+# Node-RED (an http in node, /hooks/alertmanager) which starts fabric-diagnose. Everything else goes to a receiver that does
+# nothing: the Hub and Grafana show alerts as before.
 # The portal's bearer token is not in this repository: /opt/monitoring-secrets/alertmanager/evpn-prefect.token on the NMS
-# (mounted at /etc/alertmanager-secrets), written by evpn-prefect's lab.sh nms-token.
+# (mounted at /etc/alertmanager-secrets), written by evpn-prefect's lab.sh nms-token; Node-RED's password likewise (evpn-nodered.password, lab.sh nms-secret).
 route:
   receiver: blackhole
   group_by: [lab, alertname]
@@ -12,6 +13,12 @@ route:
       receiver: evpn-prefect
       group_by: [lab, alertname, switch]
       group_wait: 10s                 # the lab's own diagnosis deduplicates a burst: no need to wait long
+      group_interval: 1m
+      repeat_interval: 2h
+    - matchers: ['lab="evpn-nodered"', 'incident="true"']
+      receiver: evpn-nodered
+      group_by: [lab, alertname, switch]
+      group_wait: 10s                 # Node-RED's diagnosis deduplicates a burst (once per incident)
       group_interval: 1m
       repeat_interval: 2h
 
@@ -25,3 +32,11 @@ receivers:
           authorization:
             type: Bearer
             credentials_file: /etc/alertmanager-secrets/evpn-prefect.token
+  - name: evpn-nodered
+    webhook_configs:
+      - url: http://10.0.0.1:1880/hooks/alertmanager
+        send_resolved: true
+        http_config:
+          basic_auth:                  # Node-RED's http endpoints take its login (settings.js httpNodeAuth)
+            username: admin
+            password_file: /etc/alertmanager-secrets/evpn-nodered.password

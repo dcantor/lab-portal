@@ -71,6 +71,17 @@ the flows' logs (`type:FLOWLOG`) and the switches' events (`type:EVENT`). Alert 
 `incident="true"` (failing checks, drift, an exporter down) go through **Alertmanager** to the portal, which turns them
 into Prefect events that start the lab's diagnosis. Dashboard **evpn-prefect: overview (Prefect / EVPN)**.
 
+**evpn-nodered** (job `evpn-nodered`, SD `http://10.0.0.1:8107/api/sd`): the same fabric built and run by Node-RED flows.
+Management network 172.20.120.0/24, reached through the host. Every switch's node- and frr-exporter and the portal:
+Node-RED (`lab_nodered_up`), each workflow's last outcome (`lab_workflow_last_ok`, state as a label), runs in the last
+24 h (`lab_runs_24h`), runs waiting for approval, the switches against the applied intent at the last drift check
+(`lab_switch_drift_lines`), the last validation (`lab_fabric_checks`), maintenance, VyOS versions (`lab_switch_version`),
+Node-RED's syslog listener (`lab_syslog_lines_total`, `lab_switch_events_total`). The portal ships into **VictoriaLogs**
+every finished run (`lab:evpn-nodered type:RUN`), the runs' log lines (`type:RUNLOG`) and the switches' events
+(`type:EVENT`). Alert group `evpn-nodered`; its `incident="true"` alerts go through **Alertmanager** straight to Node-RED
+(`/hooks/alertmanager`, basic auth: `/opt/monitoring-secrets/alertmanager/evpn-nodered.password`, written by the lab's
+`lab.sh nms-secret`), which starts fabric-diagnose. Dashboard **evpn-nodered: overview (Node-RED / EVPN)**.
+
 **Alertmanager** (`:9093`, `alertmanager/alertmanager.yml`): Prometheus sends it every alert. A lab that wants its
 alerts acted on gets a route with its own receiver (today only evpn-prefect's incident alerts, as a webhook to its
 portal). Everything else goes to `blackhole`, so the Hub and Grafana show alerts as before. Webhook tokens are not in

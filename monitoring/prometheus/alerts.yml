@@ -632,3 +632,55 @@ groups:
         labels: {severity: info}
         annotations: {summary: "the portal cannot ship flow runs, flow logs and switch events to VictoriaLogs"}
 
+  - name: evpn-nodered              # the fabric Node-RED builds and runs (portal :8107). incident: "true" routes an alert through Alertmanager to Node-RED's
+    rules:                          # /hooks/alertmanager — it starts fabric-diagnose. Gated on the lab running; quiet while a switch is in maintenance
+      - alert: EvpnNodeRedPortalDown
+        expr: up{lab="evpn-nodered",job="portal"} == 0
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "evpn-nodered's portal (:8107) does not answer"}
+      - alert: EvpnNodeRedNodeRedDown
+        expr: (lab_nodered_up{lab="evpn-nodered"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="evpn-nodered"}) > 0)
+        for: 3m
+        labels: {severity: critical}
+        annotations: {summary: "Node-RED (:1880) does not answer while the lab runs"}
+      - alert: EvpnNodeRedFabricChecksFailing
+        expr: (lab_fabric_checks{lab="evpn-nodered",result="fail"} > 0) and on (lab) (sum by (lab) (lab_switch_maintenance{lab="evpn-nodered"}) == 0)
+        for: 1m
+        labels: {severity: critical, incident: "true"}
+        annotations: {summary: "{{ $value }} of the fabric's checks fail (the last validation)"}
+      - alert: EvpnNodeRedSwitchDrift
+        expr: (lab_switch_drift_lines{lab="evpn-nodered"} > 0) and on (lab, switch) (lab_switch_maintenance{lab="evpn-nodered"} == 0)
+        for: 15m
+        labels: {severity: warning, incident: "true"}
+        annotations: {summary: "{{ $labels.switch }} differs from the applied intent by {{ $value }} lines"}
+      - alert: EvpnNodeRedSwitchExporterDown
+        expr: (up{lab="evpn-nodered",job=~"node|frr"} == 0) and on (lab, node) (label_replace(lab_switch_maintenance{lab="evpn-nodered"}, "node", "$1", "switch", "(.*)") == 0)
+        for: 3m
+        labels: {severity: warning, incident: "true", switch: "{{ $labels.node }}"}
+        annotations: {summary: "{{ $labels.node }}'s {{ $labels.job }} exporter does not answer"}
+      - alert: EvpnNodeRedWorkflowFailed
+        expr: lab_workflow_last_ok{lab="evpn-nodered",workflow=~"fabric-build|fabric-validate|switch-upgrade|rolling-upgrade"} == 0
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.workflow }}'s last run ended {{ $labels.state }}"}
+      - alert: EvpnNodeRedApprovalWaiting
+        expr: lab_runs_waiting_approval{lab="evpn-nodered"} > 0
+        for: 30m
+        labels: {severity: info}
+        annotations: {summary: "{{ $value }} runs wait for a person's decision (dashboard, portal, ./lab.sh changes)"}
+      - alert: EvpnNodeRedMaintenanceTooLong
+        expr: lab_switch_maintenance{lab="evpn-nodered"} == 1
+        for: 1h
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.switch }} has been in maintenance for over an hour"}
+      - alert: EvpnNodeRedDriftNotChecked
+        expr: (lab_drift_check_age_seconds{lab="evpn-nodered"} > 1800) and on (lab) (lab_nodered_up{lab="evpn-nodered"} == 1)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "no drift check for {{ $value | humanizeDuration }} (scheduled every 10 minutes)"}
+      - alert: EvpnNodeRedLogsNotShipping
+        expr: lab_vlogs_ship_ok{lab="evpn-nodered"} == 0
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "the portal cannot ship runs and events to VictoriaLogs"}
