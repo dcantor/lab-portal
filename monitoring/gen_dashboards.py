@@ -866,4 +866,44 @@ p.append(panel("Node containers running", "state-timeline", [(f"lab_vm_running{{
 p.append(panel("Workflows: last run ok", "state-timeline", [(f"max by (workflow) (lab_workflow_last_ok{{{L}}})", "{{workflow}}")], 12, 58, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 host_row(p, 68)
 (OUT / "evpn-nodered-overview.json").write_text(json.dumps(dashboard("evpn-nodered-overview", "evpn-nodered: overview (Node-RED / EVPN)", p, ["evpn-nodered", "lab", "node-red"], lab="evpn-nodered"), indent=1))
+# ---------------------------------------------------------------- homa-lab: the Homa transport kernel module on four KVM hosts joined by sw1, a Linux
+# bridge whose ports model a top-of-rack switch (1 Gbit/s, 8 strict priority queues by DSCP). The portal (:8108) reads each host's /proc/net/homa_metrics
+# and sw1's queue counters over SSH. Runs (tests, measurements) load the network, flip sw1's policy and the timers on purpose: homa_lab_run_active marks them
+_id[0] = 0
+L = 'lab="homa-lab"'
+HC = lambda c: f'homa_counter_total{{{L},counter="{c}"}}'
+p = []
+p.append(row("The lab", 0))
+p.append(panel("VMs running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 5")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 5}]}))
+p.append(panel("homa.ko loaded", "stat", [(f"sum(homa_module_loaded{{{L}}})", "of 4 hosts")], 4, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 4}]}))
+p.append(panel("sw1 policy", "stat", [(f'count by (mode) (sw1_qos_mode{{{L}}})', "{{mode}}", {"instant": True})], 8, 1, 4, 4, textMode="name", colorMode="none"))
+p.append(panel("resend_ticks (ms)", "stat", [(f"homa_resend_ticks{{{L}}}", "{{node}}")], 12, 1, 4, 4, colorMode="none"))
+p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("sw1: what each port sends towards its host (the bottleneck)", 5))
+p.append(panel("Bit rate towards each host", "timeseries", [(f"rate(sw1_port_bytes_total{{{L}}}[2m]) * 8", "→ {{host}}")], 0, 6, 8, 8, unit="bps", min=0))
+p.append(panel("Packets/s by priority queue (all ports; 7 = highest)", "timeseries", [(f"sum by (band) (rate(sw1_queue_packets_total{{{L}}}[2m]))", "band {{band}}")], 8, 6, 8, 8, unit="pps", min=0,
+               custom={"stacking": {"mode": "normal"}, "fillOpacity": 40}))
+p.append(panel("Drops/s per port, and by queue", "timeseries", [(f"rate(sw1_port_drops_total{{{L}}}[2m])", "→ {{host}}"), (f"sum by (band) (rate(sw1_queue_drops_total{{{L}}}[2m])) > 0", "band {{band}}")], 16, 6, 8, 8, unit="pps", min=0))
+
+p.append(row("Homa on the hosts (/proc/net/homa_metrics)", 14))
+p.append(panel("DATA packets sent/s", "timeseries", [(f'rate({HC("packets_sent_DATA")}[2m])', "{{node}}")], 0, 15, 8, 8, unit="pps", min=0))
+p.append(panel("GRANTs sent/s (receivers pulling long messages)", "timeseries", [(f'rate({HC("packets_sent_GRANT")}[2m])', "{{node}}")], 8, 15, 8, 8, unit="pps", min=0))
+p.append(panel("RPCs completed/s (client + server)", "timeseries", [(f'sum by (node) (rate(homa_counter_total{{{L},counter=~"client_requests_done|server_requests_done"}}[2m]))', "{{node}}")], 16, 15, 8, 8, unit="reqps", min=0))
+p.append(panel("RESENDs sent/s (a receiver asking again: loss, or data starved in a low queue)", "timeseries", [(f'rate({HC("packets_sent_RESEND")}[2m])', "{{node}}")], 0, 23, 8, 8, unit="pps", min=0))
+p.append(panel("Packets retransmitted/s", "timeseries", [(f'rate({HC("resent_packets")}[2m])', "{{node}}")], 8, 23, 8, 8, unit="pps", min=0))
+p.append(panel("RPC timeouts (per 5 min)", "timeseries", [(f'increase({HC("rpc_timeouts")}[5m])', "{{node}}")], 16, 23, 8, 8, min=0, decimals=0, custom={"drawStyle": "bars", "fillOpacity": 70}))
+p.append(panel("Packets sent by Homa priority (all hosts; 7 = highest)", "timeseries", [(f'sum by (counter) (rate(homa_counter_total{{{L},counter=~"priority[0-7]_packets"}}[2m]))', "{{counter}}")], 0, 31, 12, 8, unit="pps", min=0,
+               custom={"stacking": {"mode": "normal"}, "fillOpacity": 40}))
+p.append(panel("Resend timers per host (ms)", "timeseries", [(f"homa_resend_ticks{{{L}}}", "{{node}}"), (f"max(homa_link_mbps{{{L}}}) / 1000", "link Gbit/s")], 12, 31, 12, 8, min=0))
+
+p.append(row("Lab and runs", 39))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 40, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal run going (tests / measurements: load and changes on purpose)", "state-timeline", [(f"homa_lab_run_active{{{L}}}", "run")], 12, 40, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 44, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 48)
+(OUT / "homa-lab-overview.json").write_text(json.dumps(dashboard("homa-lab-overview", "homa-lab: overview (Homa kernel module)", p, ["homa-lab", "lab", "homa"], lab="homa-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

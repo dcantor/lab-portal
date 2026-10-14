@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.39.0] - 2026-10-14
+
+### Added
+- Monitoring: homa-lab — Prometheus job (service discovery from its portal, :8108, every 30 s; the portal reads each
+  host's `/proc/net/homa_metrics` and sw1's queue counters over SSH), alert group `homa-lab` (5 rules: module not loaded,
+  timers differing between hosts, `link_mbps` not the bottleneck rate, RPC timeouts outside runs (info), failed tests;
+  the timer, rate and timeout rules wait for `homa_lab_run_active` to be 0), and the dashboard **homa-lab: overview
+  (Homa kernel module)**.
+
 ## [0.38.0] - 2026-10-10
 
 ### Added

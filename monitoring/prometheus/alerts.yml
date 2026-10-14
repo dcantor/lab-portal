@@ -684,3 +684,30 @@ groups:
         for: 10m
         labels: {severity: warning}
         annotations: {summary: "the portal cannot ship runs and events to VictoriaLogs"}
+
+  - name: homa-lab                  # Homa kernel module lab (portal :8108). Gated on the lab running. The tests and the portal's measurements unload the
+    rules:                          # module for seconds, change sw1 and the timers and cause timeouts on purpose: homa_lab_run_active says when
+      - alert: HomaModuleNotLoaded
+        expr: (homa_module_loaded{lab="homa-lab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="homa-lab",role="host"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "homa.ko is not loaded on {{ $labels.node }}: no Homa sockets there (./lab.sh homa load)"}
+      - alert: HomaTimersDiffer
+        expr: (max by (lab) (homa_resend_ticks{lab="homa-lab"}) != min by (lab) (homa_resend_ticks{lab="homa-lab"})) and on (lab) (homa_lab_run_active == 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "the homa-lab hosts run different resend timers: results depend on which host receives (set a preset in the portal)"}
+      - alert: HomaLinkRateMismatch
+        expr: (homa_link_mbps{lab="homa-lab"} != 1000) and on (lab) (homa_lab_run_active == 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} has net.homa.link_mbps {{ $value }}, not sw1's 1000: its pacer and grants assume the wrong bottleneck"}
+      - alert: HomaRpcTimeouts
+        # informational outside runs: an RPC given up on while nobody is loading the network on purpose
+        expr: (increase(homa_counter_total{lab="homa-lab",counter="rpc_timeouts"}[10m]) > 0) and on (lab) (max_over_time(homa_lab_run_active[10m]) == 0)
+        labels: {severity: info}
+        annotations: {summary: "{{ $labels.node }} gave up on {{ $value | humanize }} Homa RPC(s) in the last 10 min with no test or measurement running"}
+      - alert: HomaTestsFailing
+        expr: lab_tests_last_failed{lab="homa-lab"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last homa-lab Robot run had {{ $value }} failed test(s) (portal: Last tests)"}

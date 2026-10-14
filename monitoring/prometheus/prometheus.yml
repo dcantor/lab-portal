@@ -89,6 +89,14 @@ scrape_configs:
     metric_relabel_configs:
       - {source_labels: [__name__], regex: "node_(scrape_collector|textfile|entropy|timex|nfs|schedstat|softnet|arp).*", action: drop}
 
+  - job_name: homa-lab                                             # the Homa transport kernel module on four KVM hosts + sw1 (libvirt): the portal
+    http_sd_configs: [{url: http://10.0.0.1:8108/api/sd, refresh_interval: 60s}]   # (:8108) reads each host's /proc/net/homa_metrics and sw1's
+    honor_labels: true                                             # eight egress queues per port over SSH, so one scrape takes ~1.5 s
+    scrape_interval: 30s
+    scrape_timeout: 20s
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
     honor_labels: true

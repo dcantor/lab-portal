@@ -82,6 +82,15 @@ every finished run (`lab:evpn-nodered type:RUN`), the runs' log lines (`type:RUN
 (`/hooks/alertmanager`, basic auth: `/opt/monitoring-secrets/alertmanager/evpn-nodered.password`, written by the lab's
 `lab.sh nms-secret`), which starts fabric-diagnose. Dashboard **evpn-nodered: overview (Node-RED / EVPN)**.
 
+**homa-lab** (job `homa-lab`, SD `http://10.0.0.1:8108/api/sd`, every 30 s): the Homa transport kernel module on four KVM
+hosts and sw1 (a Linux bridge with 8 strict priority queues per port). Everything comes from the portal, which reads each
+host's `/proc/net/homa_metrics` and sw1's queue counters over SSH (a scrape takes ~1.5 s): `homa_counter_total` (a
+selection of Homa's counters, `counter` label), `homa_module_loaded`, `homa_resend_ticks`, `homa_link_mbps`,
+`sw1_port_bytes_total` / `sw1_port_drops_total` (per port, `host` = the host it faces), `sw1_queue_*_total` (per port and
+band), `sw1_qos_mode`, and `homa_lab_run_active`. Tests and measurements load the network and change sw1 and the timers
+on purpose, so the timer, link-rate and timeout alerts wait for no run to be going. Alert group `homa-lab`; dashboard
+**homa-lab: overview (Homa kernel module)**.
+
 **Alertmanager** (`:9093`, `alertmanager/alertmanager.yml`): Prometheus sends it every alert. A lab that wants its
 alerts acted on gets a route with its own receiver (today only evpn-prefect's incident alerts, as a webhook to its
 portal). Everything else goes to `blackhole`, so the Hub and Grafana show alerts as before. Webhook tokens are not in
