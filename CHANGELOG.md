@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.40.0] - 2026-10-15
+
+### Changed
+- Lab Hub banner: the map now reads left to right, NMS → hub → one row per running lab (plus any lab whose last power
+  operation failed, in red). Every other lab folds into one "N stopped" node; stale problems of stopped labs (old
+  failing tests, portal down) show there as "N flagged" and in its hover list, and clicking it sets the Stopped
+  filter. At most 6 rows; past that the last row is "N more labs". Clicking a lab row opens its card. The old arc of
+  every lab overlapped once there were 14.
+
 ## [0.39.0] - 2026-10-14
 
 ### Added

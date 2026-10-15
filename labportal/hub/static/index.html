@@ -152,6 +152,7 @@
   .hero-graphic { width:100%; height:auto; max-height:240px; display:block }
   .hero-graphic text { font:11px ui-monospace, Menlo, monospace; fill:#94a3b8 } .hero-graphic .nm { fill:#e2e8f0; font-weight:600 }
   .hero-graphic .link { fill:none; stroke:#334155; stroke-width:1.4 } .hero-graphic .link.live { stroke:url(#lg-link); stroke-width:1.8 } .hero-graphic .link.off { stroke-dasharray:3 5 }
+  .hero-graphic .hnode { cursor:pointer } .hero-graphic .hnode:hover .nm, .hero-graphic .hnode:focus .nm { fill:#7dd3fc } .hero-graphic .hnode:focus { outline:none }
   .hero-graphic .ring { fill:none; stroke:#38bdf8; stroke-opacity:.35; animation:ring 3s ease-out infinite; transform-origin:center; transform-box:fill-box }
   @keyframes ring { from { transform:scale(.6); opacity:1 } to { transform:scale(1.9); opacity:0 } }
   @media (prefers-reduced-motion: reduce) { .blink, .hero-graphic .ring { animation:none } }
@@ -704,39 +705,56 @@ function renderHero(d) {
     ...(() => { const c = (d.alerts || {}).counts || {}, n = (c.critical || 0) + (c.warning || 0);
       return n ? [`<span class="hchip ${c.critical ? 'bad' : 'warn'}"><b>${n}</b> alert${n > 1 ? 's' : ''}</span>`] : []; })(),
     `<span class="hchip">mem <b>${d.host && d.host.memory ? Math.round(d.host.memory.pct) : '–'}%</b></span>`].join('');
-  // the map
-  const W = 560, H = 240, cx = 290, cy = 104, rx = 200, ry = 72, n = labs.length, anim = !reduceMotion();
-  // the labs along the lower arc, left to right (165° … 15°), so their labels stay inside the picture
-  const pos = labs.map((l, i) => { const t = (n === 1 ? 90 : 165 - 150 * i / (n - 1)) * Math.PI / 180; return [cx + rx * Math.cos(t), cy + ry * Math.sin(t) + 10]; });
-  const nms = [cx, 28], nmsOn = sv.vm_state === 'running';
-  const curve = (a, b) => { const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 18; return `M${a[0]},${a[1]} Q${mx},${my} ${b[0]},${b[1]}`; };
+  // the map, left to right: NMS -> hub -> one row per running lab (or one whose power operation failed); every other
+  // lab folds into one "N stopped" node (click: the Stopped filter), so the picture stays readable however many labs
+  // there are. Stale problems of stopped labs (old failing tests, portal down) are counted on that node, not given rows.
+  const W = 560, H = 240, anim = !reduceMotion(), MAXROWS = 6;
+  const featured = labs.filter(l => l.running > 0 || health(l).lvl === 'bad');
+  const shownLabs = featured.slice(0, featured.length + 1 > MAXROWS ? MAXROWS - 1 : MAXROWS);
+  const rest = labs.filter(l => !shownLabs.includes(l)), extra = featured.length - shownLabs.length;
+  const rows = shownLabs.length + (rest.length ? 1 : 0), gap = Math.min(40, 200 / Math.max(1, rows - 1));
+  const rowY = i => rows === 1 ? H / 2 : H / 2 - gap * (rows - 1) / 2 + gap * i;
+  const nms = [52, H / 2], hub = [190, H / 2], lx = 330, nmsOn = sv.vm_state === 'running';
+  const curve = (a, b) => `M${a[0]},${a[1]} C${a[0] + (b[0] - a[0]) * .5},${a[1]} ${b[0] - (b[0] - a[0]) * .5},${b[1]} ${b[0]},${b[1]}`;
   let g = `<defs><linearGradient id="lg-link" x1="0" x2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
     <radialGradient id="rg-hub"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#1e3a8a"/></radialGradient>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
   // circuit traces in the background
-  for (let i = 0; i < 6; i++) { const y = 20 + i * 40; g += `<path d="M0,${y} H${60 + i * 9} l14,14 H${150 + i * 7}" fill="none" stroke="#1e293b" stroke-width="1"/><circle cx="${150 + i * 7}" cy="${y + 14}" r="2" fill="#1e293b"/>`; }
-  for (let i = 0; i < 5; i++) { const y = 30 + i * 46; g += `<path d="M${W},${y} H${W - 50 - i * 8} l-12,12 H${W - 120 - i * 6}" fill="none" stroke="#1e293b" stroke-width="1"/><circle cx="${W - 120 - i * 6}" cy="${y + 12}" r="2" fill="#1e293b"/>`; }
-  // links: NMS to hub, hub to every lab
-  const links = [[nms, [cx, cy], nmsOn, 'nms']].concat(labs.map((l, i) => [[cx, cy], pos[i], l.running > 0, l.name]));
+  for (let i = 0; i < 5; i++) { const y = 30 + i * 46; g += `<path d="M${W},${y} H${W - 30 - i * 8} l-12,12 H${W - 70 - i * 6}" fill="none" stroke="#1e293b" stroke-width="1"/><circle cx="${W - 70 - i * 6}" cy="${y + 12}" r="2" fill="#1e293b"/>`; }
+  // links: NMS to hub, hub to every row
+  const links = [[nms, hub, nmsOn]].concat(shownLabs.map((l, i) => [hub, [lx, rowY(i)], l.running > 0]));
+  if (rest.length) links.push([hub, [lx, rowY(rows - 1)], false]);
   links.forEach(([a, b, live], i) => {
-    const id = `hl${i}`, dpath = curve(a, b);
-    g += `<path id="${id}" class="link ${live ? 'live' : 'off'}" d="${dpath}"/>`;
+    const id = `hl${i}`;
+    g += `<path id="${id}" class="link ${live ? 'live' : 'off'}" d="${curve(a, b)}"/>`;
     if (live && anim) for (let k = 0; k < 3; k++) g += `<circle r="2.6" fill="#7dd3fc" filter="url(#glow)"><animateMotion dur="${2.4 + (i % 3) * 0.5}s" begin="${k * 0.8}s" repeatCount="indefinite" ${k % 2 ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}><mpath href="#${id}"/></animateMotion></circle>`;
   });
   // the NMS
   g += `<g><rect x="${nms[0] - 34}" y="${nms[1] - 13}" width="68" height="26" rx="6" fill="#0f172a" stroke="${nmsOn ? '#38bdf8' : '#334155'}"/>
     <text x="${nms[0]}" y="${nms[1] + 4}" text-anchor="middle" class="nm">NMS</text><circle cx="${nms[0] + 26}" cy="${nms[1] - 6}" r="3" fill="${nmsOn ? HEALTHCOL.ok : HEALTHCOL.off}"/></g>`;
-  // the labs
-  labs.forEach((l, i) => {
-    const [x, y] = pos[i], h = health(l), col = HEALTHCOL[h.lvl];
-    g += `<g><title>${esc(l.name)} — ${esc(h.why.join(', '))}</title>
-      ${l.running && anim ? `<circle class="ring" cx="${x}" cy="${y}" r="15" style="stroke:${col}"/>` : ''}
-      <circle cx="${x}" cy="${y}" r="13" fill="#0b1324" stroke="${col}" stroke-width="2.2" ${l.running ? 'filter="url(#glow)"' : ''}/>
-      <circle cx="${x}" cy="${y}" r="4.5" fill="${col}"/>
-      <text x="${x}" y="${y + 29}" text-anchor="middle" class="nm">${esc(l.name)}</text>
-      <text x="${x}" y="${y + 42}" text-anchor="middle">${l.total ? `${l.running}/${l.total} ${U(l)}` : 'no VMs'}</text></g>`;
+  // the labs worth a row: running, or stopped with a problem (red); click opens the card
+  shownLabs.forEach((l, i) => {
+    const y = rowY(i), h = health(l), pr = problems(l), col = l.running ? HEALTHCOL[h.lvl] : (pr.length || h.lvl === 'bad' ? HEALTHCOL.bad : HEALTHCOL.off);
+    const room = Math.max(8, 29 - l.name.length), full = l.running ? `${l.running}/${l.total} ${U(l)}` : `off · ${h.why[0] || ''}`;
+    const sub = full.length > room ? full.slice(0, room - 1) + '…' : full;     // name + reason share ~30 monospace characters
+    g += `<a href="#lab-${esc(l.name)}" data-open="${esc(l.name)}" class="hnode"><title>${esc(l.name)} — ${esc(h.why.join(', '))}</title>
+      ${l.running && anim ? `<circle class="ring" cx="${lx}" cy="${y}" r="11" style="stroke:${col}"/>` : ''}
+      <circle cx="${lx}" cy="${y}" r="10" fill="#0b1324" stroke="${col}" stroke-width="2" ${l.running ? 'filter="url(#glow)"' : ''}/>
+      <circle cx="${lx}" cy="${y}" r="3.5" fill="${col}"/>
+      <text x="${lx + 18}" y="${y + 4}" class="nm">${esc(l.name)}</text>
+      <text x="${W - 12}" y="${y + 4}" text-anchor="end">${esc(sub)}</text></a>`;
   });
+  // everything else, folded into one node
+  if (rest.length) {
+    const y = rowY(rows - 1), label = extra > 0 ? `${rest.length} more labs` : `${rest.length} ${shownLabs.length ? 'more ' : ''}stopped`;
+    const flagged = rest.filter(l => problems(l).length), tip = rest.map(l => l.name + (problems(l).length ? ` — ${problems(l).join(', ')}` : '')).join('\n');
+    g += `<g class="hnode" role="button" tabindex="0" data-hero-show="${extra > 0 ? 'all' : 'stopped'}"><title>${esc(tip)}</title>
+      <circle cx="${lx}" cy="${y}" r="10" fill="#0b1324" stroke="#475569" stroke-width="1.6" stroke-dasharray="3 3"/>
+      <text x="${lx}" y="${y + 4}" text-anchor="middle" class="nm">${rest.length}</text>
+      <text x="${lx + 18}" y="${y + 4}">${esc(label)}${flagged.length ? ` · <tspan fill="${HEALTHCOL.warn}">${flagged.length} flagged</tspan>` : ''}</text><text x="${W - 12}" y="${y + 4}" text-anchor="end">show ›</text></g>`;
+  }
   // the hub itself
+  const [cx, cy] = hub;
   g += `${anim ? `<circle class="ring" cx="${cx}" cy="${cy}" r="20"/>` : ''}<circle cx="${cx}" cy="${cy}" r="19" fill="url(#rg-hub)" filter="url(#glow)"/>
     <path d="M${cx},${cy - 11} l9.5,5.5 v11 l-9.5,5.5 l-9.5,-5.5 v-11 z" fill="none" stroke="#e0f2fe" stroke-width="1.6"/><circle cx="${cx}" cy="${cy}" r="3" fill="#e0f2fe"/>
     <text x="${cx}" y="${cy + 36}" text-anchor="middle" class="nm">hub</text>`;
@@ -792,6 +810,7 @@ function renderAlerts(al, mon) {
     ${(crit.length && warn.length && !ALERTS_OPEN) || (!crit.length && warn.length > 6 && !ALERTS_OPEN) ? `<div class="more"><button class="link" data-alerts="1">show ${crit.length ? `the ${warn.length} warning${warn.length > 1 ? 's' : ''}` : `all ${warn.length}`} ▾</button></div>`
       : ALERTS_OPEN && warn.length ? `<div class="more"><button class="link" data-alerts="0">less ▴</button></div>` : ''}`;
 }
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-hero-show]')) { e.preventDefault(); e.target.closest('[data-hero-show]').dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
 document.addEventListener('click', e => { const b = e.target.closest('[data-alerts]'); if (!b) return; ALERTS_OPEN = b.dataset.alerts === '1'; renderAlerts(LAST.alerts, LAST.monitoring); });
 const labAlerts = l => ((LAST && LAST.alerts && LAST.alerts.alerts) || []).filter(a => a.lab === l.name);
 function alertPill(l) { const a = labAlerts(l); if (!a.length) return '';
@@ -838,6 +857,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('#ftoggle')) { const tb = document.getElementById('toolbar'); tb.classList.toggle('open'); e.target.closest('#ftoggle').setAttribute('aria-expanded', tb.classList.contains('open')); return renderLabs(); }
   const sv = e.target.closest('button[data-svc]'); if (sv) { SVC_OPEN = sv.dataset.svc === '1'; try { localStorage.setItem('hub-svc-open', JSON.stringify(SVC_OPEN)); } catch (x) { } return renderServices(window.SV); }
   const vw = e.target.closest('button[data-view]'); if (vw) return setView(vw.dataset.view);
+  const hs = e.target.closest('[data-hero-show]'); if (hs) { SHOW = hs.dataset.heroShow; store.set('hub-show', SHOW); renderLabs(); return document.getElementById('toolbar').scrollIntoView({ behavior: 'smooth' }); }
   const sh = e.target.closest('button[data-show]'); if (sh) { SHOW = sh.dataset.show; store.set('hub-show', SHOW); return renderLabs(); }
   const rs = e.target.closest('button[data-reset]'); if (rs) { SHOW = 'all'; store.set('hub-show', SHOW); Q = ''; document.getElementById('q').value = ''; return renderLabs(); }
   const fd = e.target.closest('button[data-fold]'); if (fd) return fold(fd.dataset.fold, !FOLDED.has(fd.dataset.fold));
