@@ -7,6 +7,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.43.0] - 2026-10-16
+
+### Added
+- Hub, fast resume: labs with `"fast_resume": true` are shut down by saving their VMs' memory to disk (`virsh
+  managedsave`) and resume in about a minute; full shutdown and cold boot stay in the dialogs. Saved VMs are shown on
+  the card; `lab.sh resumed` runs after a resume. Scheduled and idle shutdowns save too.
+- Hub, making room: when a lab does not fit in memory, the start dialog lists the running labs that could be shut down
+  for it (what each frees, when it was last used, whether it resumes fast) and ticks the fewest that are enough; the
+  start shuts them down first (`stop_first`). `/plan` returns the candidates (`room`, `room_with_deps`), the saved
+  state, and for a shutdown the disk the images would take.
+
 ## [0.42.0] - 2026-10-15
 
 ### Changed

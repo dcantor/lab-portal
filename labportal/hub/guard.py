@@ -102,7 +102,7 @@ def container_rss():
 # ---- what VMs each lab has (static: from lab.sh status, cached) and what state they are in (live: one virsh call) -----
 NODES_TTL = 600
 _nodes = {}                                     # lab dir -> (time, [(node, role, domain)], source)
-_live = {"at": 0.0, "states": {}}
+_live = {"at": 0.0, "states": {}, "saved": set()}
 
 
 _declared = {}                                  # lab dir -> {domain: MiB} from a MEM column in `lab.sh status`
@@ -163,13 +163,16 @@ def live_states(max_age=2.0):
     if time.time() - _live["at"] < max_age:
         return _live["states"]
     try:
-        r = SHARED.virsh("list", "--all", timeout=20)
-        states = {}
+        r = SHARED.virsh("list", "--all", "--managed-save", timeout=20)
+        states, saved = {}, set()
         for line in r.stdout.splitlines():
             parts = line.split(None, 2)                       # " Id   Name   State" — the state can be two words
-            if len(parts) == 3: states[parts[1]] = parts[2].strip()
+            if len(parts) == 3:
+                st = parts[2].strip()
+                if st == "saved": saved.add(parts[1]); st = "shut off"   # off, with its memory saved to disk (resume.py)
+                states[parts[1]] = st
         if r.returncode == 0:
-            _live.update(at=time.time(), states={**container_states(), **states})
+            _live.update(at=time.time(), states={**container_states(), **states}, saved=saved)
     except Exception:                                          # noqa: BLE001
         pass
     if not _live["states"]:                                    # no libvirt answer: the containers alone
@@ -193,7 +196,14 @@ def _absent(lab_dir, dom):
 def vm_states(lab_dir):
     """node -> {role, state, domain}, for the hub's cards — the same shape lab.sh status used to give."""
     live = live_states(); rows, _ = lab_nodes(lab_dir)
-    return {n: {"role": r, "state": live.get(dom) or _absent(lab_dir, dom), "domain": dom} for n, r, dom in rows}
+    saved = _live["saved"]
+    return {n: {"role": r, "state": live.get(dom) or _absent(lab_dir, dom), "domain": dom, **({"saved": True} if dom in saved else {})}
+            for n, r, dom in rows}
+
+
+def saved_domains():
+    """The libvirt domains that are off with their memory saved to disk (`virsh managedsave`): a start resumes them."""
+    live_states(); return set(_live["saved"])
 
 
 def lab_vms(lab_dir):

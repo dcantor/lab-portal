@@ -25,7 +25,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 import requests
-from . import alerts as ALERTS, auth as AUTH, ci as CI, guard as GUARD, history as HIST, schedule as SCHED, shared as SHARED, version as VERSION
+from . import alerts as ALERTS, auth as AUTH, ci as CI, guard as GUARD, history as HIST, resume as RESUME, schedule as SCHED, shared as SHARED, version as VERSION
 from .. import nmsbackup as NMSBACKUP
 
 CONFIG = Path(os.environ.get("LAB_HUB_CONFIG", Path.home() / ".config" / "lab-hub" / "labs.json"))
@@ -204,7 +204,7 @@ def api_labs():
                     "ci_status": CI.status(lab["ci"]) if lab.get("ci") else None,
                     "depends_on": GUARD.depends_on(lab, labs()), "memory_gib": GUARD.lab_total_gib(lab["dir"]),
                     "memory_used_gib": round(sum(rss.get(d, 0) for d in GUARD.lab_domains(lab["dir"])) / 1024, 1),
-                    "version": VERSION.lab_version(lab)})
+                    "version": VERSION.lab_version(lab), "fast_resume": RESUME.enabled(lab), "saved": RESUME.info(lab)})
         out[-1]["schedule"] = SCHED.view(lab["name"], running, out[-1]["portal_health"], out[-1]["ci_status"])
     return {"labs": out, "host": host_stats(), "monitoring": MONITORING, "power_enabled": POWER, "alerts": ALERTS.firing(),
             "services": {**SHARED.status(), "power": SERVICE_OP.get("op"), "backup": NMSBACKUP.latest(),
@@ -224,14 +224,43 @@ class PowerRequest(BaseModel):
     start_deps: bool = False                     # up: start what the lab depends on first (the NMS, attached labs)
     override_memory: bool = False                # up: start even though the host has not got the memory for it
     override_dependents: bool = False            # down: shut down even though running labs depend on this one
+    mode: str = ""                               # down: save (memory to disk, fast resume) | shutdown; "" = save where the lab allows it
+    cold: bool = False                           # up: throw the saved state away and boot
+    stop_first: list[str] = []                   # up: shut these running labs down first to make room (saved where they allow it)
 
 
 def _running():
     return {l["name"]: sum(1 for v in vm_states(l["dir"]).values() if isinstance(v, dict) and v.get("state") == "running") for l in labs()}
 
 
+def _lab_sh(lab, args, op):
+    r = subprocess.run([str(Path(lab["dir"]) / "lab.sh"), *args], capture_output=True, text=True, timeout=POWER_TIMEOUT)
+    op["log"] = (op["log"] + [l for l in (r.stdout + r.stderr).splitlines() if l.strip()])[-200:]
+    return r.returncode
+
+
+def _down(lab, nodes, op, mode):
+    """Save (fast resume) where the lab allows it and mode is not "shutdown"; anything not saved goes through lab.sh down."""
+    if mode != "shutdown" and RESUME.enabled(lab):
+        rest = RESUME.save(lab, nodes, op)
+        return _lab_sh(lab, ["down", *rest], op) if rest else 0
+    return _lab_sh(lab, ["down", *nodes], op)
+
+
 def _run_power(lab, op, deps=()):
-    """Start what the lab depends on first (in order), then `lab.sh up|down [node...]`, with the output kept."""
+    """Make room first (stop_first), start what the lab depends on (in order), then `lab.sh up|down [node...]` — a
+    shutdown saving the VMs instead where the lab has fast resume — with the output kept."""
+    try:
+        for other in op.get("stop_first", []):
+            o = next((l for l in labs() if l["name"] == other), None)
+            if not o: continue
+            op["log"].append(f"shutting {other} down first to make room …")
+            HIST.event(other, "down", f"to make room for {lab['name']}")
+            sub = {"log": []}; rc = _down(o, [], sub, "")
+            op["log"] += [f"  {l}" for l in sub["log"][-4:]]; GUARD.invalidate(o["dir"])
+            if rc: op["log"].append(f"{other} did not shut down cleanly (exit {rc})")
+    except Exception as e:                       # noqa: BLE001
+        op["log"].append(f"making room failed: {e}")
     for d in deps:
         if d["on"] == "nms":
             sub = {"action": "up", "log": []}; op["log"].append("starting the NMS first …"); SHARED.power(sub)
@@ -242,16 +271,23 @@ def _run_power(lab, op, deps=()):
                 op["log"].append(f"starting {dep['name']} first ({d['why']}) …")
                 r = subprocess.run([str(Path(dep["dir"]) / "lab.sh"), "up"], capture_output=True, text=True, timeout=POWER_TIMEOUT)
                 op["log"] += [l for l in (r.stdout + r.stderr).splitlines() if l.strip()][-3:]
-    cmd = [str(Path(lab["dir"]) / "lab.sh"), op["action"], *op["nodes"]]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=POWER_TIMEOUT)
-        op["log"] = (op["log"] + [l for l in (r.stdout + r.stderr).splitlines() if l.strip()])[-200:]
-        op["status"] = "done" if r.returncode == 0 else "failed"
-        op["returncode"] = r.returncode
+        if op["action"] == "up":
+            if op.get("cold"): RESUME.discard(lab, op["nodes"], op)
+            saved = {dom for n, dom, _ in GUARD.lab_vms(lab["dir"]) if dom in GUARD.saved_domains() and (not op["nodes"] or n in op["nodes"])}
+            if saved: op["log"].append(f"resuming {len(saved)} saved VM(s) …"); op["resumed"] = len(saved)
+            rc = _lab_sh(lab, ["up", *op["nodes"]], op)
+            if saved:
+                RESUME.forget(saved); GUARD.invalidate(lab["dir"])
+                if rc == 0: RESUME.after_resume(lab, op["nodes"], op)
+        else:
+            rc = _down(lab, op["nodes"], op, op.get("mode", ""))
+        op["status"] = "done" if rc == 0 else "failed"
+        op["returncode"] = rc
     except subprocess.TimeoutExpired:
-        op["status"] = "failed"; op["log"] = [f"timed out after {POWER_TIMEOUT}s"]
+        op["status"] = "failed"; op["log"].append(f"timed out after {POWER_TIMEOUT}s")
     except Exception as e:                       # noqa: BLE001
-        op["status"] = "failed"; op["log"] = [f"{e.__class__.__name__}: {e}"]
+        op["status"] = "failed"; op["log"].append(f"{e.__class__.__name__}: {e}")
     op["finished"] = time.time(); GUARD.invalidate(lab["dir"])
     if op["action"] == "up" and op["status"] == "done": SCHED.touch(lab["name"], "started")
 
@@ -272,9 +308,18 @@ def start_power(lab, req, why="from the hub"):
         if active: raise PowerRefused(409, f"{name}: a {active['mode']} run is in progress ({active['id']}) — let it finish, or send force: true")
         if lab.get("ci") and CI.status(lab["ci"]).get("running"):
             raise PowerRefused(409, f"{name}: a CI run is testing this lab — stop it first, or send force: true")
+    if req.mode not in ("", "save", "shutdown"): raise PowerRefused(422, "mode must be save or shutdown")
+    if req.mode == "save" and not RESUME.enabled(lab): raise PowerRefused(422, f"{name} does not have fast resume (\"fast_resume\": true in labs.json)")
     pl = GUARD.plan(lab, req.action, req.nodes, labs(), _running())
     m = pl.get("memory") or {}
-    fits = m.get("fits_with_deps") if req.start_deps and pl.get("deps_down") else m.get("fits")
+    freed = 0.0
+    if req.action == "up" and req.stop_first:
+        cands = {c["lab"]: c for c in room_candidates(lab, pl)}
+        bad = [x for x in req.stop_first if x not in cands]
+        if bad: raise PowerRefused(422, f"cannot make room by shutting down {', '.join(bad)}: not running, or running labs need it")
+        freed = sum(cands[x]["frees_gib"] for x in req.stop_first)
+    fits = (m.get("fits_with_deps") if req.start_deps and pl.get("deps_down") else m.get("fits")) if not freed else \
+        m["need_gib"] + (m.get("deps_need_gib", 0) if req.start_deps else 0) <= max(0.0, m["available_gib"] + freed - m["reserve_gib"])
     if req.action == "up" and not fits and not req.override_memory:
         need = m["need_gib"] + (m.get("deps_need_gib", 0) if req.start_deps else 0)
         if m.get("unreadable"):
@@ -290,18 +335,70 @@ def start_power(lab, req, why="from the hub"):
     with _ops_lock:
         cur = OPS.get(name)
         if cur and cur["status"] == "running": raise PowerRefused(409, f"{name} is already {cur['action']} ({', '.join(cur['nodes']) or 'the whole lab'})")
+        for other in req.stop_first:
+            c = OPS.get(other)
+            if c and c["status"] == "running": raise PowerRefused(409, f"{other} is already {c['action']}")
         op = OPS[name] = {"id": uuid.uuid4().hex[:8], "lab": name, "action": req.action, "nodes": list(req.nodes), "why": why,
-                          "started": time.time(), "finished": None, "status": "running", "log": [], "returncode": None}
+                          "started": time.time(), "finished": None, "status": "running", "log": [], "returncode": None,
+                          "mode": req.mode, "cold": req.cold, "stop_first": list(req.stop_first) if req.action == "up" else []}
     threading.Thread(target=_run_power, args=(lab, op, deps), name=f"power-{name}", daemon=True).start()
     HIST.event(name, req.action, why if not req.nodes else f"{why}: {', '.join(req.nodes)}")
     return op
 
 
-@app.get("/api/labs/{name}/plan", summary="What a power operation would need and break: memory, dependencies (nothing is changed)")
+def room_candidates(lab, pl):
+    """Running labs that could be shut down to make room for this one: not the lab itself, nothing it is about to start,
+    nothing it depends on, and none another running lab needs. Largest first, with what each would free (the memory its
+    VMs hold now) and whether it would come back quickly (fast resume)."""
+    running = _running(); rss = GUARD.qemu_rss(); all_labs = labs()
+    mine = {d["on"] for d in GUARD.depends_on(lab, all_labs)}
+    out = []
+    for l in all_labs:
+        if l["name"] == lab["name"] or l["name"] in mine or not running.get(l["name"]): continue
+        if any(running.get(o["name"]) and d["on"] == l["name"] for o in all_labs if o["name"] != l["name"] for d in GUARD.depends_on(o, all_labs)):
+            continue
+        frees = round(sum(rss.get(d, 0) for d in GUARD.lab_domains(l["dir"])) / 1024, 1)
+        if frees < 0.5: continue
+        ph = portal_health(l.get("portal")) or {}
+        try: at, why = SCHED.last_activity(l["name"], running[l["name"]], ph, None)
+        except Exception: at, why = None, None            # noqa: BLE001
+        out.append({"lab": l["name"], "frees_gib": frees, "fast_resume": RESUME.enabled(l), "last_activity": at,
+                    "last_activity_why": why, "portal_busy": bool(ph.get("active"))})
+    return sorted(out, key=lambda c: -c["frees_gib"])
+
+
+def make_room(lab, pl, withDeps=False):
+    """Not enough memory: the fewest labs to shut down for it to fit — one lab if one is enough (the smallest that is),
+    else the largest until it fits. Labs with a portal run in progress are never suggested."""
+    m = pl["memory"]; need = m["need_gib"] + (m.get("deps_need_gib", 0) if withDeps else 0)
+    short = need - max(0.0, m["available_gib"] - m["reserve_gib"])
+    cands = room_candidates(lab, pl)
+    if short <= 0: return {"short_gib": 0, "candidates": cands, "suggest": []}
+    free = [c for c in cands if not c["portal_busy"]]
+    one = sorted((c for c in free if c["frees_gib"] >= short), key=lambda c: c["frees_gib"])
+    if one: pick = [one[0]]
+    else:
+        pick, got = [], 0.0
+        for c in free:
+            pick.append(c); got += c["frees_gib"]
+            if got >= short: break
+        if got < short: pick = []
+    return {"short_gib": round(short, 1), "candidates": cands, "suggest": [c["lab"] for c in pick]}
+
+
+@app.get("/api/labs/{name}/plan", summary="What a power operation would need and break: memory, dependencies, labs to shut down to make room, saved state (nothing is changed)")
 def power_plan(name: str, action: str = "up", nodes: str = ""):
     lab = next((l for l in labs() if l["name"] == name), None)
     if lab is None: raise HTTPException(404, f"no such lab: {name}")
-    return GUARD.plan(lab, action, [n for n in nodes.split(",") if n], labs(), _running())
+    pl = GUARD.plan(lab, action, [n for n in nodes.split(",") if n], labs(), _running())
+    pl["fast_resume"] = RESUME.enabled(lab); pl["saved"] = RESUME.info(lab)
+    if action == "up":
+        pl["room"] = make_room(lab, pl); pl["room_with_deps"] = make_room(lab, pl, True) if pl.get("deps_down") else pl["room"]
+    elif pl["fast_resume"]:
+        rss = GUARD.qemu_rss(); want = [n for n in nodes.split(",") if n]
+        pl["save_gib"] = round(sum(rss.get(d, 0) for n, d, st in GUARD.lab_vms(lab["dir"]) if st == "running" and (not want or n in want)) / 1024, 1)
+        pl["disk_free_gib"] = round(shutil.disk_usage("/var/lib/libvirt").free / 2**30, 1)
+    return pl
 
 
 @app.post("/api/labs/{name}/power", summary="Bring a lab up or shut it down — the whole lab, or the nodes you name")

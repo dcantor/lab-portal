@@ -82,6 +82,11 @@ runs and the lab is left as the tests found it.
 - **Memory.** Starting VMs needs the sum of their libvirt memory sizes, and the host must have that available with 2 GiB to
   spare (`LAB_HUB_RESERVE_GIB`). Otherwise the hub says how much is missing and asks before going ahead. If a lab's VMs
   cannot be read, its need is reported as unknown rather than zero.
+- **Making room.** When a lab does not fit, the dialog lists the running labs that could be shut down for it, with
+  what each frees (the memory its VMs hold now), when it was last used, and whether it comes back quickly (fast resume).
+  It ticks the fewest that are enough: one lab if one will do (the smallest that will), else the largest until it fits.
+  It never suggests a lab with a portal run going, one the new lab depends on, or one another running lab needs. The
+  start then shuts those down first (saved where they have fast resume) and goes ahead (`stop_first` in the request).
 - **Dependencies.** Every lab depends on the NMS (soft: monitoring, CI, backups, Nautobot), and on any lab whose VMs it
   attaches. That second kind is read from its `lab.conf` `EXT_LAB` entries, so it follows whether srv6-core has the IPsec
   headends attached.
@@ -89,6 +94,16 @@ runs and the lab is left as the tests found it.
   need it.
 - Each card shows the lab's total memory and its dependencies. `GET /api/labs/{name}/plan?action=up|down` returns the
   same checks without changing anything.
+
+**Fast resume.** A lab with `"fast_resume": true` in `labs.json` (its nodes all libvirt VMs) is shut down by saving
+each VM's memory to disk (`virsh managedsave`, in parallel) instead of a guest shutdown. The next start resumes the VMs
+where they were, in about a minute; an XRv9k otherwise takes ten to boot. The dialog offers a full shutdown instead, and,
+when starting, to boot from scratch (throwing the saved state away). Saved VMs show dashed on the card, with a "saved ·
+resumes fast" pill and the disk the images take. Scheduled and idle shutdowns save too. The hub falls back to
+`lab.sh down` for any VM it cannot save, and for all of them when the disk would keep less than 20 GiB free. After a
+resume it runs `lab.sh resumed` when the lab has that command (a saved VM's clock stands still: srv6-xr's sets the
+clocks and verifies). The lab's `lab.sh` must undefine with `--managed-save` and boot a VM whose image cannot be read
+back; srv6-xr's does.
 
 **Schedules and idle shutdown.** Per lab, from the card's Schedule line:
 - start and stop times on chosen days, and shut down after N idle hours;
