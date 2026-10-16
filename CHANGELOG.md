@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.42.0] - 2026-10-15
+
+### Changed
+- Monitoring, srv6-xr 0.4.0: the dashboard counts 14 IS-IS adjacencies (the p1 - p3 chord makes 7 core links) and shows
+  xr-pe1's SR policies; new alert `Srv6XrTePolicyDown` (an enabled SR policy down for 2 min outside runs: its tenants
+  fall back to the IGP path).
+
 ## [0.41.0] - 2026-10-15
 
 ### Added

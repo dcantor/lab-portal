@@ -913,7 +913,7 @@ L = 'lab="srv6-xr"'
 p = []
 p.append(row("The lab", 0))
 p.append(panel("VMs running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 10")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 10}]}))
-p.append(panel("IS-IS adjacencies up", "stat", [(f"sum(srv6xr_isis_adjacency_up{{{L}}})", "of 12 (6 links x 2 ends)")], 4, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 12}]}))
+p.append(panel("IS-IS adjacencies up", "stat", [(f"sum(srv6xr_isis_adjacency_up{{{L}}})", "of 14 (7 links x 2 ends)")], 4, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 14}]}))
 p.append(panel("BGP sessions to rr", "stat", [(f"sum(srv6xr_bgp_established{{{L}}})", "of 4 (2 PEs x VPNv4/v6)")], 8, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 4}]}))
 p.append(panel("Tenant probes as expected", "stat", [(f'sum(srv6xr_tenant_reachable{{{L},same_tenant="true"}}) + (count(srv6xr_tenant_reachable{{{L},same_tenant="false"}} == 0) or vector(0))', "of 16")], 12, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 16}]}))
 p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
@@ -924,20 +924,21 @@ p.append(row("Control plane (polled every 20 s)", 5))
 p.append(panel("IS-IS adjacencies (each router's view of each neighbour)", "state-timeline", [(f"srv6xr_isis_adjacency_up{{{L}}}", "{{node}} → {{peer}}")], 0, 6, 12, 10, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("BGP sessions to the reflector", "state-timeline", [(f"srv6xr_bgp_established{{{L}}}", "{{pe}} {{family}}")], 12, 6, 12, 5, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("Prefixes each PE sends the reflector", "timeseries", [(f"srv6xr_bgp_prefixes_received{{{L}}}", "{{pe}} {{family}}")], 12, 11, 12, 5, min=0, decimals=0))
+p.append(panel("SR policies on xr-pe1 (tenants steered by colour; admin=false: shut on purpose)", "state-timeline", [(f"srv6xr_te_policy_up{{{L}}}", "{{policy}} (colour {{color}}, admin {{admin}})")], 0, 16, 24, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 
-p.append(row("Tenants across vendors (probe pings from each host to the other site)", 16))
-p.append(panel("Same tenant reachable (must be up)", "state-timeline", [(f'srv6xr_tenant_reachable{{{L},same_tenant="true"}}', "{{src}} → {{dst}} {{af}}")], 0, 17, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("Round trip across the core, ms", "timeseries", [(f'srv6xr_tenant_rtt_ms{{{L},same_tenant="true"}}', "{{src}} → {{dst}} {{af}}")], 12, 17, 12, 8, unit="ms", min=0))
-p.append(panel("Other tenant reachable (must stay 0: a 1 is a leak between VRFs)", "state-timeline", [(f'srv6xr_tenant_reachable{{{L},same_tenant="false"}}', "{{src}} → {{dst}} {{af}}")], 0, 25, 24, 6,
+p.append(row("Tenants across vendors (probe pings from each host to the other site)", 20))
+p.append(panel("Same tenant reachable (must be up)", "state-timeline", [(f'srv6xr_tenant_reachable{{{L},same_tenant="true"}}', "{{src}} → {{dst}} {{af}}")], 0, 21, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Round trip across the core, ms", "timeseries", [(f'srv6xr_tenant_rtt_ms{{{L},same_tenant="true"}}', "{{src}} → {{dst}} {{af}}")], 12, 21, 12, 8, unit="ms", min=0))
+p.append(panel("Other tenant reachable (must stay 0: a 1 is a leak between VRFs)", "state-timeline", [(f'srv6xr_tenant_reachable{{{L},same_tenant="false"}}', "{{src}} → {{dst}} {{af}}")], 0, 29, 24, 6,
                mappings=[{"type": "value", "options": {"0": {"text": "isolated", "color": "green"}, "1": {"text": "LEAK", "color": "red"}}}]))
 
-p.append(row("Failures, runs and the lab", 31))
-p.append(panel("Core links failed from the portal (on purpose)", "state-timeline", [(f"srv6xr_link_failed{{{L}}}", "{{link}}")], 0, 32, 12, 6,
+p.append(row("Failures, runs and the lab", 35))
+p.append(panel("Core links failed from the portal (on purpose)", "state-timeline", [(f"srv6xr_link_failed{{{L}}}", "{{link}}")], 0, 36, 12, 6,
                mappings=[{"type": "value", "options": {"0": {"text": "ok", "color": "transparent"}, "1": {"text": "failed", "color": "orange"}}}]))
-p.append(panel("Run going (portal run or test run)", "state-timeline", [(f"srv6xr_run_active{{{L}}}", "run")], 12, 32, 12, 3,
+p.append(panel("Run going (portal run or test run)", "state-timeline", [(f"srv6xr_run_active{{{L}}}", "run")], 12, 36, 12, 3,
                mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
-p.append(panel("Routers answering the portal", "state-timeline", [(f"srv6xr_router_reachable{{{L}}}", "{{node}} ({{os}})")], 12, 35, 12, 6, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{os}})")], 0, 38, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-host_row(p, 46)
+p.append(panel("Routers answering the portal", "state-timeline", [(f"srv6xr_router_reachable{{{L}}}", "{{node}} ({{os}})")], 12, 39, 12, 6, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{os}})")], 0, 42, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 50)
 (OUT / "srv6-xr-overview.json").write_text(json.dumps(dashboard("srv6-xr-overview", "srv6-xr: overview (IOS-XR + VyOS SRv6)", p, ["srv6-xr", "lab", "srv6"], lab="srv6-xr"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

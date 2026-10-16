@@ -186,7 +186,7 @@
       "uid": "victoriametrics"
      },
      "expr": "sum(srv6xr_isis_adjacency_up{lab=\"srv6-xr\"})",
-     "legendFormat": "of 12 (6 links x 2 ends)"
+     "legendFormat": "of 14 (7 links x 2 ends)"
     }
    ],
    "fieldConfig": {
@@ -203,7 +203,7 @@
        },
        {
         "color": "green",
-        "value": 12
+        "value": 14
        }
       ]
      }
@@ -663,19 +663,86 @@
   },
   {
    "id": 12,
+   "title": "SR policies on xr-pe1 (tenants steered by colour; admin=false: shut on purpose)",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 16,
+    "w": 24,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "srv6xr_te_policy_up{lab=\"srv6-xr\"}",
+     "legendFormat": "{{policy}} (colour {{color}}, admin {{admin}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 13,
    "type": "row",
    "title": "Tenants across vendors (probe pings from each host to the other site)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 16,
+    "y": 20,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 13,
+   "id": 14,
    "title": "Same tenant reachable (must be up)",
    "type": "state-timeline",
    "datasource": {
@@ -684,7 +751,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 17,
+    "y": 21,
     "w": 12,
     "h": 8
    },
@@ -742,7 +809,7 @@
    }
   },
   {
-   "id": 14,
+   "id": 15,
    "title": "Round trip across the core, ms",
    "type": "timeseries",
    "datasource": {
@@ -751,7 +818,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 17,
+    "y": 21,
     "w": 12,
     "h": 8
    },
@@ -784,7 +851,7 @@
    }
   },
   {
-   "id": 15,
+   "id": 16,
    "title": "Other tenant reachable (must stay 0: a 1 is a leak between VRFs)",
    "type": "state-timeline",
    "datasource": {
@@ -793,7 +860,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 25,
+    "y": 29,
     "w": 24,
     "h": 6
    },
@@ -839,20 +906,20 @@
    }
   },
   {
-   "id": 16,
+   "id": 17,
    "type": "row",
    "title": "Failures, runs and the lab",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 31,
+    "y": 35,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 17,
+   "id": 18,
    "title": "Core links failed from the portal (on purpose)",
    "type": "state-timeline",
    "datasource": {
@@ -861,7 +928,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 32,
+    "y": 36,
     "w": 12,
     "h": 6
    },
@@ -907,7 +974,7 @@
    }
   },
   {
-   "id": 18,
+   "id": 19,
    "title": "Run going (portal run or test run)",
    "type": "state-timeline",
    "datasource": {
@@ -916,7 +983,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 32,
+    "y": 36,
     "w": 12,
     "h": 3
    },
@@ -962,7 +1029,7 @@
    }
   },
   {
-   "id": 19,
+   "id": 20,
    "title": "Routers answering the portal",
    "type": "state-timeline",
    "datasource": {
@@ -971,7 +1038,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 35,
+    "y": 39,
     "w": 12,
     "h": 6
    },
@@ -1029,7 +1096,7 @@
    }
   },
   {
-   "id": 20,
+   "id": 21,
    "title": "VMs running",
    "type": "state-timeline",
    "datasource": {
@@ -1038,7 +1105,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 38,
+    "y": 42,
     "w": 12,
     "h": 8
    },
@@ -1096,20 +1163,20 @@
    }
   },
   {
-   "id": 21,
+   "id": 22,
    "type": "row",
    "title": "Ubuntu lab host (KVM): CPU and memory",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 46,
+    "y": 50,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 22,
+   "id": 23,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1118,7 +1185,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 47,
+    "y": 51,
     "w": 4,
     "h": 4
    },
@@ -1167,7 +1234,7 @@
    }
   },
   {
-   "id": 23,
+   "id": 24,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1176,7 +1243,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 47,
+    "y": 51,
     "w": 4,
     "h": 4
    },
@@ -1225,7 +1292,7 @@
    }
   },
   {
-   "id": 24,
+   "id": 25,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1234,7 +1301,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 47,
+    "y": 51,
     "w": 5,
     "h": 4
    },
@@ -1284,7 +1351,7 @@
    }
   },
   {
-   "id": 25,
+   "id": 26,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1293,7 +1360,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 47,
+    "y": 51,
     "w": 7,
     "h": 4
    },
@@ -1361,7 +1428,7 @@
    }
   },
   {
-   "id": 26,
+   "id": 27,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1370,7 +1437,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 47,
+    "y": 51,
     "w": 4,
     "h": 4
    },
@@ -1419,7 +1486,7 @@
    }
   },
   {
-   "id": 27,
+   "id": 28,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1428,7 +1495,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 51,
+    "y": 55,
     "w": 8,
     "h": 8
    },
@@ -1498,7 +1565,7 @@
    }
   },
   {
-   "id": 28,
+   "id": 29,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1507,7 +1574,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 51,
+    "y": 55,
     "w": 8,
     "h": 8
    },
@@ -1567,7 +1634,7 @@
    }
   },
   {
-   "id": 29,
+   "id": 30,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1576,7 +1643,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 51,
+    "y": 55,
     "w": 8,
     "h": 8
    },
