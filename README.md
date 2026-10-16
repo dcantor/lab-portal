@@ -70,6 +70,7 @@ used for: Prometheus, VictoriaMetrics, VictoriaLogs, Grafana, Gitea and Nautobot
 - It shows whether each service answers, and states plainly when the NMS is off, because then nothing alerts, CI does not
   run and Nautobot is unreachable.
 - It can start the NMS, waiting until every service answers, or shut it down cleanly.
+- It opens with the details shown; "less ▴" folds it to one line while everything is fine, remembered per browser.
 - The services come from `~/.config/lab-hub/services.json`, or the built-in defaults (`labportal/hub/shared.py`).
 
 **CI.** For a lab with a `ci` entry in `labs.json`, its card shows:

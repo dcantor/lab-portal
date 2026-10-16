@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.46.0] - 2026-10-16
+
+### Changed
+- Hub: the Shared services card opens with its details shown; "less ▴" still folds it to one line, remembered per
+  browser (a new storage key, so an earlier choice of the one-line view does not carry over).
+
 ## [0.45.0] - 2026-10-16
 
 ### Added

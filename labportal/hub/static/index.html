@@ -306,7 +306,7 @@ function versionView(l) {
 // ---- shared services: the NMS VM and what runs on it --------------------------------------------------------------
 const pillOf = st => ({ success: 'ok', ok: 'ok', running: 'warn', degraded: 'warn', failure: 'bad', down: 'bad' }[st] || '');
 const ago = iso => { const s = (Date.now() - new Date(iso).getTime()) / 1000; return s < 90 ? `${Math.round(s)}s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
-let SVC_OPEN = store_get('hub-svc-open', false);
+let SVC_OPEN = store_get('hub-svc-details', true);         // the full card unless this browser chose "less"
 function store_get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }
 function renderServices(sv) {
   if (!sv) return;
@@ -893,7 +893,7 @@ function schedule(labs) {
 document.addEventListener('click', e => {
   if (e.target.closest('svg.spark')) return openHistory();
   if (e.target.closest('#ftoggle')) { const tb = document.getElementById('toolbar'); tb.classList.toggle('open'); e.target.closest('#ftoggle').setAttribute('aria-expanded', tb.classList.contains('open')); return renderLabs(); }
-  const sv = e.target.closest('button[data-svc]'); if (sv) { SVC_OPEN = sv.dataset.svc === '1'; try { localStorage.setItem('hub-svc-open', JSON.stringify(SVC_OPEN)); } catch (x) { } return renderServices(window.SV); }
+  const sv = e.target.closest('button[data-svc]'); if (sv) { SVC_OPEN = sv.dataset.svc === '1'; try { localStorage.setItem('hub-svc-details', JSON.stringify(SVC_OPEN)); } catch (x) { } return renderServices(window.SV); }
   const vw = e.target.closest('button[data-view]'); if (vw) return setView(vw.dataset.view);
   const hs = e.target.closest('[data-hero-show]'); if (hs) { SHOW = hs.dataset.heroShow; store.set('hub-show', SHOW); renderLabs(); return document.getElementById('toolbar').scrollIntoView({ behavior: 'smooth' }); }
   const sh = e.target.closest('button[data-show]'); if (sh) { SHOW = sh.dataset.show; store.set('hub-show', SHOW); return renderLabs(); }
