@@ -92,6 +92,15 @@ band), `sw1_qos_mode`, and `homa_lab_run_active`. Tests and measurements load th
 on purpose, so the timer, link-rate and timeout alerts wait for no run to be going. Alert group `homa-lab`; dashboard
 **homa-lab: overview (Homa kernel module)**.
 
+**openstack-lab** (job `openstack-lab`, SD `http://10.0.0.1:8110/api/sd`, every 30 s): OpenStack 2026.1 (Kolla-Ansible)
+in three nested-virtualisation VMs. The portal reads the cloud every 20 s with the openstack CLI on osl-ctl and serves it
+from memory: `openstack_service_up` (Nova and Cinder services, Neutron/OVN agents; `service`, `host`),
+`openstack_containers` (Kolla containers per node, `state` up / bad), `openstack_nested_kvm`, `openstack_instances`
+(`host`, `status`), `openstack_compute_mem_available_mib` / `_total_mib`, `openstack_compute_guests`,
+`openstack_problems`, and `openstack_lab_run_active`. The evacuation suite powers osl-cmp2 off on purpose, so the
+service and container alerts wait for no run to be going. Alert group `openstack-lab`; dashboard **openstack-lab:
+overview (OpenStack on nested KVM)**.
+
 **Alertmanager** (`:9093`, `alertmanager/alertmanager.yml`): Prometheus sends it every alert. A lab that wants its
 alerts acted on gets a route with its own receiver (today only evpn-prefect's incident alerts, as a webhook to its
 portal). Everything else goes to `blackhole`, so the Hub and Grafana show alerts as before. Webhook tokens are not in

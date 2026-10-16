@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.47.0] - 2026-10-16
+
+### Added
+- Monitoring: openstack-lab (OpenStack 2026.1 by Kolla-Ansible in three nested-virtualisation VMs). Prometheus job
+  `openstack-lab` (SD from its portal, :8110): services and agents, Kolla containers, nested KVM, instances per compute,
+  compute memory. Alert group `openstack-lab` (`OpenstackServiceDown`, `OpenstackContainersUnhealthy`,
+  `OpenstackNestedKvmMissing`, `OpenstackComputeMemoryLow`, `OpenstackInstanceError`, `OpenstackTestsFailing`; the first
+  two wait for no portal run, since the evacuation suite powers a compute off on purpose). Dashboard
+  **openstack-lab: overview (OpenStack on nested KVM)**.
+
 ## [0.46.0] - 2026-10-16
 
 ### Changed

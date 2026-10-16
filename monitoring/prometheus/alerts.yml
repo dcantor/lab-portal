@@ -784,3 +784,35 @@ groups:
         for: 15m
         labels: {severity: info}
         annotations: {summary: "xr-pe1 {{ $labels.location }} CPU at {{ $value }}% (5-minute average)"}
+
+  - name: openstack-lab             # OpenStack lab (portal :8110). The cloud's metrics exist only while all three VMs run. The evacuation suite powers
+    rules:                          # osl-cmp2 off and forces its nova-compute down on purpose: openstack_lab_run_active says a run is going
+      - alert: OpenstackServiceDown
+        expr: (openstack_service_up{lab="openstack-lab"} == 0) and on (lab) (openstack_lab_run_active == 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.service }} on {{ $labels.host }} is down (Nova / Cinder service or Neutron agent)"}
+      - alert: OpenstackContainersUnhealthy
+        expr: (openstack_containers{lab="openstack-lab",state="bad"} > 0) and on (lab) (openstack_lab_run_active == 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $value }} Kolla container(s) on {{ $labels.node }} exited or unhealthy (sudo docker ps -a there)"}
+      - alert: OpenstackNestedKvmMissing
+        expr: openstack_nested_kvm{lab="openstack-lab"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} has no /dev/kvm: instances there would be emulated or fail to boot (host-passthrough CPU, kvm_amd nested=1)"}
+      - alert: OpenstackComputeMemoryLow
+        expr: openstack_compute_mem_available_mib{lab="openstack-lab"} / openstack_compute_mem_total_mib{lab="openstack-lab"} < 0.1
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} has under 10% memory left for its nested guests ({{ $value | humanizePercentage }})"}
+      - alert: OpenstackInstanceError
+        expr: openstack_instances{lab="openstack-lab",status="ERROR"} > 0
+        for: 5m
+        labels: {severity: info}
+        annotations: {summary: "{{ $value }} instance(s) in ERROR on {{ $labels.host }}"}
+      - alert: OpenstackTestsFailing
+        expr: lab_tests_last_failed{lab="openstack-lab"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last openstack-lab Robot run had {{ $value }} failed test(s) (portal: Last tests)"}

@@ -972,4 +972,37 @@ p.append(panel("Errors and discards / s per port", "timeseries",
                12, 72, 12, 7, min=0))
 host_row(p, 79)
 (OUT / "srv6-xr-overview.json").write_text(json.dumps(dashboard("srv6-xr-overview", "srv6-xr: overview (IOS-XR + VyOS SRv6)", p, ["srv6-xr", "lab", "srv6"], lab="srv6-xr"), indent=1))
+# ---------------------------------------------------------------- openstack-lab: OpenStack 2026.1 (Kolla-Ansible) in three Ubuntu VMs; Nova's instances are
+# KVM guests inside the compute VMs (nested virtualisation). The portal (:8110) reads the cloud every 20 s with the openstack CLI on osl-ctl over SSH. The
+# evacuation suite powers osl-cmp2 off and forces its nova-compute down on purpose: openstack_lab_run_active marks runs
+_id[0] = 0
+L = 'lab="openstack-lab"'
+p = []
+p.append(row("The lab", 0))
+p.append(panel("VMs running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 3")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 3}]}))
+p.append(panel("Health problems", "stat", [(f"openstack_problems{{{L}}}", "problems")], 4, 1, 4, 4, colorMode="background", thresholds=RED1))
+p.append(panel("Services and agents up", "stat", [(f"sum(openstack_service_up{{{L}}})", "up"), (f"count(openstack_service_up{{{L}}})", "of")], 8, 1, 4, 4, colorMode="none"))
+p.append(panel("Instances", "stat", [(f"sum(openstack_instances{{{L}}}) or vector(0)", "instances")], 12, 1, 4, 4, colorMode="none"))
+p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("The cloud", 5))
+p.append(panel("Services and agents (Nova, Cinder, Neutron/OVN)", "state-timeline", [(f"openstack_service_up{{{L}}}", "{{service}} @ {{host}}")], 0, 6, 12, 12, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Instances by compute and status", "timeseries", [(f"sum by (host, status) (openstack_instances{{{L}}})", "{{host}} {{status}}")], 12, 6, 12, 6, min=0, decimals=0,
+               custom={"stacking": {"mode": "normal"}, "fillOpacity": 40}))
+p.append(panel("Kolla containers exited or unhealthy", "timeseries", [(f'openstack_containers{{{L},state="bad"}}', "{{node}}")], 12, 12, 12, 6, min=0, decimals=0))
+
+p.append(row("The compute VMs (nested KVM)", 18))
+p.append(panel("Memory left for nested guests", "timeseries", [(f"openstack_compute_mem_available_mib{{{L}}} * 1048576", "{{node}} available"), (f"openstack_compute_mem_total_mib{{{L}}} * 1048576", "{{node}} total")], 0, 19, 12, 8, unit="bytes", min=0))
+p.append(panel("Running guests (libvirt domains) per compute", "timeseries", [(f"openstack_compute_guests{{{L}}}", "{{node}}")], 12, 19, 6, 8, min=0, decimals=0))
+p.append(panel("/dev/kvm per node", "state-timeline", [(f"openstack_nested_kvm{{{L}}}", "{{node}}")], 18, 19, 6, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+
+p.append(row("Lab and runs", 27))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 28, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal run going (the evacuation suite powers osl-cmp2 off on purpose)", "state-timeline", [(f"openstack_lab_run_active{{{L}}}", "run")], 12, 28, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 32, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 36)
+(OUT / "openstack-lab-overview.json").write_text(json.dumps(dashboard("openstack-lab-overview", "openstack-lab: overview (OpenStack on nested KVM)", p, ["openstack-lab", "lab", "openstack"], lab="openstack-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

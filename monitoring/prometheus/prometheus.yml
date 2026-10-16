@@ -112,6 +112,14 @@ scrape_configs:
     metric_relabel_configs:
       - {regex: "source|subscription_name", action: labeldrop}
 
+  - job_name: openstack-lab                                        # OpenStack (Kolla-Ansible) in three nested-virt VMs (libvirt): the portal (:8110)
+    http_sd_configs: [{url: http://10.0.0.1:8110/api/sd, refresh_interval: 60s}]   # serves the cloud's state it reads every 20 s (openstack CLI on
+    honor_labels: true                                             # osl-ctl over SSH) from memory, so a scrape is quick; nothing but lab_vm_running while off
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
     honor_labels: true
