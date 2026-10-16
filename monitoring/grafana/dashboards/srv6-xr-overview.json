@@ -1165,7 +1165,7 @@
   {
    "id": 22,
    "type": "row",
-   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "title": "xr-pe1 over gNMI (XR streams it every 10 s: gnmic-srv6-xr; the rows above are the portal's SSH poll)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -1177,7 +1177,7 @@
   },
   {
    "id": 23,
-   "title": "Host CPU busy %",
+   "title": "Ports up (core + tenant)",
    "type": "stat",
    "datasource": {
     "type": "prometheus",
@@ -1186,6 +1186,742 @@
    "gridPos": {
     "x": 0,
     "y": 51,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(xr_iface_oper_up{lab=\"srv6-xr\",node=\"xr-pe1\",peer!=\"oob\"})",
+     "legendFormat": "of 4"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 4
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 24,
+   "title": "IS-IS adjacencies",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 51,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(xr_isis_adjacency_up{lab=\"srv6-xr\",node=\"xr-pe1\"})",
+     "legendFormat": "of 2"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 25,
+   "title": "BFD sessions",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 51,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(xr_bfd_session_up{lab=\"srv6-xr\",node=\"xr-pe1\"})",
+     "legendFormat": "of 2"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 26,
+   "title": "BGP sessions (VPNv4/v6)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 51,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(xr_bgp_established{lab=\"srv6-xr\",node=\"xr-pe1\"})",
+     "legendFormat": "of 2"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 27,
+   "title": "SR policies up",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 51,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(xr_te_oper_up{lab=\"srv6-xr\",node=\"xr-pe1\"})",
+     "legendFormat": "of 2"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 28,
+   "title": "Route processor CPU",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 51,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "xr_system_cpu_1m{lab=\"srv6-xr\",node=\"xr-pe1\",location=\"0/RP0/CPU0\"}",
+     "legendFormat": "1 min"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 60
+       },
+       {
+        "color": "red",
+        "value": 85
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 29,
+   "title": "Core links at xr-pe1, bits/s (out to the P router up, in from it down)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 55,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(xr_iface_out_octets{lab=\"srv6-xr\",node=\"xr-pe1\",peer=~\"p[0-9]+\"}[1m]) * 8",
+     "legendFormat": "\u2192 {{peer}} ({{interface}})"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "-rate(xr_iface_in_octets{lab=\"srv6-xr\",node=\"xr-pe1\",peer=~\"p[0-9]+\"}[1m]) * 8",
+     "legendFormat": "\u2190 {{peer}} ({{interface}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 30,
+   "title": "Tenant traffic entering the VPN at xr-pe1 (from each tenant's host), bits/s",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 55,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(xr_iface_in_octets{lab=\"srv6-xr\",node=\"xr-pe1\",tenant!=\"\"}[1m]) * 8",
+     "legendFormat": "{{tenant}} from {{peer}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "-rate(xr_iface_out_octets{lab=\"srv6-xr\",node=\"xr-pe1\",tenant!=\"\"}[1m]) * 8",
+     "legendFormat": "{{tenant}} to {{peer}} (down)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 31,
+   "title": "Sessions as XR reports them (XR drops a down adjacency or BFD session: shown down when a core port has none)",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 63,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (peer) (xr_isis_adjacency_up{lab=\"srv6-xr\",node=\"xr-pe1\"}) or sum by (peer) (0 * xr_iface_oper_up{lab=\"srv6-xr\",node=\"xr-pe1\",peer=~\"p[0-9]+\"})",
+     "legendFormat": "IS-IS {{peer}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (peer) (xr_bfd_session_up{lab=\"srv6-xr\",node=\"xr-pe1\"}) or sum by (peer) (0 * xr_iface_oper_up{lab=\"srv6-xr\",node=\"xr-pe1\",peer=~\"p[0-9]+\"})",
+     "legendFormat": "BFD {{peer}}"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "xr_bgp_established{lab=\"srv6-xr\",node=\"xr-pe1\"}",
+     "legendFormat": "BGP {{family}} to {{peer}}"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "xr_te_oper_up{lab=\"srv6-xr\",node=\"xr-pe1\"}",
+     "legendFormat": "SR policy {{policy}} (colour {{color}})"
+    },
+    {
+     "refId": "E",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "xr_iface_oper_up{lab=\"srv6-xr\",node=\"xr-pe1\",peer!=\"oob\"}",
+     "legendFormat": "port to {{peer}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 32,
+   "title": "CPU % per card",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 63,
+    "w": 6,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "xr_system_cpu_1m{lab=\"srv6-xr\",node=\"xr-pe1\"}",
+     "legendFormat": "{{location}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 33,
+   "title": "Memory used % per card",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 63,
+    "w": 6,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - xr_system_memory_free_bytes{lab=\"srv6-xr\",node=\"xr-pe1\"} / xr_system_memory_total_bytes{lab=\"srv6-xr\",node=\"xr-pe1\"})",
+     "legendFormat": "{{location}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 34,
+   "title": "VPN prefixes xr-pe1 accepts from / advertises to the reflector",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 72,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "xr_bgp_prefixes_accepted{lab=\"srv6-xr\",node=\"xr-pe1\"}",
+     "legendFormat": "{{family}} accepted"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "xr_bgp_prefixes_advertised{lab=\"srv6-xr\",node=\"xr-pe1\"}",
+     "legendFormat": "{{family}} advertised"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 35,
+   "title": "Errors and discards / s per port",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 72,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum by (interface, peer) (rate(xr_iface_in_errors{lab=\"srv6-xr\",node=\"xr-pe1\"}[5m]) + rate(xr_iface_out_errors{lab=\"srv6-xr\",node=\"xr-pe1\"}[5m]) + rate(xr_iface_in_discards{lab=\"srv6-xr\",node=\"xr-pe1\"}[5m]) + rate(xr_iface_out_discards{lab=\"srv6-xr\",node=\"xr-pe1\"}[5m]))",
+     "legendFormat": "{{peer}} ({{interface}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 36,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 79,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 37,
+   "title": "Host CPU busy %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 80,
     "w": 4,
     "h": 4
    },
@@ -1234,7 +1970,7 @@
    }
   },
   {
-   "id": 24,
+   "id": 38,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1243,7 +1979,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 51,
+    "y": 80,
     "w": 4,
     "h": 4
    },
@@ -1292,7 +2028,7 @@
    }
   },
   {
-   "id": 25,
+   "id": 39,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1301,7 +2037,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 51,
+    "y": 80,
     "w": 5,
     "h": 4
    },
@@ -1351,7 +2087,7 @@
    }
   },
   {
-   "id": 26,
+   "id": 40,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1360,7 +2096,7 @@
    },
    "gridPos": {
     "x": 13,
-    "y": 51,
+    "y": 80,
     "w": 7,
     "h": 4
    },
@@ -1428,7 +2164,7 @@
    }
   },
   {
-   "id": 27,
+   "id": 41,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1437,7 +2173,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 51,
+    "y": 80,
     "w": 4,
     "h": 4
    },
@@ -1486,7 +2222,7 @@
    }
   },
   {
-   "id": 28,
+   "id": 42,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1495,7 +2231,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 55,
+    "y": 84,
     "w": 8,
     "h": 8
    },
@@ -1565,7 +2301,7 @@
    }
   },
   {
-   "id": 29,
+   "id": 43,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1574,7 +2310,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 55,
+    "y": 84,
     "w": 8,
     "h": 8
    },
@@ -1634,7 +2370,7 @@
    }
   },
   {
-   "id": 30,
+   "id": 44,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {
@@ -1643,7 +2379,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 55,
+    "y": 84,
     "w": 8,
     "h": 8
    },

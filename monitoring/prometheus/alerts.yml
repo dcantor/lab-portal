@@ -754,3 +754,33 @@ groups:
         expr: lab_tests_last_failed{lab="srv6-xr"} > 0
         labels: {severity: warning}
         annotations: {summary: "the last srv6-xr Robot run had {{ $value }} failed test(s) (portal: Tests)"}
+      # xr-pe1 over gNMI (job srv6-xr-gnmi): what XR streams itself. IS-IS, BGP and the SR policies are already alerted on
+      # from the portal's poll above; these add what only the telemetry sees
+      - alert: Srv6XrGnmiSilent
+        # XR's YANG layer loads a few minutes after a boot (gNMI answers "Server not ready" until then): hence the 15 m
+        expr: (lab_vm_running{lab="srv6-xr",node="xr-pe1"} == 1) unless on (lab, node) xr_system_cpu_1m
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "xr-pe1 is running but streams no gNMI telemetry (gnmic-srv6-xr, the host's srv6-xr-gnmi-relay unit, XR's grpc config?)"}
+      - alert: Srv6XrInterfaceDown
+        # a failed link from the portal is packet loss (netem) and leaves the port up: down here is a real fault
+        expr: (xr_iface_oper_up{lab="srv6-xr",peer!="oob"} == 0) and on (lab) (srv6xr_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "xr-pe1 {{ $labels.interface }} (to {{ $labels.peer }}) is down"}
+      - alert: Srv6XrBfdSessionDown
+        # XR drops a down session from its list instead of reporting it down: a core port (a P router as peer) with no session up
+        expr: (sum by (lab, node, peer) (xr_iface_oper_up{lab="srv6-xr",peer=~"p[0-9]+"}) unless on (lab, node, peer) (xr_bfd_session_up == 1)) and on (lab) (srv6xr_run_active == 0) and on (lab) (sum by (lab) (srv6xr_link_failed) == 0)
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "xr-pe1 has no BFD session up to {{ $labels.peer }} (no link was failed on purpose)"}
+      - alert: Srv6XrInterfaceErrors
+        expr: (rate(xr_iface_in_errors{lab="srv6-xr"}[5m]) + rate(xr_iface_out_errors{lab="srv6-xr"}[5m])) > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "xr-pe1 {{ $labels.interface }} (to {{ $labels.peer }}) counts errors: {{ $value | humanize }}/s"}
+      - alert: Srv6XrCpuHigh
+        expr: xr_system_cpu_5m{lab="srv6-xr"} > 80
+        for: 15m
+        labels: {severity: info}
+        annotations: {summary: "xr-pe1 {{ $labels.location }} CPU at {{ $value }}% (5-minute average)"}

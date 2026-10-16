@@ -105,6 +105,13 @@ scrape_configs:
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
 
+  - job_name: srv6-xr-gnmi                                         # srv6-xr's xr-pe1 over gNMI (gnmic-srv6-xr, gnmic/srv6-xr.yml): streamed every 10 s,
+    static_configs: [{targets: ["gnmic-srv6-xr:9805"]}]             # named by the lab (peer=p1, policy=VIA-P3); xr_* series. XR drops a down adjacency or
+    scrape_interval: 10s                                           # BFD session instead of reporting it down: its series goes 30 s later (gnmic expiration)
+    honor_labels: true
+    metric_relabel_configs:
+      - {regex: "source|subscription_name", action: labeldrop}
+
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
     honor_labels: true

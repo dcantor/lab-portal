@@ -84,6 +84,12 @@ services:
     command: ["--config", "/etc/gnmic/srl-evpn.yml", "subscribe"]
     volumes: ["./gnmic:/etc/gnmic:ro"]
 
+  gnmic-srv6-xr:                                  # srv6-xr's IOS-XR PE over gNMI (XR's gRPC 57400 on the lab's isolated OOB, reached through the host's
+    image: ghcr.io/openconfig/gnmic:0.49.0        # relay 10.0.0.1:57409): interfaces, IS-IS, BGP, BFD, SR policies, CPU, memory -> Prometheus (:9805)
+    restart: unless-stopped
+    command: ["--config", "/etc/gnmic/srv6-xr.yml", "subscribe"]
+    volumes: ["./gnmic:/etc/gnmic:ro"]
+
   prometheus:
     image: prom/prometheus:v3.14.0
     restart: unless-stopped

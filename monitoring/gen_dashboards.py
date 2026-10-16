@@ -939,6 +939,37 @@ p.append(panel("Run going (portal run or test run)", "state-timeline", [(f"srv6x
                mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
 p.append(panel("Routers answering the portal", "state-timeline", [(f"srv6xr_router_reachable{{{L}}}", "{{node}} ({{os}})")], 12, 39, 12, 6, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{os}})")], 0, 42, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-host_row(p, 50)
+
+p.append(row("xr-pe1 over gNMI (XR streams it every 10 s: gnmic-srv6-xr; the rows above are the portal's SSH poll)", 50))
+X = f'{L},node="xr-pe1"'
+def upstat(title, expr, of, x):
+    return panel(title, "stat", [(expr, f"of {of}")], x, 51, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": of}]})
+p.append(upstat("Ports up (core + tenant)", f'sum(xr_iface_oper_up{{{X},peer!="oob"}})', 4, 0))
+p.append(upstat("IS-IS adjacencies", f"sum(xr_isis_adjacency_up{{{X}}})", 2, 4))
+p.append(upstat("BFD sessions", f"sum(xr_bfd_session_up{{{X}}})", 2, 8))
+p.append(upstat("BGP sessions (VPNv4/v6)", f"sum(xr_bgp_established{{{X}}})", 2, 12))
+p.append(upstat("SR policies up", f"sum(xr_te_oper_up{{{X}}})", 2, 16))
+p.append(panel("Route processor CPU", "stat", [(f'xr_system_cpu_1m{{{X},location="0/RP0/CPU0"}}', "1 min")], 20, 51, 4, 4, unit="percent", colorMode="value",
+               thresholds={"steps": [{"color": "green", "value": None}, {"color": "orange", "value": 60}, {"color": "red", "value": 85}]}))
+p.append(panel("Core links at xr-pe1, bits/s (out to the P router up, in from it down)", "timeseries",
+               [(f'rate(xr_iface_out_octets{{{X},peer=~"p[0-9]+"}}[1m]) * 8', "→ {{peer}} ({{interface}})"),
+                (f'-rate(xr_iface_in_octets{{{X},peer=~"p[0-9]+"}}[1m]) * 8', "← {{peer}} ({{interface}})")], 0, 55, 12, 8, unit="bps"))
+p.append(panel("Tenant traffic entering the VPN at xr-pe1 (from each tenant's host), bits/s", "timeseries",
+               [(f'rate(xr_iface_in_octets{{{X},tenant!=""}}[1m]) * 8', "{{tenant}} from {{peer}}"),
+                (f'-rate(xr_iface_out_octets{{{X},tenant!=""}}[1m]) * 8', "{{tenant}} to {{peer}} (down)")], 12, 55, 12, 8, unit="bps"))
+p.append(panel("Sessions as XR reports them (XR drops a down adjacency or BFD session: shown down when a core port has none)", "state-timeline",
+               [(f'sum by (peer) (xr_isis_adjacency_up{{{X}}}) or sum by (peer) (0 * xr_iface_oper_up{{{X},peer=~"p[0-9]+"}})', "IS-IS {{peer}}"),
+                (f'sum by (peer) (xr_bfd_session_up{{{X}}}) or sum by (peer) (0 * xr_iface_oper_up{{{X},peer=~"p[0-9]+"}})', "BFD {{peer}}"),
+                (f"xr_bgp_established{{{X}}}", "BGP {{family}} to {{peer}}"), (f"xr_te_oper_up{{{X}}}", "SR policy {{policy}} (colour {{color}})"),
+                (f'xr_iface_oper_up{{{X},peer!="oob"}}', "port to {{peer}}")], 0, 63, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("CPU % per card", "timeseries", [(f"xr_system_cpu_1m{{{X}}}", "{{location}}")], 12, 63, 6, 9, unit="percent", min=0))
+p.append(panel("Memory used % per card", "timeseries",
+               [(f"100 * (1 - xr_system_memory_free_bytes{{{X}}} / xr_system_memory_total_bytes{{{X}}})", "{{location}}")], 18, 63, 6, 9, unit="percent", min=0, max=100))
+p.append(panel("VPN prefixes xr-pe1 accepts from / advertises to the reflector", "timeseries",
+               [(f"xr_bgp_prefixes_accepted{{{X}}}", "{{family}} accepted"), (f"xr_bgp_prefixes_advertised{{{X}}}", "{{family}} advertised")], 0, 72, 12, 7, min=0, decimals=0))
+p.append(panel("Errors and discards / s per port", "timeseries",
+               [(f'sum by (interface, peer) (rate(xr_iface_in_errors{{{X}}}[5m]) + rate(xr_iface_out_errors{{{X}}}[5m]) + rate(xr_iface_in_discards{{{X}}}[5m]) + rate(xr_iface_out_discards{{{X}}}[5m]))', "{{peer}} ({{interface}})")],
+               12, 72, 12, 7, min=0))
+host_row(p, 79)
 (OUT / "srv6-xr-overview.json").write_text(json.dumps(dashboard("srv6-xr-overview", "srv6-xr: overview (IOS-XR + VyOS SRv6)", p, ["srv6-xr", "lab", "srv6"], lab="srv6-xr"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))
