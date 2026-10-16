@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.41.0] - 2026-10-15
+
+### Added
+- Monitoring: srv6-xr (multi-vendor SRv6 L3VPN, IOS-XRv9000 + VyOS): Prometheus job (service discovery from its portal, :8109,
+  every 30 s; the portal answers from its last router poll), alert group `srv6-xr` (7 rules: router unreachable, IS-IS
+  adjacency down outside runs and deliberate link failures, BGP session to the reflector down, same-tenant probe failing,
+  a tenant leak (critical), stale poll (info), failed tests), and the dashboard **srv6-xr: overview (IOS-XR + VyOS SRv6)**.
+
 ## [0.40.0] - 2026-10-15
 
 ### Changed

@@ -97,6 +97,14 @@ scrape_configs:
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
 
+  - job_name: srv6-xr                                              # multi-vendor SRv6 L3VPN (IOS-XRv9000 PE + VyOS core, libvirt): the portal (:8109)
+    http_sd_configs: [{url: http://10.0.0.1:8109/api/sd, refresh_interval: 60s}]   # serves its last router poll (every 20 s: adjacencies, BGP,
+    honor_labels: true                                             # SIDs, tenant probe pings) from memory, so a scrape is quick
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
   - job_name: srl-evpn                                             # Nokia SR Linux 5-stage Clos (containerlab): gNMI streaming telemetry, every SR
     static_configs: [{targets: ["gnmic-srl-evpn:9804"]}]            # Linux node subscribed by gnmic (gnmic/srl-evpn.yml); its labels lab / node / role / pod
     honor_labels: true

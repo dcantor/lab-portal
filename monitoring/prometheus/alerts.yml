@@ -711,3 +711,40 @@ groups:
         expr: lab_tests_last_failed{lab="homa-lab"} > 0
         labels: {severity: warning}
         annotations: {summary: "the last homa-lab Robot run had {{ $value }} failed test(s) (portal: Last tests)"}
+
+  - name: srv6-xr                   # multi-vendor SRv6 L3VPN lab (portal :8109). The metrics exist only while the lab runs (the portal polls nothing when it is
+    rules:                          # off). A link failed from the portal, and the test runs (suite 06 fails p1 - p2), take adjacencies down on purpose
+      - alert: Srv6XrRouterUnreachable
+        expr: srv6xr_router_reachable{lab="srv6-xr"} == 0
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "the srv6-xr portal cannot reach {{ $labels.node }} ({{ $labels.os }}) over SSH: no state for it"}
+      - alert: Srv6XrIsisAdjacencyDown
+        expr: (srv6xr_isis_adjacency_up{lab="srv6-xr"} == 0) and on (lab) (srv6xr_run_active == 0) and on (lab) (sum by (lab) (srv6xr_link_failed) == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} has no IS-IS adjacency with {{ $labels.peer }} (no link was failed on purpose)"}
+      - alert: Srv6XrBgpSessionDown
+        expr: (srv6xr_bgp_established{lab="srv6-xr"} == 0) and on (lab) (srv6xr_run_active == 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.pe }}'s {{ $labels.family }} session with the route reflector is down: its VPN routes are gone"}
+      - alert: Srv6XrTenantUnreachable
+        expr: (srv6xr_tenant_reachable{lab="srv6-xr",same_tenant="true"} == 0) and on (lab) (srv6xr_run_active == 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.src }} cannot reach {{ $labels.dst }} ({{ $labels.af }}) in its own tenant VPN across the core"}
+      - alert: Srv6XrTenantLeak
+        # the worst outcome: traffic crossing between the tenant VRFs
+        expr: srv6xr_tenant_reachable{lab="srv6-xr",same_tenant="false"} == 1
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.src }} reaches {{ $labels.dst }} ({{ $labels.af }}) in the OTHER tenant: the VRFs leak (route targets?)"}
+      - alert: Srv6XrPollStale
+        expr: (time() - srv6xr_poll_timestamp_seconds{lab="srv6-xr"} > 300) and on (lab) (srv6xr_run_active == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="srv6-xr"}) > 0)
+        for: 5m
+        labels: {severity: info}
+        annotations: {summary: "the srv6-xr portal has not polled its routers for {{ $value | humanizeDuration }} with no run going"}
+      - alert: Srv6XrTestsFailing
+        expr: lab_tests_last_failed{lab="srv6-xr"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last srv6-xr Robot run had {{ $value }} failed test(s) (portal: Tests)"}
