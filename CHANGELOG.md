@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.45.0] - 2026-10-16
+
+### Added
+- Hub: a Clear button on the alert banner hides the alerts firing now, for everyone (stored on the hub). A cleared alert
+  shows again if it stops and fires again, and new alerts always show; "N cleared · show again" brings them back.
+  Cleared alerts leave the lab cards' pills and the counts. `POST /api/alerts/clear`, `POST /api/alerts/restore`.
+
 ## [0.44.0] - 2026-10-16
 
 ### Added

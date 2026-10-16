@@ -186,6 +186,20 @@ def host_history(hours: float = 24): return HIST.series(min(max(hours, 1), 24))
 def api_alerts(): return ALERTS.firing()
 
 
+class ClearRequest(BaseModel):
+    keys: list[str] | None = None                # the alerts' `key`s; none = every alert firing now
+
+
+@app.post("/api/alerts/clear", summary="Clear alerts from the banner (all firing now, or the keys given): they show again if they stop and fire again")
+def api_alerts_clear(req: ClearRequest, request: Request):
+    return {"cleared": ALERTS.clear(req.keys, getattr(request.state, "user", None)), "alerts": ALERTS.firing()}
+
+
+@app.post("/api/alerts/restore", summary="Show every cleared alert again")
+def api_alerts_restore():
+    ALERTS.restore(); return {"alerts": ALERTS.firing()}
+
+
 @app.get("/api/me", summary="Who is signed in")
 def me(request: Request): return {"user": getattr(request.state, "user", None), "auth": AUTH.ENABLED}
 

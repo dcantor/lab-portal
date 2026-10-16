@@ -57,6 +57,11 @@ the hub read-only again. Everything else about a lab — provisioning, day-2 cha
   shown when all is quiet; "Alerts unknown" when neither evaluator answers (the NMS is off: nothing is watching).
 - Each lab card gets an "N alerts" pill, a critical alert turns its health dot red and a warning amber, and the banner at
   the top counts them.
+- **Clear** (on the banner) hides the alerts firing now: from the banner, the lab cards and the counts, for everyone
+  (kept on the hub in `~/.local/state/lab-hub/cleared.json`, so it holds on every device). An alert stays cleared only
+  while it keeps firing: one that stops and fires again, or a new one, shows again. The banner keeps a quiet "N cleared ·
+  show again" line while cleared alerts are still firing. `POST /api/alerts/clear` (all, or `keys`), `POST
+  /api/alerts/restore`; each alert in `/api/alerts` has its `key` and `cleared`.
 - Why: evpn-clab's wan exporters were down for a day with `ExporterDown` firing the whole time, and nobody saw it.
 - `GET /api/alerts`; the sources are `LAB_HUB_PROMETHEUS` and `LAB_HUB_VMALERT` (default the NMS, ports 9090 and 8880).
 
