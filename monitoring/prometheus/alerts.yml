@@ -812,6 +812,16 @@ groups:
         for: 5m
         labels: {severity: info}
         annotations: {summary: "{{ $value }} instance(s) in ERROR on {{ $labels.host }}"}
+      - alert: OpenstackLoadBalancerError
+        expr: openstack_loadbalancers{lab="openstack-lab",status="ERROR"} > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $value }} Octavia load balancer(s) ({{ $labels.provider }}) in ERROR"}
+      - alert: OpenstackClusterFailed
+        expr: openstack_coe_clusters{lab="openstack-lab",status=~".*_FAILED"} > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $value }} Magnum cluster(s) in {{ $labels.status }}"}
       - alert: OpenstackTestsFailing
         expr: lab_tests_last_failed{lab="openstack-lab"} > 0
         labels: {severity: warning}

@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.49.0] - 2026-10-16
+
+### Added
+- Monitoring: openstack-lab's Octavia and Magnum (openstack-lab 0.4.0): `openstack_loadbalancers` (provider, status)
+  and `openstack_coe_clusters` (status); alerts `OpenstackLoadBalancerError`, `OpenstackClusterFailed`; an "Octavia and
+  Magnum" row on the openstack-lab dashboard.
+
 ## [0.48.1] - 2026-10-16
 
 ### Security

@@ -998,11 +998,17 @@ p.append(panel("Memory left for nested guests", "timeseries", [(f"openstack_comp
 p.append(panel("Running guests (libvirt domains) per compute", "timeseries", [(f"openstack_compute_guests{{{L}}}", "{{node}}")], 12, 19, 6, 8, min=0, decimals=0))
 p.append(panel("/dev/kvm per node", "state-timeline", [(f"openstack_nested_kvm{{{L}}}", "{{node}}")], 18, 19, 6, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 
-p.append(row("Lab and runs", 27))
-p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 28, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-p.append(panel("Portal run going (the evacuation suite powers osl-cmp2 off on purpose)", "state-timeline", [(f"openstack_lab_run_active{{{L}}}", "run")], 12, 28, 12, 4,
+p.append(row("Octavia and Magnum", 27))
+p.append(panel("Load balancers by provider and status", "timeseries", [(f"sum by (provider, status) (openstack_loadbalancers{{{L}}})", "{{provider}} {{status}}")], 0, 28, 12, 7, min=0, decimals=0,
+               custom={"stacking": {"mode": "normal"}, "fillOpacity": 40}))
+p.append(panel("Kubernetes clusters by status", "timeseries", [(f"sum by (status) (openstack_coe_clusters{{{L}}})", "{{status}}")], 12, 28, 12, 7, min=0, decimals=0,
+               custom={"stacking": {"mode": "normal"}, "fillOpacity": 40}))
+
+p.append(row("Lab and runs", 35))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 36, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal run going (the evacuation suite powers osl-cmp2 off on purpose)", "state-timeline", [(f"openstack_lab_run_active{{{L}}}", "run")], 12, 36, 12, 4,
                mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
-p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 32, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
-host_row(p, 36)
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 40, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 44)
 (OUT / "openstack-lab-overview.json").write_text(json.dumps(dashboard("openstack-lab-overview", "openstack-lab: overview (OpenStack on nested KVM)", p, ["openstack-lab", "lab", "openstack"], lab="openstack-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))
