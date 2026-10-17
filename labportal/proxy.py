@@ -10,6 +10,7 @@ HTTP middleware never sees a WebSocket handshake, so the check is repeated in th
 One user unit per port (monitoring/lab-relay-*.service.example). LAB_HUB_AUTH=off makes it an open relay again."""
 import argparse
 import asyncio
+import http.cookiejar
 
 import httpx
 import uvicorn
@@ -66,7 +67,10 @@ def make(upstream):
             await up.close()
             try: await ws.close()
             except Exception: pass                               # noqa: BLE001
-    client = httpx.AsyncClient(base_url=upstream, timeout=httpx.Timeout(15.0, read=None), follow_redirects=False)
+    # cookies: the browser's own pass through in the Cookie header; the client must never keep a jar of its own, or
+    # an upstream's Set-Cookie (a login session) would be sent on behalf of every later visitor
+    no_jar = http.cookiejar.CookieJar(policy=http.cookiejar.DefaultCookiePolicy(allowed_domains=[]))
+    client = httpx.AsyncClient(base_url=upstream, timeout=httpx.Timeout(15.0, read=None), follow_redirects=False, cookies=no_jar)
 
     @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
     async def proxy(path: str, request: Request):

@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.48.1] - 2026-10-16
+
+### Security
+- lab-proxy no longer keeps a cookie jar. Its HTTP client stored every `Set-Cookie` an upstream sent and replayed it
+  on later requests, so a login made through a relay (Horizon, Grafana, Nautobot, Gitea) was shared with every visitor
+  of that relay who had passed the hub sign-in. Only the browser's own cookies are sent now. Present since lab-proxy
+  was introduced; restart every relay unit after updating.
+
 ## [0.48.0] - 2026-10-16
 
 ### Added
