@@ -7,6 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.48.0] - 2026-10-16
+
+### Added
+- lab-proxy relays WebSockets, behind the same check as HTTP (this host, or a valid hub session cookie; HTTP middleware
+  never sees a WebSocket handshake, so the route checks itself): openstack-lab's noVNC instance consoles on the LAN.
+  New dependency: `websockets`.
+
+### Fixed
+- lab-proxy rewrites a redirect that names its upstream (`Location: http://10.11.0.250/auth/login/`, as Django and
+  Horizon build them from their Host) back to the relay's own address, as the browser reached it: before, the browser
+  was sent to an address it cannot reach.
+
 ## [0.47.0] - 2026-10-16
 
 ### Added
