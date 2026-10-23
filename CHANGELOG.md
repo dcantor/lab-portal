@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.51.0] - 2026-10-22
+
+### Added
+- Monitoring: tcp-cc-lab MTU (tcp-cc-lab 0.3.0): `tcpcc_host_mtu` (the hosts' eth1, 1500 or 9000) and `tcpcc_link_mtu`
+  (r1 / r2 / wanem's data links); alerts `TcpCcInfraMtuNot9000` (a router or wanem link not jumbo) and
+  `TcpCcHostMtuMixed` (the hosts not all on one MTU); an MTU stat and timeline on the tcp-cc-lab dashboard.
+
 ## [0.50.0] - 2026-10-22
 
 ### Added

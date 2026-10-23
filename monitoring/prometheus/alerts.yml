@@ -735,6 +735,18 @@ groups:
         for: 3m
         labels: {severity: warning}
         annotations: {summary: "{{ $labels.node }} has no fq qdisc on eth1 or no iperf3 server: runs to or from it fail or skip pacing (rc-service local restart)"}
+      - alert: TcpCcInfraMtuNot9000
+        # r1, r2 and wanem's data links must always be jumbo, whatever the hosts use
+        expr: tcpcc_link_mtu{lab="tcp-cc-lab"} != 9000
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} {{ $labels.dev }} has MTU {{ $value }}, not 9000: jumbo flows will be dropped or fragmented (lab.sh configure / verify)"}
+      - alert: TcpCcHostMtuMixed
+        # the hosts switch together (lab.sh mtu set / the portal): a mix means a host rebooted into another value or a set half failed
+        expr: count by (lab) (count_values by (lab) ("mtu", tcpcc_host_mtu{lab="tcp-cc-lab"})) > 1
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "the tcp-cc-lab hosts run different MTUs: set one value for all (portal: Host MTU)"}
       - alert: TcpCcTestsFailing
         expr: lab_tests_last_failed{lab="tcp-cc-lab"} > 0
         labels: {severity: warning}

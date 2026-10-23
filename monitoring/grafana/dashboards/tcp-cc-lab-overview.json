@@ -228,7 +228,7 @@
    "gridPos": {
     "x": 8,
     "y": 1,
-    "w": 8,
+    "w": 5,
     "h": 4
    },
    "targets": [
@@ -286,6 +286,55 @@
   },
   {
    "id": 5,
+   "title": "MTU",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 13,
+    "y": 1,
+    "w": 3,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "max(tcpcc_host_mtu{lab=\"tcp-cc-lab\"})",
+     "legendFormat": "hosts"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "min(tcpcc_link_mtu{lab=\"tcp-cc-lab\"})",
+     "legendFormat": "r1/r2/wanem"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "none",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 6,
    "title": "Last Robot run",
    "type": "stat",
    "datasource": {
@@ -377,7 +426,7 @@
    }
   },
   {
-   "id": 6,
+   "id": 7,
    "title": "Firing alerts",
    "type": "stat",
    "datasource": {
@@ -430,7 +479,7 @@
    }
   },
   {
-   "id": 7,
+   "id": 8,
    "type": "row",
    "title": "The WAN emulator's bottleneck (wanem tbf; a2b = site A \u2192 B)",
    "collapsed": false,
@@ -443,7 +492,7 @@
    "panels": []
   },
   {
-   "id": 8,
+   "id": 9,
    "title": "Bit rate through the bottleneck",
    "type": "timeseries",
    "datasource": {
@@ -494,7 +543,7 @@
    }
   },
   {
-   "id": 9,
+   "id": 10,
    "title": "Queued at the bottleneck (bytes) and its size",
    "type": "timeseries",
    "datasource": {
@@ -545,7 +594,7 @@
    }
   },
   {
-   "id": 10,
+   "id": 11,
    "title": "Drops/s at the bottleneck (queue full)",
    "type": "timeseries",
    "datasource": {
@@ -587,7 +636,7 @@
    }
   },
   {
-   "id": 11,
+   "id": 12,
    "title": "Emulated RTT (ms) \u2014 the slider",
    "type": "timeseries",
    "datasource": {
@@ -597,7 +646,7 @@
    "gridPos": {
     "x": 0,
     "y": 14,
-    "w": 24,
+    "w": 16,
     "h": 5
    },
    "targets": [
@@ -640,7 +689,60 @@
    }
   },
   {
-   "id": 12,
+   "id": 13,
+   "title": "MTU: hosts (all six) and r1 / r2 / wanem (always 9000)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 14,
+    "w": 8,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "max(tcpcc_host_mtu{lab=\"tcp-cc-lab\"})",
+     "legendFormat": "hosts"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "min(tcpcc_link_mtu{lab=\"tcp-cc-lab\"})",
+     "legendFormat": "r1/r2/wanem (min)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "custom": {
+      "lineInterpolation": "stepAfter"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 14,
    "type": "row",
    "title": "Flows (only while a portal compete / solo run goes; 15 s scrape, per-second detail is in the portal)",
    "collapsed": false,
@@ -653,7 +755,7 @@
    "panels": []
   },
   {
-   "id": 13,
+   "id": 15,
    "title": "Throughput per algorithm",
    "type": "timeseries",
    "datasource": {
@@ -741,7 +843,7 @@
    }
   },
   {
-   "id": 14,
+   "id": 16,
    "title": "RTT the sender sees",
    "type": "timeseries",
    "datasource": {
@@ -829,7 +931,7 @@
    }
   },
   {
-   "id": 15,
+   "id": 17,
    "title": "Congestion window",
    "type": "timeseries",
    "datasource": {
@@ -917,7 +1019,7 @@
    }
   },
   {
-   "id": 16,
+   "id": 18,
    "title": "Last compete run: share of the bottleneck",
    "type": "bargauge",
    "datasource": {
@@ -1007,7 +1109,7 @@
    }
   },
   {
-   "id": 17,
+   "id": 19,
    "title": "Last compete run: Jain fairness (1 = equal shares)",
    "type": "stat",
    "datasource": {
@@ -1065,7 +1167,7 @@
    }
   },
   {
-   "id": 18,
+   "id": 20,
    "type": "row",
    "title": "Lab and runs",
    "collapsed": false,
@@ -1078,7 +1180,7 @@
    "panels": []
   },
   {
-   "id": 19,
+   "id": 21,
    "title": "VMs running",
    "type": "state-timeline",
    "datasource": {
@@ -1145,7 +1247,7 @@
    }
   },
   {
-   "id": 20,
+   "id": 22,
    "title": "Hosts: on their algorithm",
    "type": "state-timeline",
    "datasource": {
@@ -1212,7 +1314,7 @@
    }
   },
   {
-   "id": 21,
+   "id": 23,
    "title": "Portal run going (flows and tests load the WAN on purpose)",
    "type": "state-timeline",
    "datasource": {
@@ -1267,7 +1369,7 @@
    }
   },
   {
-   "id": 22,
+   "id": 24,
    "type": "row",
    "title": "Ubuntu lab host (KVM): CPU and memory",
    "collapsed": false,
@@ -1280,7 +1382,7 @@
    "panels": []
   },
   {
-   "id": 23,
+   "id": 25,
    "title": "Host CPU busy %",
    "type": "stat",
    "datasource": {
@@ -1338,7 +1440,7 @@
    }
   },
   {
-   "id": 24,
+   "id": 26,
    "title": "Host memory used %",
    "type": "stat",
    "datasource": {
@@ -1396,7 +1498,7 @@
    }
   },
   {
-   "id": 25,
+   "id": 27,
    "title": "Host memory used / total",
    "type": "stat",
    "datasource": {
@@ -1455,7 +1557,7 @@
    }
   },
   {
-   "id": 26,
+   "id": 28,
    "title": "Host load (1 / 5 / 15 min) vs cores",
    "type": "stat",
    "datasource": {
@@ -1532,7 +1634,7 @@
    }
   },
   {
-   "id": 27,
+   "id": 29,
    "title": "Host swap used %",
    "type": "stat",
    "datasource": {
@@ -1590,7 +1692,7 @@
    }
   },
   {
-   "id": 28,
+   "id": 30,
    "title": "Host CPU busy % (all cores) and per mode",
    "type": "timeseries",
    "datasource": {
@@ -1669,7 +1771,7 @@
    }
   },
   {
-   "id": 29,
+   "id": 31,
    "title": "Host memory (bytes)",
    "type": "timeseries",
    "datasource": {
@@ -1738,7 +1840,7 @@
    }
   },
   {
-   "id": 30,
+   "id": 32,
    "title": "Busiest host cores (busy %, top 8)",
    "type": "timeseries",
    "datasource": {

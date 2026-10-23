@@ -96,9 +96,9 @@ on purpose, so the timer, link-rate and timeout alerts wait for no run to be goi
 hosts in two sites) across a Linux WAN emulator between two VyOS routers. The portal reads wanem's netem/tbf counters and
 each host's algorithm, qdisc and iperf3 server over SSH (hosts cached 20 s): `tcpcc_wan_{rtt_ms,rate_mbit,loss_pct,buffer_bdp,queue_bytes}`,
 `tcpcc_bottleneck_{bytes,drops}_total` and `tcpcc_bottleneck_backlog_bytes` (`direction` a2b / b2a), `tcpcc_wanem_up`,
-`tcpcc_host_{up,cc_ok,fq,iperf3_up}`, while a portal flow run goes `tcpcc_flow_{mbps,rtt_ms,cwnd_bytes}` (`cc`), the last
+`tcpcc_host_{up,cc_ok,fq,iperf3_up,mtu}`, `tcpcc_link_mtu` (r1 / r2 / wanem data links, always 9000), while a portal flow run goes `tcpcc_flow_{mbps,rtt_ms,cwnd_bytes}` (`cc`), the last
 compete run's `tcpcc_last_compete_{mbps,share,jain}`, and `tcpcc_lab_run_active`. Alert group `tcp-cc-lab` (wanem
-unreachable, host down, host on the wrong algorithm, no fq / iperf3, failed tests); dashboard **tcp-cc-lab: overview**.
+unreachable, host down, host on the wrong algorithm, no fq / iperf3, infrastructure MTU not 9000, hosts on mixed MTUs, failed tests); dashboard **tcp-cc-lab: overview**.
 
 **openstack-lab** (job `openstack-lab`, SD `http://10.0.0.1:8110/api/sd`, every 30 s): OpenStack 2026.1 (Kolla-Ansible)
 in three nested-virtualisation VMs. The portal reads the cloud every 20 s with the openstack CLI on osl-ctl and serves it
