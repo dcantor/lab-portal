@@ -1011,4 +1011,41 @@ p.append(panel("Portal run going (the evacuation suite powers osl-cmp2 off on pu
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 40, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 host_row(p, 44)
 (OUT / "openstack-lab-overview.json").write_text(json.dumps(dashboard("openstack-lab-overview", "openstack-lab: overview (OpenStack on nested KVM)", p, ["openstack-lab", "lab", "openstack"], lab="openstack-lab"), indent=1))
+# ---------------------------------------------------------------- tcp-cc-lab: TCP congestion control (CUBIC / BBR / Reno hosts in two sites) across a
+# Linux WAN emulator (wanem: netem delay RTT/2 + loss, then a tbf bottleneck, both directions) between two VyOS routers. The portal (:8112) reads wanem's
+# qdisc counters and each host's algorithm over SSH; while a compete / solo run goes it also serves each algorithm's last second (throughput, RTT, cwnd)
+_id[0] = 0
+L = 'lab="tcp-cc-lab"'
+CC_COLORS = [{"matcher": {"id": "byRegexp", "options": f"^{cc}.*"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": col}}]}
+             for cc, col in (("cubic", "#2a78d6"), ("bbr", "#eb6834"), ("reno", "#1baf7a"))]
+p = []
+p.append(row("The lab", 0))
+p.append(panel("VMs running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 9")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 9}]}))
+p.append(panel("Hosts on their algorithm", "stat", [(f"sum(tcpcc_host_cc_ok{{{L}}})", "of 6")], 4, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 6}]}))
+p.append(panel("WAN now", "stat", [(f"tcpcc_wan_rtt_ms{{{L}}}", "RTT ms"), (f"tcpcc_wan_rate_mbit{{{L}}}", "Mbit/s"), (f"tcpcc_wan_loss_pct{{{L}}}", "loss %"), (f"tcpcc_wan_buffer_bdp{{{L}}}", "× BDP")], 8, 1, 8, 4, colorMode="none"))
+p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("The WAN emulator's bottleneck (wanem tbf; a2b = site A → B)", 5))
+p.append(panel("Bit rate through the bottleneck", "timeseries", [(f"rate(tcpcc_bottleneck_bytes_total{{{L}}}[1m]) * 8", "{{direction}}"), (f"tcpcc_wan_rate_mbit{{{L}}} * 1e6", "limit")], 0, 6, 8, 8, unit="bps", min=0))
+p.append(panel("Queued at the bottleneck (bytes) and its size", "timeseries", [(f"tcpcc_bottleneck_backlog_bytes{{{L}}}", "{{direction}}"), (f"tcpcc_wan_queue_bytes{{{L}}}", "buffer")], 8, 6, 8, 8, unit="decbytes", min=0))
+p.append(panel("Drops/s at the bottleneck (queue full)", "timeseries", [(f"rate(tcpcc_bottleneck_drops_total{{{L}}}[1m])", "{{direction}}")], 16, 6, 8, 8, unit="pps", min=0))
+p.append(panel("Emulated RTT (ms) — the slider", "timeseries", [(f"tcpcc_wan_rtt_ms{{{L}}}", "RTT"), (f"tcpcc_wan_loss_pct{{{L}}}", "loss %")], 0, 14, 24, 5, min=0, custom={"lineInterpolation": "stepAfter"}))
+
+p.append(row("Flows (only while a portal compete / solo run goes; 15 s scrape, per-second detail is in the portal)", 19))
+p.append(panel("Throughput per algorithm", "timeseries", [(f"tcpcc_flow_mbps{{{L}}}", "{{cc}}")], 0, 20, 8, 8, unit="Mbits", min=0, overrides=CC_COLORS))
+p.append(panel("RTT the sender sees", "timeseries", [(f"tcpcc_flow_rtt_ms{{{L}}}", "{{cc}}")], 8, 20, 8, 8, unit="ms", min=0, overrides=CC_COLORS))
+p.append(panel("Congestion window", "timeseries", [(f"tcpcc_flow_cwnd_bytes{{{L}}}", "{{cc}}")], 16, 20, 8, 8, unit="decbytes", min=0, overrides=CC_COLORS))
+p.append(panel("Last compete run: share of the bottleneck", "bargauge", [(f"tcpcc_last_compete_share{{{L}}}", "{{cc}}")], 0, 28, 12, 6, unit="percentunit", min=0, max=1, overrides=CC_COLORS))
+p.append(panel("Last compete run: Jain fairness (1 = equal shares)", "stat", [(f"tcpcc_last_compete_jain{{{L}}}", "Jain")], 12, 28, 12, 6, colorMode="value", decimals=2,
+               thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 0.6}, {"color": "green", "value": 0.9}]}))
+
+p.append(row("Lab and runs", 34))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 35, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Hosts: on their algorithm", "state-timeline", [(f"tcpcc_host_cc_ok{{{L}}}", "{{node}}")], 12, 35, 12, 5, mappings=[{"type": "value", "options": {"0": {"text": "wrong", "color": "red"}, "1": {"text": "ok", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Portal run going (flows and tests load the WAN on purpose)", "state-timeline", [(f"tcpcc_lab_run_active{{{L}}}", "run")], 12, 40, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
+host_row(p, 44)
+(OUT / "tcp-cc-lab-overview.json").write_text(json.dumps(dashboard("tcp-cc-lab-overview", "tcp-cc-lab: overview (TCP congestion control over an emulated WAN)", p, ["tcp-cc-lab", "lab", "tcp"], lab="tcp-cc-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

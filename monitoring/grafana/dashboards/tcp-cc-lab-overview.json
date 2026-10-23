@@ -1,0 +1,1816 @@
+{
+ "uid": "tcp-cc-lab-overview",
+ "title": "tcp-cc-lab: overview (TCP congestion control over an emulated WAN)",
+ "tags": [
+  "tcp-cc-lab",
+  "lab",
+  "tcp"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": true,
+ "refresh": "30s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "annotations": {
+  "list": [
+   {
+    "name": "Runs and tests",
+    "enable": true,
+    "iconColor": "#5794F2",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "tcp-cc-lab",
+      "run"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Test events (failover, reflector)",
+    "enable": true,
+    "iconColor": "#F2495C",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "tcp-cc-lab",
+      "test"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Steering changes",
+    "enable": true,
+    "iconColor": "#FF9830",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-grafana-"
+    },
+    "type": "tags",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "tcp-cc-lab",
+      "steering"
+     ],
+     "matchAny": false,
+     "limit": 200
+    }
+   },
+   {
+    "name": "Router syslog alerts (vmalert-logs)",
+    "enable": true,
+    "iconColor": "#B877D9",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "expr": "ALERTS{lab=\"tcp-cc-lab\",evaluator=\"vmalert-logs\",alertstate=\"firing\",severity!=\"info\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{hostname}}",
+    "tagKeys": "alertname,hostname"
+   }
+  ]
+ },
+ "templating": {
+  "list": []
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "row",
+   "title": "The lab",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 2,
+   "title": "VMs running",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(lab_vm_running{lab=\"tcp-cc-lab\"})",
+     "legendFormat": "of 9"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 9
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 3,
+   "title": "Hosts on their algorithm",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(tcpcc_host_cc_ok{lab=\"tcp-cc-lab\"})",
+     "legendFormat": "of 6"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 6
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 4,
+   "title": "WAN now",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 1,
+    "w": 8,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_rtt_ms{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "RTT ms"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_rate_mbit{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "Mbit/s"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_loss_pct{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "loss %"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_buffer_bdp{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "\u00d7 BDP"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "none",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 5,
+   "title": "Last Robot run",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tests_last_passed{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "passed"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_tests_last_failed{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "failed"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "failed"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 1
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "passed"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 6,
+   "title": "Firing alerts",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 1,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(ALERTS{lab=\"tcp-cc-lab\",alertstate=\"firing\",severity!=\"info\"}) or vector(0)",
+     "legendFormat": "firing"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 7,
+   "type": "row",
+   "title": "The WAN emulator's bottleneck (wanem tbf; a2b = site A \u2192 B)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 5,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 8,
+   "title": "Bit rate through the bottleneck",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 6,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(tcpcc_bottleneck_bytes_total{lab=\"tcp-cc-lab\"}[1m]) * 8",
+     "legendFormat": "{{direction}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_rate_mbit{lab=\"tcp-cc-lab\"} * 1e6",
+     "legendFormat": "limit"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "title": "Queued at the bottleneck (bytes) and its size",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 6,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_bottleneck_backlog_bytes{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "{{direction}}"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_queue_bytes{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "buffer"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "decbytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 10,
+   "title": "Drops/s at the bottleneck (queue full)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 6,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "rate(tcpcc_bottleneck_drops_total{lab=\"tcp-cc-lab\"}[1m])",
+     "legendFormat": "{{direction}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "pps",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 11,
+   "title": "Emulated RTT (ms) \u2014 the slider",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 14,
+    "w": 24,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_rtt_ms{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "RTT"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_wan_loss_pct{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "loss %"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "custom": {
+      "lineInterpolation": "stepAfter"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "type": "row",
+   "title": "Flows (only while a portal compete / solo run goes; 15 s scrape, per-second detail is in the portal)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 19,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 13,
+   "title": "Throughput per algorithm",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 20,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_flow_mbps{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "{{cc}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "Mbits",
+     "min": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^cubic.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#2a78d6"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^bbr.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#eb6834"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^reno.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#1baf7a"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 14,
+   "title": "RTT the sender sees",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 20,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_flow_rtt_ms{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "{{cc}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "min": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^cubic.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#2a78d6"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^bbr.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#eb6834"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^reno.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#1baf7a"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 15,
+   "title": "Congestion window",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 20,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_flow_cwnd_bytes{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "{{cc}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "decbytes",
+     "min": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^cubic.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#2a78d6"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^bbr.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#eb6834"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^reno.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#1baf7a"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 16,
+   "title": "Last compete run: share of the bottleneck",
+   "type": "bargauge",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 28,
+    "w": 12,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_last_compete_share{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "{{cc}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "max": 1
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^cubic.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#2a78d6"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^bbr.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#eb6834"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^reno.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#1baf7a"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true
+   }
+  },
+  {
+   "id": 17,
+   "title": "Last compete run: Jain fairness (1 = equal shares)",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 28,
+    "w": 12,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_last_compete_jain{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "Jain"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 2,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.6
+       },
+       {
+        "color": "green",
+        "value": 0.9
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 18,
+   "type": "row",
+   "title": "Lab and runs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 34,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 19,
+   "title": "VMs running",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 35,
+    "w": 12,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "lab_vm_running{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "{{node}} ({{role}})"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "down",
+         "color": "red"
+        },
+        "1": {
+         "text": "up",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 20,
+   "title": "Hosts: on their algorithm",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 35,
+    "w": 12,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_host_cc_ok{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "wrong",
+         "color": "red"
+        },
+        "1": {
+         "text": "ok",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 21,
+   "title": "Portal run going (flows and tests load the WAN on purpose)",
+   "type": "state-timeline",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 40,
+    "w": 12,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "tcpcc_lab_run_active{lab=\"tcp-cc-lab\"}",
+     "legendFormat": "run"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "idle",
+         "color": "transparent"
+        },
+        "1": {
+         "text": "run going",
+         "color": "blue"
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    }
+   }
+  },
+  {
+   "id": 22,
+   "type": "row",
+   "title": "Ubuntu lab host (KVM): CPU and memory",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 44,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 23,
+   "title": "Host CPU busy %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 45,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "cpu"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 24,
+   "title": "Host memory used %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 45,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - node_memory_MemAvailable_bytes{lab=\"lab-host\"} / node_memory_MemTotal_bytes{lab=\"lab-host\"})",
+     "legendFormat": "mem"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 75
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 25,
+   "title": "Host memory used / total",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 45,
+    "w": 5,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"} - node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "used"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"}",
+     "legendFormat": "total"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 26,
+   "title": "Host load (1 / 5 / 15 min) vs cores",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 13,
+    "y": 45,
+    "w": 7,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load1{lab=\"lab-host\"}",
+     "legendFormat": "1m"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load5{lab=\"lab-host\"}",
+     "legendFormat": "5m"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_load15{lab=\"lab-host\"}",
+     "legendFormat": "15m"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "count(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"})",
+     "legendFormat": "cores"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 1,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 27,
+   "title": "Host swap used %",
+   "type": "stat",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 45,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - node_memory_SwapFree_bytes{lab=\"lab-host\"} / node_memory_SwapTotal_bytes{lab=\"lab-host\"})",
+     "legendFormat": "swap"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 20
+       },
+       {
+        "color": "red",
+        "value": 60
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 28,
+   "title": "Host CPU busy % (all cores) and per mode",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 49,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "busy"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"user\"}[2m]))",
+     "legendFormat": "user"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"system\"}[2m]))",
+     "legendFormat": "system"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"iowait\"}[2m]))",
+     "legendFormat": "iowait"
+    },
+    {
+     "refId": "E",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "100 * avg(rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"steal\"}[2m]))",
+     "legendFormat": "steal"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 29,
+   "title": "Host memory (bytes)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 49,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemTotal_bytes{lab=\"lab-host\"} - node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "used"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_Cached_bytes{lab=\"lab-host\"} + node_memory_Buffers_bytes{lab=\"lab-host\"}",
+     "legendFormat": "cache + buffers"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_MemAvailable_bytes{lab=\"lab-host\"}",
+     "legendFormat": "available"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "node_memory_SwapTotal_bytes{lab=\"lab-host\"} - node_memory_SwapFree_bytes{lab=\"lab-host\"}",
+     "legendFormat": "swap used"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 30,
+   "title": "Busiest host cores (busy %, top 8)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 49,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "topk(8, 100 * (1 - rate(node_cpu_seconds_total{lab=\"lab-host\",mode=\"idle\"}[2m])))",
+     "legendFormat": "core {{cpu}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  }
+ ],
+ "links": [
+  {
+   "title": "Lab hub",
+   "type": "link",
+   "url": "http://192.168.50.231:8088",
+   "targetBlank": true
+  },
+  {
+   "title": "Prometheus alerts",
+   "type": "link",
+   "url": "http://192.168.50.231:9091/alerts",
+   "targetBlank": true
+  },
+  {
+   "title": "\u263e Dark",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/tcp-cc-lab-overview?theme=dark",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the dark theme (new tab)"
+  },
+  {
+   "title": "\u2600 Light",
+   "type": "link",
+   "url": "http://192.168.50.231:3001/d/tcp-cc-lab-overview?theme=light",
+   "keepTime": true,
+   "includeVars": true,
+   "targetBlank": true,
+   "tooltip": "this dashboard in the light theme (new tab)"
+  }
+ ]
+}

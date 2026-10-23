@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.50.0] - 2026-10-22
+
+### Added
+- Monitoring: tcp-cc-lab — Prometheus job (service discovery from its portal, :8112, every 15 s: wanem's bottleneck
+  counters and settings, each host's congestion control / fq / iperf3, the running flow's per-algorithm throughput, RTT
+  and cwnd, the last compete run's shares and Jain index), alert group `tcp-cc-lab` (5 rules: WAN emulator unreachable,
+  host down, host on the wrong algorithm, host without fq or iperf3, failed tests), and the dashboard **tcp-cc-lab:
+  overview (TCP congestion control over an emulated WAN)**.
+
 ## [0.49.0] - 2026-10-16
 
 ### Added

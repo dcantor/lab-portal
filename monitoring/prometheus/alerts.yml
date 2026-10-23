@@ -712,6 +712,34 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the last homa-lab Robot run had {{ $value }} failed test(s) (portal: Last tests)"}
 
+  - name: tcp-cc-lab                # TCP congestion control lab (portal :8112). The metrics exist only while the lab runs. Flows and tests fill the
+    rules:                          # bottleneck and drop packets on purpose; the tests also move the WAN settings (tcpcc_lab_run_active says when)
+      - alert: TcpCcWanEmulatorUnreachable
+        expr: (tcpcc_wanem_up{lab="tcp-cc-lab"} == 0) and on (lab) (sum by (lab) (lab_vm_running{lab="tcp-cc-lab",node="wanem"}) > 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "the tcp-cc-lab portal cannot read wanem's settings: the RTT slider and the bottleneck counters are dead"}
+      - alert: TcpCcHostDown
+        expr: tcpcc_host_up{lab="tcp-cc-lab"} == 0
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.expected }}) does not answer over SSH"}
+      - alert: TcpCcWrongAlgorithm
+        # the whole point of the lab: a host whose kernel runs another algorithm than its name says measures the wrong thing
+        expr: (tcpcc_host_cc_ok{lab="tcp-cc-lab"} == 0) and on (node) (tcpcc_host_up{lab="tcp-cc-lab"} == 1)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} runs '{{ $labels.cc }}', not {{ $labels.expected }}: its flows are mislabelled (sysctl net.ipv4.tcp_congestion_control)"}
+      - alert: TcpCcHostNotReady
+        expr: ((tcpcc_host_fq{lab="tcp-cc-lab"} == 0) or (tcpcc_host_iperf3_up{lab="tcp-cc-lab"} == 0)) and on (node) (tcpcc_host_up{lab="tcp-cc-lab"} == 1)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} has no fq qdisc on eth1 or no iperf3 server: runs to or from it fail or skip pacing (rc-service local restart)"}
+      - alert: TcpCcTestsFailing
+        expr: lab_tests_last_failed{lab="tcp-cc-lab"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last tcp-cc-lab Robot run had {{ $value }} failed test(s) (portal: Verify and tests)"}
+
   - name: srv6-xr                   # multi-vendor SRv6 L3VPN lab (portal :8109). The metrics exist only while the lab runs (the portal polls nothing when it is
     rules:                          # off). A link failed from the portal, and the test runs (suite 06 fails p1 - p2), take adjacencies down on purpose
       - alert: Srv6XrRouterUnreachable

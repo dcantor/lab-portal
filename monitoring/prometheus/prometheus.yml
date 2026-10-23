@@ -97,6 +97,14 @@ scrape_configs:
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
 
+  - job_name: tcp-cc-lab                                           # TCP congestion control (CUBIC / BBR / Reno) across a netem + tbf WAN emulator (libvirt):
+    http_sd_configs: [{url: http://10.0.0.1:8112/api/sd, refresh_interval: 60s}]   # the portal (:8112) reads wanem's qdisc counters and each host's
+    honor_labels: true                                             # algorithm over SSH (hosts cached 20 s), and the running flow's last second
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
   - job_name: srv6-xr                                              # multi-vendor SRv6 L3VPN (IOS-XRv9000 PE + VyOS core, libvirt): the portal (:8109)
     http_sd_configs: [{url: http://10.0.0.1:8109/api/sd, refresh_interval: 60s}]   # serves its last router poll (every 20 s: adjacencies, BGP,
     honor_labels: true                                             # SIDs, tenant probe pings) from memory, so a scrape is quick
