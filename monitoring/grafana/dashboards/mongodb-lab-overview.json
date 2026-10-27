@@ -129,7 +129,7 @@
       "uid": "victoriametrics"
      },
      "expr": "sum(lab_vm_running{lab=\"mongodb-lab\"})",
-     "legendFormat": "of 15"
+     "legendFormat": "of 26"
     }
    ],
    "fieldConfig": {
@@ -146,7 +146,7 @@
        },
        {
         "color": "green",
-        "value": 15
+        "value": 26
        }
       ]
      }
@@ -186,7 +186,7 @@
       "uid": "victoriametrics"
      },
      "expr": "sum(mongodb_rs_has_primary{lab=\"mongodb-lab\"})",
-     "legendFormat": "of 4"
+     "legendFormat": "of 5"
     }
    ],
    "fieldConfig": {
@@ -199,7 +199,7 @@
        },
        {
         "color": "green",
-        "value": 4
+        "value": 5
        }
       ]
      }
@@ -715,7 +715,7 @@
   },
   {
    "id": 14,
-   "title": "Shards (sh1, sh2)",
+   "title": "Shards (sh1, sh2, sh3)",
    "type": "timeseries",
    "datasource": {
     "type": "prometheus",

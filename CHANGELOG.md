@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.52.2] - 2026-10-27
+
+### Changed
+- Monitoring: the mongodb-lab dashboard counts its 26 containers and 5 replica sets (mongodb-lab 0.8.0 adds a third
+  shard, a router and two clients); the shards panel names sh3.
+
 ## [0.52.1] - 2026-10-27
 
 ### Fixed
