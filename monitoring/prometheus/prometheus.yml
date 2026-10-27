@@ -97,6 +97,14 @@ scrape_configs:
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
 
+  - job_name: mongodb-lab                                          # MongoDB replica set + sharded cluster across three emulated DCs (containerlab):
+    http_sd_configs: [{url: http://10.0.0.1:8115/api/sd, refresh_interval: 60s}]   # the portal (:8115) samples every mongod and mongos once a
+    honor_labels: true                                             # second (serverStatus, replSetGetStatus) and serves the last sample from memory
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
   - job_name: tcp-cc-lab                                           # TCP congestion control (CUBIC / BBR / Reno) across a netem + tbf WAN emulator (libvirt):
     http_sd_configs: [{url: http://10.0.0.1:8112/api/sd, refresh_interval: 60s}]   # the portal (:8112) reads wanem's qdisc counters and each host's
     honor_labels: true                                             # algorithm over SSH (hosts cached 20 s), and the running flow's last second

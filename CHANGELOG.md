@@ -7,6 +7,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.52.0] - 2026-10-27
+
+### Added
+- Monitoring: mongodb-lab (mongodb-lab 0.5.0): Prometheus job `mongodb-lab` (SD `http://10.0.0.1:8115/api/sd`, 15 s),
+  alert group `mongodb-lab` (`MongoNodeDown`, `MongoReplicaSetNoPrimary`, `MongoPrimaryNotPreferred`,
+  `MongoReplicationLag`, `MongoChainedSecondary`, `MongoWanDcCutOff`, `MongoTestsFailing`; the outage alerts wait for no
+  portal run to be going), dashboard **mongodb-lab: overview**.
+
+### Found
+- The NMS disk had filled on 2026-10-23 (the gnmic-srl-evpn container's log: 5.2 GB of "failed to create a subscribe
+  client" while srl-evpn is off, plus 1.7 GB of journal): Prometheus stored nothing for four days. 400 MB of build cache
+  freed it enough to write again; the container log limits and the journal cap are still to do (see the README).
+
 ## [0.51.0] - 2026-10-22
 
 ### Added

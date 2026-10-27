@@ -92,6 +92,21 @@ band), `sw1_qos_mode`, and `homa_lab_run_active`. Tests and measurements load th
 on purpose, so the timer, link-rate and timeout alerts wait for no run to be going. Alert group `homa-lab`; dashboard
 **homa-lab: overview (Homa kernel module)**.
 
+**Disk (found 2026-10-27):** nothing caps the containers' json logs or the journal on the NMS, and its disk is 19 GB. With
+srl-evpn off, gnmic-srl-evpn logs a subscribe error every 10 s (about 1.3 GB a day); on 2026-10-23 the disk filled and
+Prometheus stopped storing anything. To do: `logging: {driver: json-file, options: {max-size: 50m, max-file: "3"}}` on
+every service (a deploy then recreates the containers, dropping their current logs), and `SystemMaxUse=500M` for
+journald. Check with `df -h /` on the NMS.
+
+**mongodb-lab** (job `mongodb-lab`, SD `http://10.0.0.1:8115/api/sd`, every 15 s): a MongoDB 9.0 replica set (rs0) and a sharded
+cluster (shards sh1, sh2, config servers cfg, routers q1, q2) across three emulated data centres (containerlab, tc netem). The portal
+samples every mongod and mongos once a second: `mongodb_node_{up,ops_per_second,connections}` (`node`, `role`, `dc`, `op`),
+`mongodb_rs_{has_primary,primary_preferred}` (`rs`), `mongodb_rs_member_{lag_seconds,chained}`, `mongodb_wan_{rtt_ms,loss_pct}` (`link`),
+`mongodb_wan_dc_cut` (`dc`), `mongodb_balancer_on`, `mongodb_shard_documents` (`ns`, `shard`), `mongodb_lab_run_active`, and while a
+load run goes `mongodb_load_{ops,errors}_per_second` and `mongodb_load_latency_ms` (`q`). Alert group `mongodb-lab` (node down, no
+primary, primary not the preferred member, lag, a chained secondary, a DC left cut off, failed tests; the outage alerts wait for no run
+to be going); dashboard **mongodb-lab: overview**.
+
 **tcp-cc-lab** (job `tcp-cc-lab`, SD `http://10.0.0.1:8112/api/sd`, every 15 s): TCP congestion control (CUBIC, BBR, Reno
 hosts in two sites) across a Linux WAN emulator between two VyOS routers. The portal reads wanem's netem/tbf counters and
 each host's algorithm, qdisc and iperf3 server over SSH (hosts cached 20 s): `tcpcc_wan_{rtt_ms,rate_mbit,loss_pct,buffer_bdp,queue_bytes}`,

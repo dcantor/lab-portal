@@ -1050,4 +1050,44 @@ p.append(panel("Portal run going (flows and tests load the WAN on purpose)", "st
                mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
 host_row(p, 44)
 (OUT / "tcp-cc-lab-overview.json").write_text(json.dumps(dashboard("tcp-cc-lab-overview", "tcp-cc-lab: overview (TCP congestion control over an emulated WAN)", p, ["tcp-cc-lab", "lab", "tcp"], lab="tcp-cc-lab"), indent=1))
+# ---------------------------------------------------------------- mongodb-lab: a MongoDB replica set (rs0) and a sharded cluster (sh1, sh2, cfg, q1, q2)
+# across three emulated DCs (tc netem). The portal (:8115) samples every mongod and mongos once a second and serves the last sample.
+_id[0] = 0
+L = 'lab="mongodb-lab"'
+p = []
+p.append(row("The lab", 0))
+p.append(panel("Containers running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 15")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 15}]}))
+p.append(panel("Sets with a primary", "stat", [(f"sum(mongodb_rs_has_primary{{{L}}})", "of 4")], 4, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "green", "value": 4}]}))
+p.append(panel("WAN now (RTT ms)", "stat", [(f"mongodb_wan_rtt_ms{{{L}}}", "{{link}}")], 8, 1, 8, 4, colorMode="none"))
+p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("Replica sets (rs0: phases 1-2; sh1, sh2: the shards; cfg: the config servers)", 5))
+p.append(panel("Has a primary", "state-timeline", [(f"mongodb_rs_has_primary{{{L}}}", "{{rs}}")], 0, 6, 12, 6, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Primary is the preferred member", "state-timeline", [(f"mongodb_rs_primary_preferred{{{L}}}", "{{rs}} ({{preferred}})")], 12, 6, 12, 6,
+               mappings=[{"type": "value", "options": {"0": {"text": "other", "color": "orange"}, "1": {"text": "preferred", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Replication lag", "timeseries", [(f"mongodb_rs_member_lag_seconds{{{L}}}", "{{rs}} {{node}}")], 0, 12, 12, 8, unit="s", min=0))
+p.append(panel("Secondaries syncing through another secondary", "state-timeline", [(f"mongodb_rs_member_chained{{{L}}}", "{{rs}} {{node}}")], 12, 12, 12, 8,
+               mappings=[{"type": "value", "options": {"0": {"text": "from the primary", "color": "green"}, "1": {"text": "chained", "color": "orange"}}}], thresholds=UPDOWN))
+
+p.append(row("Operations (opcounters, per second)", 20))
+p.append(panel("rs0", "timeseries", [(f'sum by (node) (mongodb_node_ops_per_second{{{L},role="mongod"}})', "{{node}}")], 0, 21, 8, 8, unit="ops", min=0))
+p.append(panel("Shards (sh1, sh2)", "timeseries", [(f'sum by (node) (mongodb_node_ops_per_second{{{L},role="shard"}})', "{{node}}")], 8, 21, 8, 8, unit="ops", min=0))
+p.append(panel("Routers and config servers", "timeseries", [(f'sum by (node) (mongodb_node_ops_per_second{{{L},role=~"mongos|config"}})', "{{node}}")], 16, 21, 8, 8, unit="ops", min=0))
+p.append(panel("Connections", "timeseries", [(f"mongodb_node_connections{{{L}}}", "{{node}}")], 0, 29, 12, 7, min=0))
+p.append(panel("Documents per shard", "bargauge", [(f'sum by (shard) (mongodb_shard_documents{{{L}}})', "{{shard}}")], 12, 29, 12, 7, min=0))
+
+p.append(row("Load runs (only while a portal load run goes; per-second detail is in the portal)", 36))
+p.append(panel("Operations/s and errors/s", "timeseries", [(f"mongodb_load_ops_per_second{{{L}}}", "ok"), (f"mongodb_load_errors_per_second{{{L}}}", "errors")], 0, 37, 12, 8, unit="ops", min=0))
+p.append(panel("Latency", "timeseries", [(f"mongodb_load_latency_ms{{{L}}}", "{{q}}")], 12, 37, 12, 8, unit="ms", min=0))
+
+p.append(row("Lab and runs", 45))
+p.append(panel("Containers running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 46, 12, 12, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("DC cut off", "state-timeline", [(f"mongodb_wan_dc_cut{{{L}}}", "{{dc}}")], 12, 46, 12, 4, mappings=[{"type": "value", "options": {"0": {"text": "connected", "color": "green"}, "1": {"text": "cut off", "color": "red"}}}], thresholds=UPDOWN))
+p.append(panel("Portal run going (load runs and tests disrupt on purpose)", "state-timeline", [(f"mongodb_lab_run_active{{{L}}}", "run")], 12, 50, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 54, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 58)
+(OUT / "mongodb-lab-overview.json").write_text(json.dumps(dashboard("mongodb-lab-overview", "mongodb-lab: overview (MongoDB across three emulated DCs)", p, ["mongodb-lab", "lab", "mongodb"], lab="mongodb-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

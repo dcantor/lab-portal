@@ -712,6 +712,44 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the last homa-lab Robot run had {{ $value }} failed test(s) (portal: Last tests)"}
 
+  - name: mongodb-lab               # MongoDB lab (portal :8115). The metrics exist only while the lab runs. Load runs, experiments and the failover and
+    rules:                          # partition suites kill members and cut DCs on purpose (mongodb_lab_run_active says when): the outage alerts wait for none
+      - alert: MongoNodeDown
+        expr: (mongodb_node_up{lab="mongodb-lab"} == 0) and on (node) (lab_vm_running{lab="mongodb-lab"} == 1) and on (lab) (mongodb_lab_run_active == 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.role }}, {{ $labels.dc }}) runs but does not answer serverStatus"}
+      - alert: MongoReplicaSetNoPrimary
+        expr: (mongodb_rs_has_primary{lab="mongodb-lab"} == 0) and on (lab) (mongodb_lab_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.rs }} has no primary: writes to it fail (a DC left cut off? ./lab.sh wan show)"}
+      - alert: MongoPrimaryNotPreferred
+        expr: (mongodb_rs_primary_preferred{lab="mongodb-lab"} == 0) and on (rs) (mongodb_rs_has_primary == 1) and on (lab) (mongodb_lab_run_active == 0)
+        for: 15m
+        labels: {severity: info}
+        annotations: {summary: "{{ $labels.rs }}'s primary is not {{ $labels.preferred }}: the experiments assume the preferred primary's DC"}
+      - alert: MongoReplicationLag
+        expr: (mongodb_rs_member_lag_seconds{lab="mongodb-lab"} > 10) and on (lab) (mongodb_lab_run_active == 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.rs }}) is {{ $value | humanize }} s behind its primary"}
+      - alert: MongoChainedSecondary
+        # after a failover a secondary can keep syncing through another one: w:majority then waits the longer path (found at 0.5.0)
+        expr: (mongodb_rs_member_chained{lab="mongodb-lab"} == 1) and on (lab) (mongodb_lab_run_active == 0)
+        for: 30m
+        labels: {severity: info}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.rs }}) syncs from {{ $labels.source }}, not the primary: ./lab.sh rs unchain"}
+      - alert: MongoWanDcCutOff
+        expr: (mongodb_wan_dc_cut{lab="mongodb-lab"} == 1) and on (lab) (mongodb_lab_run_active == 0)
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.dc }} has been cut off for 10 minutes with no run going: left over from a test? (./lab.sh wan heal)"}
+      - alert: MongoTestsFailing
+        expr: lab_tests_last_failed{lab="mongodb-lab"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last mongodb-lab Robot run had {{ $value }} failed test(s) (portal: Verify and tests)"}
+
   - name: tcp-cc-lab                # TCP congestion control lab (portal :8112). The metrics exist only while the lab runs. Flows and tests fill the
     rules:                          # bottleneck and drop packets on purpose; the tests also move the WAN settings (tcpcc_lab_run_active says when)
       - alert: TcpCcWanEmulatorUnreachable
