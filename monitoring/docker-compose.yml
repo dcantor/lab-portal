@@ -3,8 +3,13 @@
 # themselves (Telegraf -> InfluxDB write API); VictoriaLogs keeps their syslog (Telegraf -> Loki push API); Grafana (port
 # 3001 — Gitea has 3000) reads VictoriaMetrics / VictoriaLogs for the dashboards and Prometheus for the alert state.
 # deploy: ../monitoring/deploy.sh
+x-logging: &logging                               # every container's json log capped at 3 x 50 MB: an uncapped one (gnmic-srl-evpn
+  driver: json-file                               # logging a subscribe error every 10 s while srl-evpn is off) filled the disk on
+  options: {max-size: 50m, max-file: "3"}         # 2026-10-23 and Prometheus stored nothing for four days
+
 services:
   victoriametrics:
+    logging: *logging
     image: victoriametrics/victoria-metrics:v1.152.0
     restart: unless-stopped
     command: ["--storageDataPath=/storage", "--retentionPeriod=180d", "--httpListenAddr=:8428"]
@@ -12,6 +17,7 @@ services:
     volumes: ["vm_data:/storage"]
 
   victorialogs:                                   # syslog from the VyOS nodes (system syslog remote -> the native syslog receiver, UDP 5514 — 514 is the NMS rsyslog)
+    logging: *logging
     image: victoriametrics/victoria-logs:v1.52.0
     restart: unless-stopped
     # :5514 every lab's VyOS nodes; :5515 evpn-clab's, :5516 srl-evpn's (SR Linux), :5517 evpn-pfsense's (VyOS + its pfSense and
@@ -25,6 +31,7 @@ services:
     volumes: ["vl_data:/vlogs"]
 
   vmalert-logs:                                   # log-derived alerts: LogsQL rules against VictoriaLogs; alert state written to VictoriaMetrics (ALERTS)
+    logging: *logging
     image: victoriametrics/vmalert:v1.152.0
     restart: unless-stopped
     command:
@@ -40,6 +47,7 @@ services:
     depends_on: [victorialogs, victoriametrics]
 
   goflow2:                                        # sFlow collector: decodes the samples from the PEs / Ps into JSON lines (shared volume)
+    logging: *logging
     image: netsampler/goflow2:v2
     restart: unless-stopped
     command: ["-listen=sflow://:6343", "-format=json", "-transport=file", "-transport.file=/flows/flows.json", "-addr=:8080"]
@@ -48,6 +56,7 @@ services:
     volumes: ["flows:/flows"]
 
   goflow2-evpn-clab:                              # evpn-clab's sFlow (its spines, leaves and wan): VXLAN decoded by flows/evpn-clab-mapping.yaml
+    logging: *logging
     image: netsampler/goflow2:v2
     restart: unless-stopped
     command: ["-listen=sflow://:6344", "-format=json", "-mapping=/etc/flows/evpn-clab-mapping.yaml",
@@ -57,6 +66,7 @@ services:
     volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
 
   goflow2-evpn-pfsense:                           # evpn-pfsense's sFlow (its spines, leaves and borders): VXLAN decoded as evpn-clab's
+    logging: *logging
     image: netsampler/goflow2:v2
     restart: unless-stopped
     command: ["-listen=sflow://:6345", "-format=json", "-mapping=/etc/flows/evpn-clab-mapping.yaml",
@@ -66,6 +76,7 @@ services:
     volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
 
   flows-shipper:                                  # Fluent Bit tails goflow2's file into VictoriaLogs (structured records, stream per exporter)
+    logging: *logging
     image: fluent/fluent-bit:3.2
     restart: unless-stopped
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/etc/flows/fluent-bit.conf"]
@@ -73,24 +84,28 @@ services:
     depends_on: [goflow2, goflow2-evpn-clab, goflow2-evpn-pfsense, victorialogs]
 
   flows-rotate:                                   # daily truncation of the goflow2 file
+    logging: *logging
     image: busybox:1.37
     restart: unless-stopped
     command: ["sh", "/etc/flows/rotate.sh"]
     volumes: ["flows:/flows", "./flows:/etc/flows:ro"]
 
   gnmic-srl-evpn:                                 # srl-evpn's SR Linux nodes over gNMI (port 57400, reached through the host): BGP, BFD,
+    logging: *logging
     image: ghcr.io/openconfig/gnmic:0.49.0        # interfaces, Ethernet Segments, routes, MACs, CPU, memory -> Prometheus (:9804)
     restart: unless-stopped
     command: ["--config", "/etc/gnmic/srl-evpn.yml", "subscribe"]
     volumes: ["./gnmic:/etc/gnmic:ro"]
 
   gnmic-srv6-xr:                                  # srv6-xr's IOS-XR PE over gNMI (XR's gRPC 57400 on the lab's isolated OOB, reached through the host's
+    logging: *logging
     image: ghcr.io/openconfig/gnmic:0.49.0        # relay 10.0.0.1:57409): interfaces, IS-IS, BGP, BFD, SR policies, CPU, memory -> Prometheus (:9805)
     restart: unless-stopped
     command: ["--config", "/etc/gnmic/srv6-xr.yml", "subscribe"]
     volumes: ["./gnmic:/etc/gnmic:ro"]
 
   prometheus:
+    logging: *logging
     image: prom/prometheus:v3.14.0
     restart: unless-stopped
     command:
@@ -106,6 +121,7 @@ services:
     depends_on: [victoriametrics]
 
   alertmanager:                                   # routes the alerts a lab asks to be acted on (alertmanager/alertmanager.yml); the rest go nowhere
+    logging: *logging
     image: prom/alertmanager:v0.34.1
     restart: unless-stopped
     command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager", "--web.listen-address=:9093"]
@@ -116,6 +132,7 @@ services:
       - am_data:/alertmanager
 
   grafana:
+    logging: *logging
     image: grafana/grafana-oss:13.0.2
     restart: unless-stopped
     environment:

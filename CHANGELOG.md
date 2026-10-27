@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.52.1] - 2026-10-27
+
+### Fixed
+- Monitoring: every container's json log is capped at 3 × 50 MB (`x-logging` in docker-compose.yml). The uncapped
+  gnmic-srl-evpn log had filled the NMS disk. The 5.2 GB log was emptied and the journal trimmed and capped at 500 MB
+  by hand; the disk went from 100 % to 62 % used.
+
 ## [0.52.0] - 2026-10-27
 
 ### Added
