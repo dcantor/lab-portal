@@ -750,6 +750,53 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the last mongodb-lab Robot run had {{ $value }} failed test(s) (portal: Verify and tests)"}
 
+  - name: evpn-3tier                # three-tier app on an EVPN fabric (portal :8119). The metrics exist only while the lab runs. The failure
+    rules:                          # scenarios and the disruptive suites power nodes off on purpose (e3t_lab_run_active says when): outage alerts wait
+      - alert: E3tAppDown
+        expr: (e3t_app_ok{lab="evpn-3tier"} == 0) and on (lab) (e3t_lab_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "the Order Desk does not answer through the VIP from wan's clients (portal: A request, right now)"}
+      - alert: E3tNodeNotAnswering
+        expr: (e3t_node_answers{lab="evpn-3tier"} == 0) and on (lab) (e3t_lab_run_active == 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} ({{ $labels.role }}) runs but does not answer the portal over SSH"}
+      - alert: E3tBgpSessionsDown
+        expr: (e3t_bgp_sessions_established{lab="evpn-3tier"} < e3t_bgp_sessions) and on (lab) (e3t_lab_run_active == 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }} has {{ $value }} BGP sessions up, fewer than configured"}
+      - alert: E3tSegmentLegDown
+        expr: ((e3t_segment_bonds_up{lab="evpn-3tier"} < e3t_segment_bonds) or (e3t_server_bond_legs{lab="evpn-3tier"} < 2)) and on (lab) (e3t_lab_run_active == 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.node }}: an EVPN multihoming leg is down (the service runs on one switch only)"}
+      - alert: E3tServiceDown
+        expr: (e3t_service_up{lab="evpn-3tier"} == 0) and on (lab) (e3t_lab_run_active == 0)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.service }} is not running on {{ $labels.node }}"}
+      - alert: E3tFirewallNotPreferred
+        expr: (e3t_fw_active{lab="evpn-3tier",node="fw1"} == 0) and on (lab) (e3t_lab_run_active == 0)
+        for: 10m
+        labels: {severity: info}
+        annotations: {summary: "the tiers route through fw2, not fw1 (fw1 down or its sessions not up?)"}
+      - alert: E3tNoDatabasePrimaryOnDb1
+        expr: (e3t_db_primary{lab="evpn-3tier",node="db1"} == 0) and on (lab) (e3t_lab_run_active == 0)
+        for: 10m
+        labels: {severity: info}
+        annotations: {summary: "db1 is not the PostgreSQL primary (left over from a failover? ./lab.sh db switchover db1)"}
+      - alert: E3tNoStandby
+        expr: (sum by (lab) (e3t_db_standby{lab="evpn-3tier"}) == 0) and on (lab) (e3t_lab_run_active == 0)
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "no PostgreSQL standby streams: a second failure loses the database (./lab.sh db reseed)"}
+      - alert: E3tTestsFailing
+        expr: lab_tests_last_failed{lab="evpn-3tier"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last evpn-3tier Robot run had {{ $value }} failed test(s) (portal: Runs)"}
+
   - name: tcp-cc-lab                # TCP congestion control lab (portal :8112). The metrics exist only while the lab runs. Flows and tests fill the
     rules:                          # bottleneck and drop packets on purpose; the tests also move the WAN settings (tcpcc_lab_run_active says when)
       - alert: TcpCcWanEmulatorUnreachable

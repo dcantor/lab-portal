@@ -1090,4 +1090,41 @@ p.append(panel("Portal run going (load runs and tests disrupt on purpose)", "sta
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 54, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 host_row(p, 58)
 (OUT / "mongodb-lab-overview.json").write_text(json.dumps(dashboard("mongodb-lab-overview", "mongodb-lab: overview (MongoDB across three emulated DCs)", p, ["mongodb-lab", "lab", "mongodb"], lab="mongodb-lab"), indent=1))
+# ---------------------------------------------------------------- evpn-3tier: a three-tier application (HAProxy, nginx, app, PostgreSQL) on a VyOS
+# EVPN fabric, each tier its own VRF, a VyOS firewall pair the only path between them. The portal (:8119) samples every node every 5 s.
+_id[0] = 0
+L = 'lab="evpn-3tier"'
+p = []
+p.append(row("The lab", 0))
+p.append(panel("VMs running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 19")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 19}]}))
+p.append(panel("Application through the VIP", "stat", [(f"e3t_app_ok{{{L}}}", "app")], 4, 1, 4, 4, colorMode="background", mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Request time (wan -> fw -> lb -> web -> fw -> app -> fw -> db)", "stat", [(f"e3t_app_latency_ms{{{L}}}", "ms")], 8, 1, 4, 4, unit="ms", colorMode="none"))
+p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 12, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Orders", "stat", [(f"e3t_orders{{{L}}}", "orders")], 16, 1, 4, 4, colorMode="none"))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("Who carries the traffic (failovers show here)", 5))
+p.append(panel("Application answers", "state-timeline", [(f"e3t_app_ok{{{L}}}", "through the VIP")], 0, 6, 12, 3, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Request time", "timeseries", [(f"e3t_app_latency_ms{{{L}}}", "end to end")], 12, 6, 12, 6, unit="ms", min=0))
+p.append(panel("VIP holder", "state-timeline", [(f"e3t_vip_holder{{{L}}}", "{{node}}")], 0, 9, 12, 3, mappings=[{"type": "value", "options": {"0": {"text": "standby", "color": "transparent"}, "1": {"text": "holds the VIP", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Active firewall (the tiers' default route)", "state-timeline", [(f"e3t_fw_active{{{L}}}", "{{node}}")], 0, 12, 12, 3, mappings=[{"type": "value", "options": {"0": {"text": "standby", "color": "transparent"}, "1": {"text": "active", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("PostgreSQL primary", "state-timeline", [(f"e3t_db_primary{{{L}}}", "{{node}}")], 0, 15, 12, 3, mappings=[{"type": "value", "options": {"0": {"text": "standby / down", "color": "transparent"}, "1": {"text": "primary", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Firewall connection-tracking entries", "timeseries", [(f"e3t_fw_conntrack_entries{{{L}}}", "{{node}}")], 12, 12, 12, 6, min=0))
+
+p.append(row("Tiers and fabric", 18))
+p.append(panel("Tier services", "state-timeline", [(f"e3t_service_up{{{L}}}", "{{node}} {{service}}")], 0, 19, 12, 7, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("HAProxy's web servers", "state-timeline", [(f"e3t_haproxy_backend_up{{{L}}}", "{{server}} (on {{lb}})")], 12, 19, 12, 3, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Bond legs per server (2 = both switches)", "state-timeline", [(f"e3t_server_bond_legs{{{L}}}", "{{node}}")], 12, 22, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "none", "color": "red"}, "1": {"text": "one leg", "color": "orange"}, "2": {"text": "both", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("BGP sessions down per node", "timeseries", [(f"e3t_bgp_sessions{{{L}}} - e3t_bgp_sessions_established{{{L}}}", "{{node}}")], 0, 26, 12, 7, min=0))
+p.append(panel("Ethernet Segment bonds down per switch", "timeseries", [(f"e3t_segment_bonds{{{L}}} - e3t_segment_bonds_up{{{L}}}", "{{node}}")], 12, 26, 12, 7, min=0))
+
+p.append(row("Lab and runs", 33))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 34, 12, 12, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal run going (failure scenarios and tests power nodes off on purpose)", "state-timeline", [(f"e3t_lab_run_active{{{L}}}", "run")], 12, 34, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 38, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 46)
+(OUT / "evpn-3tier-overview.json").write_text(json.dumps(dashboard("evpn-3tier-overview", "evpn-3tier: overview (a three-tier application on an EVPN fabric)", p, ["evpn-3tier", "lab", "evpn"], lab="evpn-3tier"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

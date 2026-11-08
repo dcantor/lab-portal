@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.53.0] - 2026-11-08
+
+### Added
+- Monitoring: evpn-3tier — the scrape job (its portal on :8119, /api/sd), alert group `evpn-3tier` (9 rules: the application
+  through the VIP, nodes, BGP, multihoming legs, tier services, the active firewall, the database primary and standby, tests)
+  and the dashboard **evpn-3tier: overview** (who carries the traffic: VIP holder, active firewall, PostgreSQL primary).
+
 ## [0.52.2] - 2026-10-27
 
 ### Changed

@@ -106,6 +106,15 @@ load run goes `mongodb_load_{ops,errors}_per_second` and `mongodb_load_latency_m
 primary, primary not the preferred member, lag, a chained secondary, a DC left cut off, failed tests; the outage alerts wait for no run
 to be going); dashboard **mongodb-lab: overview**.
 
+**evpn-3tier** (job `evpn-3tier`, SD `http://10.0.0.1:8119/api/sd`, every 15 s): a three-tier application (HAProxy + keepalived,
+nginx, a Python app tier, PostgreSQL primary + replica) on a VyOS EVPN fabric, each tier its own VRF, a VyOS firewall pair the
+only path between them. The portal samples every node over SSH every 5 s and sends one request through the whole application
+from wan's clients: `lab_vm_running`, `e3t_node_answers`, `e3t_bgp_sessions{,_established}`, `e3t_segment_bonds{,_up}`,
+`e3t_server_bond_legs`, `e3t_service_up`, `e3t_fw_{active,vrrp_master,conntrack_entries}`, `e3t_vip_holder`,
+`e3t_haproxy_backend_up`, `e3t_db_{primary,standby}`, `e3t_app_{ok,latency_ms}`, `e3t_orders`, `e3t_lab_run_active`. Alert group
+`evpn-3tier` (application down, node silent, BGP / multihoming legs / services down, fw2 or db2 carrying, no standby, tests
+failing; all wait while a portal run goes); dashboard **evpn-3tier: overview**.
+
 **tcp-cc-lab** (job `tcp-cc-lab`, SD `http://10.0.0.1:8112/api/sd`, every 15 s): TCP congestion control (CUBIC, BBR, Reno
 hosts in two sites) across a Linux WAN emulator between two VyOS routers. The portal reads wanem's netem/tbf counters and
 each host's algorithm, qdisc and iperf3 server over SSH (hosts cached 20 s): `tcpcc_wan_{rtt_ms,rate_mbit,loss_pct,buffer_bdp,queue_bytes}`,
