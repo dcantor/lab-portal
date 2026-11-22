@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.54.0] - 2026-11-21
+
+### Added
+- Lab Hub: **apps** in the shared services card — tools on the lab host built on the shared services, with their health
+  and a link (`apps` in services.json; default: Fabric Factory on :8125, the VLAN/ASN databases over Nautobot). They are
+  not counted in the NMS's state, and starting the NMS does not wait for them. The one-line card links them too.
+
 ## [0.53.0] - 2026-11-08
 
 ### Added

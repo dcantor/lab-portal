@@ -318,7 +318,7 @@ function renderServices(sv) {
     const age = (Date.now() / 1000 - b.taken) / 3600;
     el.innerHTML = `<div class="line"><span class="hdot ok"></span><b>Shared services</b><span>NMS running</span><span class="hint">·</span>
       <span>${sv.up}/${sv.total} services up</span><span class="hint">·</span><span>backup ok ${age < 1 ? Math.round(age * 60) + ' min' : Math.round(age) + ' h'} ago</span>
-      ${sv.memory_used_gib ? `<span class="hint">· ${sv.memory_used_gib} GiB</span>` : ''}<button class="link toggle" data-svc="1">details ▾</button></div>`;
+      ${sv.memory_used_gib ? `<span class="hint">· ${sv.memory_used_gib} GiB</span>` : ''}${appLinks(sv)}<button class="link toggle" data-svc="1">details ▾</button></div>`;
     return;
   }
   const on = sv.vm_state === 'running', busyNms = sv.power && sv.power.status === 'running';
@@ -328,10 +328,15 @@ function renderServices(sv) {
     <p class="desc">Every lab depends on these: monitoring and alerts, CI, configuration backups, the source of truth.${on ? '' : ' <b>The NMS is not running</b> — nothing alerts, CI does not run, Nautobot is unreachable.'}</p>
     <div class="chips">${sv.services.map(x => `<a class="chip" href="${esc(x.link)}" target="_blank" title="${esc(x.check)}${x.up ? ` · ${x.ms} ms` : ` · ${x.error || 'HTTP ' + x.code}`}">
       <b><span class="dot ${x.up ? 'ok' : (on ? '' : 'off')}"></span>${esc(x.name)}</b><small>${esc(x.used_for || '')}</small></a>`).join('')}</div>
+    ${(sv.apps || []).length ? `<p class="hint" style="margin:10px 0 4px">Apps on the lab host built on these</p><div class="chips">${sv.apps.map(x => `<a class="chip" href="${esc(x.link)}" target="_blank" title="${esc(x.check)}${x.up ? ` · ${x.ms} ms` : ` · ${x.error || 'HTTP ' + x.code}`}">
+      <b><span class="dot ${x.up ? 'ok' : 'bad'}"></span>${esc(x.name)}</b><small>${esc(x.used_for || '')}</small></a>`).join('')}</div>` : ''}
     ${backupView(sv.backup)}
     ${POWER ? `<div class="power">${on ? `<button class="down" data-nms="down" ${busyNms ? 'disabled' : ''} title="ACPI shutdown of the NMS VM">⏻ Shut down the NMS</button>`
                                         : `<button class="up" data-nms="up" ${busyNms ? 'disabled' : ''} title="virsh start; waits until every service answers">⏻ Start the NMS</button>`}</div>` : ''}
     ${opView(sv.power)}`;
+}
+function appLinks(sv) {
+  return (sv.apps || []).map(x => `<span class="hint">·</span><a href="${esc(x.link)}" target="_blank" title="${esc(x.used_for || '')}${x.up ? '' : ' — not answering'}"><span class="hdot ${x.up ? 'ok' : 'bad'}"></span> ${esc(x.name)}</a>`).join('');
 }
 function backupView(b) {
   if (!b) return '';

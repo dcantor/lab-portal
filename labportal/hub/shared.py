@@ -5,7 +5,9 @@ says so. The hub shows each one's state and can start or shut down the NMS VM.
 Declared in ~/.config/lab-hub/services.json (or $LAB_HUB_SERVICES), else the defaults below:
   {"vm": "nms", "libvirt": "qemu:///system", "services": [{"name": "Prometheus", "check": "http://10.0.0.10:9090/-/ready",
    "link": "http://192.168.50.231:9091", "used_for": "metrics and alerts"}, ...]}
-`check` is probed from the lab host (on the OOB network); `link` is what a browser opens (the LAN relay)."""
+`check` is probed from the lab host (on the OOB network); `link` is what a browser opens (the LAN relay).
+`apps` lists the tools on the lab host built on those services (Fabric Factory on Nautobot): shown as links with their
+health, but not counted in the NMS's state — they are not on the NMS and starting it does not wait for them."""
 import json, os, subprocess, time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -18,7 +20,10 @@ DEFAULT = {"vm": "nms", "libvirt": "qemu:///system", "services": [
     {"name": "VictoriaLogs", "check": "http://10.0.0.10:9428/health", "link": "http://192.168.50.231:9428/select/vmui", "used_for": "every router's syslog"},
     {"name": "Grafana", "check": "http://10.0.0.10:3001/api/health", "link": "http://192.168.50.231:3001", "used_for": "dashboards, annotations"},
     {"name": "Gitea", "check": "http://10.0.0.10:3000/api/v1/version", "link": "http://192.168.50.231:3000", "used_for": "CI mirror and runner, config backups"},
-    {"name": "Nautobot", "check": "http://10.0.0.10:8080/health/", "link": "http://192.168.50.231:8080", "used_for": "source of truth"}]}
+    {"name": "Nautobot", "check": "http://10.0.0.10:8080/health/", "link": "http://192.168.50.231:8080", "used_for": "source of truth"}],
+    "apps": [
+    {"name": "Fabric Factory", "check": "http://127.0.0.1:8125/api/health", "link": "http://192.168.50.231:8125",
+     "used_for": "VLANdb, ASNdb, next free, checks (from Nautobot)"}]}
 
 
 def config():
@@ -54,11 +59,11 @@ def _probe(svc):
 def status():
     cfg = config()
     with ThreadPoolExecutor(max_workers=8) as ex:
-        services = list(ex.map(_probe, cfg["services"]))
+        services = list(ex.map(_probe, cfg["services"])); apps = list(ex.map(_probe, cfg.get("apps") or []))
     state = vm_state()
     up = sum(s["up"] for s in services)
     overall = "ok" if state == "running" and up == len(services) else ("down" if state != "running" or up == 0 else "degraded")
-    return {"vm": cfg["vm"], "vm_state": state, "services": services, "up": up, "total": len(services), "state": overall}
+    return {"vm": cfg["vm"], "vm_state": state, "services": services, "up": up, "total": len(services), "state": overall, "apps": apps}
 
 
 def power(op):
