@@ -29,7 +29,7 @@ def panel(title, kind, targets, x, y, w, h, unit=None, ds=VM, legend=True, **opt
                                 {"id": "organize", "options": {"excludeByName": {"Time": True, "__name__": True}, "renameByName": {"Value": stat}, "indexByName": {c: i for i, c in enumerate(cols + ["Value"])}}}]
     if kind == "bargauge": p["options"] = {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "horizontal", "displayMode": "gradient", "showUnfilled": True}
     for k, v in opts.items():
-        if k in ("thresholds", "mappings", "min", "max", "decimals", "color", "custom"): p["fieldConfig"]["defaults"][k] = v
+        if k in ("thresholds", "mappings", "min", "max", "decimals", "color", "custom", "noValue"): p["fieldConfig"]["defaults"][k] = v
         elif k == "overrides": p["fieldConfig"]["overrides"] = v
         elif k == "transformations": p["transformations"] = v
         else: p["options"][k] = v
@@ -1127,4 +1127,37 @@ p.append(panel("Portal run going (failure scenarios and tests power nodes off on
 p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 38, 12, 4, mappings=UPDOWN_MAP, thresholds=UPDOWN))
 host_row(p, 46)
 (OUT / "evpn-3tier-overview.json").write_text(json.dumps(dashboard("evpn-3tier-overview", "evpn-3tier: overview (a three-tier application on an EVPN fabric)", p, ["evpn-3tier", "lab", "evpn"], lab="evpn-3tier"), indent=1))
+# ---------------------------------------------------------------- xdp-lab: eBPF/XDP programs on a dut VM raced against nftables, kernel forwarding and IPVS
+# (libvirt: tg -> dut -> be1/be2). The portal (:8126) samples the dut once a second over one SSH loop (NIC and XDP counters, CPU per vCPU, what is attached)
+# and the host's tap for ring drops. Sweeps, benchmarks and tests flood the dut and switch its mode on purpose: xdp_lab_run_active marks them
+_id[0] = 0
+L = 'lab="xdp-lab"'
+p = []
+p.append(row("The lab", 0))
+p.append(panel("VMs running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 4")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 4}]}))
+p.append(panel("dut mode", "stat", [(f"xdp_lab_mode_info{{{L}}}", "{{mode}}", {"instant": True})], 4, 1, 4, 4, textMode="name", colorMode="none"))
+p.append(panel("XDP on eth1 (as the kernel reports it)", "stat", [(f'count by (prog, attach) (xdp_lab_xdp_attached{{{L},iface="eth1"}})', "{{prog}} {{attach}}", {"instant": True})], 8, 1, 4, 4, textMode="name", colorMode="none", noValue="nothing attached"))
+p.append(panel("Sampler on the dut", "stat", [(f"xdp_lab_live_up{{{L}}}", "sampler")], 12, 1, 4, 4, colorMode="background", mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("Traffic at the dut (1-second samples, scraped every 15 s)", 5))
+p.append(panel("Offered to eth1 vs lost at its receive ring (host tap)", "timeseries", [(f"xdp_lab_offered_pps{{{L}}}", "offered"), (f"xdp_lab_ring_drop_pps{{{L}}}", "ring drop (the dut could not keep up)")], 0, 6, 8, 8, unit="pps", min=0,
+               overrides=[{"matcher": {"id": "byName", "options": "ring drop (the dut could not keep up)"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}]))
+p.append(panel("dut NICs (eth1 front, eth2 back)", "timeseries", [(f"xdp_lab_nic_pps{{{L}}}", "{{iface}} {{dir}}")], 8, 6, 8, 8, unit="pps", min=0))
+p.append(panel("XDP verdicts/s", "timeseries", [(f'xdp_lab_xdp_pps{{{L},counter!="rx"}} > 0', "{{counter}}")], 16, 6, 8, 8, unit="pps", min=0,
+               custom={"stacking": {"mode": "normal"}, "fillOpacity": 40}))
+p.append(panel("dut CPU busy per vCPU (receive queue 0 = CPU0 in one-core runs)", "timeseries", [(f"xdp_lab_cpu_busy_ratio{{{L}}}", "cpu{{cpu}}")], 0, 14, 12, 8, unit="percentunit", min=0, max=1))
+p.append(panel("dut softirq per vCPU (where the kernel paths and XDP run)", "timeseries", [(f"xdp_lab_cpu_softirq_ratio{{{L}}}", "cpu{{cpu}}")], 12, 14, 12, 8, unit="percentunit", min=0, max=1))
+p.append(panel("Load balancer: new flows, hits, no backend", "timeseries", [(f'xdp_lab_xdp_pps{{{L},counter=~"lb_.*"}}', "{{counter}}")], 0, 22, 12, 8, unit="pps", min=0))
+p.append(panel("Fast path misses (router: to the kernel), redirect errors", "timeseries", [(f'xdp_lab_xdp_pps{{{L},counter=~"slow_.*|redirect_err"}}', "{{counter}}")], 12, 22, 12, 8, unit="pps", min=0))
+
+p.append(row("Lab and runs", 30))
+p.append(panel("VMs running", "state-timeline", [(f"lab_vm_running{{{L}}}", "{{node}} ({{role}})")], 0, 31, 12, 8, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal run going (sweeps / benchmarks / tests: floods and mode changes on purpose)", "state-timeline", [(f"xdp_lab_run_active{{{L}}}", "run")], 12, 31, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
+p.append(panel("dut mode over time", "state-timeline", [(f"xdp_lab_mode_info{{{L}}}", "{{mode}}")], 12, 35, 12, 4, mappings=[{"type": "value", "options": {"1": {"text": "on", "color": "blue"}}}]))
+host_row(p, 39)
+(OUT / "xdp-lab-overview.json").write_text(json.dumps(dashboard("xdp-lab-overview", "xdp-lab: overview (eBPF/XDP vs nftables, kernel, IPVS)", p, ["xdp-lab", "lab", "xdp", "ebpf"], lab="xdp-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

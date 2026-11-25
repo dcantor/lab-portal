@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.55.0] - 2026-11-25
+
+### Added
+- Monitoring: xdp-lab — the scrape job (its portal on :8126, /api/sd, every 15 s), alert group `xdp-lab` (6 rules: the
+  portal's sampler down, an XDP mode with nothing attached, a stray program attached in a non-XDP mode, ring drops and
+  load balancer drops for lack of a backend outside runs, failed tests), dashboard **xdp-lab: overview** (offered load vs
+  ring drops, the dut's NICs, XDP verdicts, CPU and softirq per vCPU, load balancer and fast-path-miss counters, mode
+  and runs over time).
+- Dashboards: panels take `noValue` (text shown when a query returns nothing).
+
 ## [0.54.0] - 2026-11-21
 
 ### Added

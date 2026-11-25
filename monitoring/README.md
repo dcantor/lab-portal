@@ -92,6 +92,15 @@ band), `sw1_qos_mode`, and `homa_lab_run_active`. Tests and measurements load th
 on purpose, so the timer, link-rate and timeout alerts wait for no run to be going. Alert group `homa-lab`; dashboard
 **homa-lab: overview (Homa kernel module)**.
 
+**xdp-lab** (job `xdp-lab`, SD `http://10.0.0.1:8126/api/sd`, every 15 s): eBPF/XDP programs on a dut VM raced against
+nftables, kernel forwarding and IPVS. The portal samples the dut once a second over one SSH loop and the host's tap for
+ring drops, and serves the last sample: `xdp_lab_offered_pps` / `xdp_lab_ring_drop_pps` (the dut's eth1 as the host sees
+it), `xdp_lab_nic_pps`, `xdp_lab_xdp_pps` (the programs' counters, `counter` label), `xdp_lab_cpu_busy_ratio` /
+`xdp_lab_cpu_softirq_ratio` per vCPU, `xdp_lab_mode_info`, `xdp_lab_xdp_attached` (what the kernel reports attached, native
+or generic), `xdp_lab_live_up`, `xdp_lab_run_active`, `lab_vm_running`. Sweeps and tests flood the dut and switch its mode on
+purpose, so the attach, ring-drop and load balancer alerts wait for no run to be going. Alert group `xdp-lab`; dashboard
+**xdp-lab: overview (eBPF/XDP vs nftables, kernel, IPVS)**.
+
 **Disk:** the NMS has 19 GB. On 2026-10-23 an uncapped container log filled it (gnmic-srl-evpn, logging a subscribe
 error every 10 s while srl-evpn is off: 5.2 GB) together with 1.7 GB of journal, and Prometheus stored nothing for four
 days. Since 0.52.1 every service logs through `x-logging` (json-file, 3 × 50 MB), and journald is capped at 500 MB

@@ -97,6 +97,14 @@ scrape_configs:
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
 
+  - job_name: xdp-lab                                              # eBPF/XDP vs nftables / kernel forwarding / IPVS on a dut VM (libvirt): the portal
+    http_sd_configs: [{url: http://10.0.0.1:8126/api/sd, refresh_interval: 60s}]   # (:8126) samples the dut once a second over one SSH loop and
+    honor_labels: true                                             # serves the last sample (rates, CPU per vCPU, XDP attach) from memory
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
   - job_name: mongodb-lab                                          # MongoDB replica set + sharded cluster across three emulated DCs (containerlab):
     http_sd_configs: [{url: http://10.0.0.1:8115/api/sd, refresh_interval: 60s}]   # the portal (:8115) samples every mongod and mongos once a
     honor_labels: true                                             # second (serverStatus, replSetGetStatus) and serves the last sample from memory

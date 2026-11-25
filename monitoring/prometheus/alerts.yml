@@ -712,6 +712,40 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the last homa-lab Robot run had {{ $value }} failed test(s) (portal: Last tests)"}
 
+  - name: xdp-lab                   # eBPF/XDP lab (portal :8126). Gated on the dut running. Sweeps, benchmarks and tests flood the dut, switch its mode
+    rules:                          # and cause ring drops on purpose (xdp_lab_run_active says when): the traffic alerts wait for no run to be going
+      - alert: XdpLabSamplerDown
+        expr: (xdp_lab_live_up{lab="xdp-lab"} == 0) and on (lab) (lab_vm_running{lab="xdp-lab",node="dut"} == 1)
+        for: 3m
+        labels: {severity: warning}
+        annotations: {summary: "the portal's sampler can't reach the dut over SSH: no live rates, CPU or XDP state (portal log: journalctl --user -u xdp-lab-webapp)"}
+      - alert: XdpLabModeNotAttached
+        # the mode file says an XDP mode but the kernel has nothing on eth1: the program was detached behind the lab's back (or the dut rebooted mid-mode)
+        expr: (xdp_lab_mode_info{lab="xdp-lab",mode=~"xdp-.*"} unless on (lab) xdp_lab_xdp_attached{lab="xdp-lab",iface="eth1"}) and on (lab) (xdp_lab_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "the dut is in mode {{ $labels.mode }} but no XDP program is attached to eth1 (./lab.sh mode {{ $labels.mode }} to reload it)"}
+      - alert: XdpLabStrayProgram
+        # a program attached while the mode is kernel / nft / ipvs: those modes' measurements would really measure XDP (the bug that invalidated the first sweeps)
+        expr: (xdp_lab_xdp_attached{lab="xdp-lab"} unless on (lab) xdp_lab_mode_info{lab="xdp-lab",mode=~"xdp-.*"}) and on (lab) (xdp_lab_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.prog }} is attached to the dut's {{ $labels.iface }} ({{ $labels.attach }}) but the mode is not an XDP mode: ./lab.sh mode kernel"}
+      - alert: XdpLabRingDrops
+        expr: (xdp_lab_ring_drop_pps{lab="xdp-lab"} > 1000) and on (lab) (xdp_lab_run_active == 0)
+        for: 5m
+        labels: {severity: info}
+        annotations: {summary: "the host is dropping {{ $value | humanize }} pkt/s at the dut's eth1 ring with no portal run going: a flood left running on tg?"}
+      - alert: XdpLbNoBackend
+        expr: (xdp_lab_xdp_pps{lab="xdp-lab",counter="lb_nobackend"} > 0) and on (lab) (xdp_lab_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "xdp-lb is dropping {{ $value | humanize }} pkt/s to the VIP for lack of a live backend (./lab.sh exec dut sudo xdplab lb show)"}
+      - alert: XdpLabTestsFailing
+        expr: lab_tests_last_failed{lab="xdp-lab"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last xdp-lab Robot run had {{ $value }} failed test(s) (portal: Runs)"}
+
   - name: mongodb-lab               # MongoDB lab (portal :8115). The metrics exist only while the lab runs. Load runs, experiments and the failover and
     rules:                          # partition suites kill members and cut DCs on purpose (mongodb_lab_run_active says when): the outage alerts wait for none
       - alert: MongoNodeDown
