@@ -1160,4 +1160,36 @@ p.append(panel("Portal run going (sweeps / benchmarks / tests: floods and mode c
 p.append(panel("dut mode over time", "state-timeline", [(f"xdp_lab_mode_info{{{L}}}", "{{mode}}")], 12, 35, 12, 4, mappings=[{"type": "value", "options": {"1": {"text": "on", "color": "blue"}}}]))
 host_row(p, 39)
 (OUT / "xdp-lab-overview.json").write_text(json.dumps(dashboard("xdp-lab-overview", "xdp-lab: overview (eBPF/XDP vs nftables, kernel, IPVS)", p, ["xdp-lab", "lab", "xdp", "ebpf"], lab="xdp-lab"), indent=1))
+# ---------------------------------------------------------------- flowspec-lab: BGP FlowSpec with open source only (containerlab). ExaBGP controller →
+# BIRD reflector (validation) → GoBGP + fsd (nftables) on two edges; a goflow2 detector; attacks and users on demand. The portal (:8127) serves it all.
+_id[0] = 0
+L = 'lab="flowspec-lab"'
+p = []
+p.append(row("The lab", 0))
+p.append(panel("Containers running", "stat", [(f"sum(lab_vm_running{{{L}}})", "of 14")], 0, 1, 4, 4, colorMode="value", thresholds={"steps": [{"color": "red", "value": None}, {"color": "orange", "value": 1}, {"color": "green", "value": 14}]}))
+p.append(panel("BGP sessions at the reflector", "stat", [(f"sum(flowspec_bgp_session_up{{{L}}})", "up"), (f"count(flowspec_bgp_session_up{{{L}}} == 0) or vector(0)", "down")], 4, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "down"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "up"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Rules enforced", "stat", [(f'flowspec_rules{{{L},status="installed"}}', "{{edge}}")], 8, 1, 4, 4, colorMode="none"))
+p.append(panel("Guards", "stat", [(f"flowspec_guard{{{L}}}", "{{edge}}"), (f"flowspec_controller_guard{{{L}}}", "controller")], 12, 1, 4, 4, colorMode="background",
+               mappings=[{"type": "value", "options": {"0": {"text": "OFF", "color": "red"}, "1": {"text": "on", "color": "green"}}}], thresholds=UPDOWN))
+p.append(panel("Last Robot run", "stat", [(f"lab_tests_last_passed{{{L}}}", "passed"), (f"lab_tests_last_failed{{{L}}}", "failed")], 16, 1, 4, 4, colorMode="value",
+               overrides=[{"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "thresholds", "value": RED1}]}, {"matcher": {"id": "byName", "options": "passed"}, "properties": [{"id": "thresholds", "value": G1}]}]))
+p.append(panel("Firing alerts", "stat", [(f'count(ALERTS{{{L},alertstate="firing",severity!="info"}}) or vector(0)', "firing")], 20, 1, 4, 4, ds=PROM, colorMode="background", thresholds=RED1))
+
+p.append(row("Attacks and users at the customer (1-second samples, scraped every 15 s)", 5))
+p.append(panel("Packets/s reaching the customer, by kind", "timeseries", [(f"flowspec_customer_pps{{{L}}}", "{{kind}}")], 0, 6, 12, 8, unit="pps", min=0))
+p.append(panel("Successful user requests/s (cl1, HTTP)", "timeseries", [(f"flowspec_users_ok_per_s{{{L}}}", "{{family}}")], 12, 6, 6, 8, unit="reqps", min=0))
+p.append(panel("Detector: mitigations held", "timeseries", [(f"flowspec_detector_mitigations{{{L}}}", "mitigations"), (f"rate(flowspec_detector_samples_total{{{L}}}[2m])", "sFlow samples/s")], 18, 6, 6, 8, min=0))
+
+p.append(row("Rules and enforcers", 14))
+p.append(panel("Rules per edge, by fsd status", "timeseries", [(f"flowspec_rules{{{L}}} > 0", "{{edge}} {{status}}"), (f"flowspec_controller_rules{{{L}}}", "announced by the controller")], 0, 15, 12, 8, min=0))
+p.append(panel("fsd: last nftables load (ms)", "timeseries", [(f"flowspec_apply_ms{{{L}}}", "{{edge}}")], 12, 15, 12, 8, unit="ms", min=0))
+
+p.append(row("Lab and runs", 23))
+p.append(panel("BGP sessions at the reflector", "state-timeline", [(f"flowspec_bgp_session_up{{{L}}}", "{{session}}")], 0, 24, 12, 9, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+p.append(panel("Portal run going (tests, attacks, replays: on purpose)", "state-timeline", [(f"flowspec_lab_run_active{{{L}}}", "run")], 12, 24, 12, 4,
+               mappings=[{"type": "value", "options": {"0": {"text": "idle", "color": "transparent"}, "1": {"text": "run going", "color": "blue"}}}]))
+p.append(panel("Portal runs: last outcome per mode", "state-timeline", [(f"lab_run_last_success{{{L}}}", "{{mode}}")], 12, 28, 12, 5, mappings=UPDOWN_MAP, thresholds=UPDOWN))
+host_row(p, 33)
+(OUT / "flowspec-lab-overview.json").write_text(json.dumps(dashboard("flowspec-lab-overview", "flowspec-lab: overview (BGP FlowSpec)", p, ["flowspec-lab", "lab", "flowspec", "bgp"], lab="flowspec-lab"), indent=1))
 print("wrote", ", ".join(f.name for f in sorted(OUT.glob("*.json"))))

@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current version is in [`VERSION`](VERSION) and
 `pyproject.toml`, and in git as a `v<version>` tag.
 
+## [0.56.0] - 2026-11-25
+
+### Added
+- Monitoring: flowspec-lab:
+  - the scrape job (its portal on :8127, /api/sd, every 15 s);
+  - alert group `flowspec-lab`, 6 rules: a reflector session down, an edge's GoBGP disconnected, a guard left off, rules
+    nftables refused, a mitigation held outside a run, failed tests;
+  - dashboard **flowspec-lab: overview**: attacks and users at the customer, rules per edge and status, the detector,
+    nftables load time, sessions and runs over time.
+
 ## [0.55.0] - 2026-11-25
 
 ### Added

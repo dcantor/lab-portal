@@ -105,6 +105,14 @@ scrape_configs:
     relabel_configs:
       - {source_labels: [__address__], target_label: instance}
 
+  - job_name: flowspec-lab                                         # BGP FlowSpec, open source only (containerlab): the portal (:8127) reads the
+    http_sd_configs: [{url: http://10.0.0.1:8127/api/sd, refresh_interval: 60s}]   # reflector's sessions, both enforcers (fsd), the controller and
+    honor_labels: true                                             # the detector over docker exec, and serves its 1-second traffic sample
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - {source_labels: [__address__], target_label: instance}
+
   - job_name: mongodb-lab                                          # MongoDB replica set + sharded cluster across three emulated DCs (containerlab):
     http_sd_configs: [{url: http://10.0.0.1:8115/api/sd, refresh_interval: 60s}]   # the portal (:8115) samples every mongod and mongos once a
     honor_labels: true                                             # second (serverStatus, replSetGetStatus) and serves the last sample from memory

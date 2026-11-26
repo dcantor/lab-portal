@@ -101,6 +101,15 @@ or generic), `xdp_lab_live_up`, `xdp_lab_run_active`, `lab_vm_running`. Sweeps a
 purpose, so the attach, ring-drop and load balancer alerts wait for no run to be going. Alert group `xdp-lab`; dashboard
 **xdp-lab: overview (eBPF/XDP vs nftables, kernel, IPVS)**.
 
+**flowspec-lab** (job `flowspec-lab`, SD `http://10.0.0.1:8127/api/sd`, every 15 s): BGP FlowSpec with open source only
+(containerlab): ExaBGP controller → BIRD reflector (validation) → GoBGP + fsd (nftables) on two edges, a goflow2 detector.
+The portal reads it all over docker exec and serves `flowspec_bgp_session_up` (per session at the reflector),
+`flowspec_rules` (per edge and fsd status), `flowspec_guard` / `flowspec_controller_guard`, `flowspec_gobgp_up`,
+`flowspec_apply_ms`, `flowspec_controller_rules`, `flowspec_detector_*`, `flowspec_customer_pps` (by kind) and
+`flowspec_users_ok_per_s`, `flowspec_lab_run_active`, `lab_vm_running`. Tests and replays break sessions, turn guards off
+and attack on purpose, so the session, guard and mitigation alerts wait for no run to be going. Alert group
+`flowspec-lab`; dashboard **flowspec-lab: overview (BGP FlowSpec)**.
+
 **Disk:** the NMS has 19 GB. On 2026-10-23 an uncapped container log filled it (gnmic-srl-evpn, logging a subscribe
 error every 10 s while srl-evpn is off: 5.2 GB) together with 1.7 GB of journal, and Prometheus stored nothing for four
 days. Since 0.52.1 every service logs through `x-logging` (json-file, 3 × 50 MB), and journald is capped at 500 MB

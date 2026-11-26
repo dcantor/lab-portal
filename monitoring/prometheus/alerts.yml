@@ -746,6 +746,39 @@ groups:
         labels: {severity: warning}
         annotations: {summary: "the last xdp-lab Robot run had {{ $value }} failed test(s) (portal: Runs)"}
 
+  - name: flowspec-lab              # BGP FlowSpec lab (portal :8127). Tests, attacks and outage replays break sessions, turn guards off and
+    rules:                          # trigger mitigations on purpose (flowspec_lab_run_active says when): those alerts wait for no run to be going
+      - alert: FlowspecSessionDown
+        expr: (flowspec_bgp_session_up{lab="flowspec-lab"} == 0) and on (lab) (flowspec_lab_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "BGP session {{ $labels.session }} at the flowspec-lab route reflector is down (./lab.sh verify)"}
+      - alert: FlowspecEnforcerDisconnected
+        expr: (flowspec_gobgp_up{lab="flowspec-lab"} == 0) and on (lab) (flowspec_lab_run_active == 0)
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.edge }}'s GoBGP has no session to the reflector: fsd enforces nothing new (./lab.sh logs {{ $labels.edge }} gobgpd)"}
+      - alert: FlowspecGuardOff
+        # a rule matching BGP takes an edge's sessions down without it (the CenturyLink replay); the replay turns it back on
+        expr: ((flowspec_guard{lab="flowspec-lab"} == 0) or (flowspec_controller_guard{lab="flowspec-lab"} == 0)) and on (lab) (flowspec_lab_run_active == 0)
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "a flowspec-lab guard is off ({{ $labels.edge }}{{ if not $labels.edge }}controller{{ end }}) with no run going (portal: Guards)"}
+      - alert: FlowspecRuleErrors
+        expr: flowspec_rules{lab="flowspec-lab",status="error"} > 0
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $value }} FlowSpec rule(s) on {{ $labels.edge }} that nftables refused (portal: Rules)"}
+      - alert: FlowspecMitigationActive
+        expr: (flowspec_detector_mitigations{lab="flowspec-lab"} > 0) and on (lab) (flowspec_lab_run_active == 0)
+        for: 1m
+        labels: {severity: info}
+        annotations: {summary: "the flowspec-lab detector holds {{ $value }} mitigation(s) with no run going: an attack started from the portal?"}
+      - alert: FlowspecTestsFailing
+        expr: lab_tests_last_failed{lab="flowspec-lab"} > 0
+        labels: {severity: warning}
+        annotations: {summary: "the last flowspec-lab Robot run had {{ $value }} failed test(s) (portal: Runs)"}
+
   - name: mongodb-lab               # MongoDB lab (portal :8115). The metrics exist only while the lab runs. Load runs, experiments and the failover and
     rules:                          # partition suites kill members and cut DCs on purpose (mongodb_lab_run_active says when): the outage alerts wait for none
       - alert: MongoNodeDown
